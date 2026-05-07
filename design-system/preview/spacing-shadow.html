@@ -1,0 +1,25 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8"/>
+<link rel="stylesheet" href="../colors_and_type.css"/>
+<style>
+  body { padding: 30px; background: var(--bg-page); }
+  .row { display: flex; gap: 24px; align-items: flex-start; justify-content: space-around; }
+  .demo { display: flex; flex-direction: column; align-items: center; gap: 14px; }
+  .box { width: 110px; height: 80px; background: var(--bg-surface); border-radius: var(--radius-md); }
+  .b1 { box-shadow: 0 1px 2px rgba(28, 26, 22, 0.05), 0 1px 1px rgba(28, 26, 22, 0.03); }
+  .b2 { box-shadow: 0 4px 12px rgba(28, 26, 22, 0.08), 0 2px 4px rgba(28, 26, 22, 0.04); }
+  .b3 { box-shadow: 0 8px 24px rgba(28, 26, 22, 0.12), 0 4px 8px rgba(28, 26, 22, 0.06); }
+  .label { font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.04em; color: var(--text-secondary); }
+  .desc { font-family: var(--font-body); font-size: 11px; color: var(--text-tertiary); }
+</style>
+</head>
+<body>
+  <div class="row">
+    <div class="demo"><div class="box b1"></div><div class="label">shadow-1</div><div class="desc">Raised card · FAB rest</div></div>
+    <div class="demo"><div class="box b2"></div><div class="label">shadow-2</div><div class="desc">Popover · modal</div></div>
+    <div class="demo"><div class="box b3"></div><div class="label">shadow-3</div><div class="desc">Sheet · FAB pressed</div></div>
+  </div>
+</body>
+</html>

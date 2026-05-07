@@ -1,0 +1,32 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8"/>
+<link rel="stylesheet" href="../colors_and_type.css"/>
+<style>
+  body { padding: 24px; background: var(--bg-page); display: flex; flex-direction: column; gap: 12px; }
+  .row { display: flex; align-items: center; gap: 16px; padding: 12px 16px; background: var(--bg-surface); border: 1px solid var(--border-default); border-radius: var(--radius-md); }
+  .name { font-family: var(--font-mono); font-size: 11px; color: var(--text-secondary); width: 110px; letter-spacing: 0.04em; }
+  .desc { font-family: var(--font-body); font-size: 13px; color: var(--text-tertiary); flex: 1; }
+  .glyph { width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; color: var(--text-primary); }
+  .glyph svg { width: 22px; height: 22px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+  .uni { font-family: var(--font-body); font-size: 22px; line-height: 1; }
+  .head { font-family: var(--font-display); font-size: 18px; font-weight: 600; margin-bottom: 4px; }
+  .small { font-family: var(--font-body); font-size: 12px; color: var(--text-secondary); }
+</style>
+</head>
+<body>
+  <div>
+    <div class="head">Lucide · stroke-only · 2px</div>
+    <div class="small">CDN substitution — flag for replacement when production icon set is decided.</div>
+  </div>
+  <div class="row"><div class="name">stock</div><div class="glyph"><svg viewBox="0 0 24 24"><path d="M3 7l9-4 9 4M5 9v11h14V9"/></svg></div><div class="desc">House / godown — Stock tab, home</div></div>
+  <div class="row"><div class="name">parties</div><div class="glyph"><svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3"/><path d="M15 11a3 3 0 100-6 3 3 0 000 6zM3 21v-2a4 4 0 014-4h4a4 4 0 014 4v2"/></svg></div><div class="desc">People — Parties / Customers</div></div>
+  <div class="row"><div class="name">inward</div><div class="glyph" style="color:var(--inward)"><svg viewBox="0 0 24 24"><path d="M5 12l7-7M5 12l7 7M5 12h14"/></svg></div><div class="desc">Arrow in — Inward (always teal)</div></div>
+  <div class="row"><div class="name">outward</div><div class="glyph" style="color:var(--outward)"><svg viewBox="0 0 24 24"><path d="M19 12l-7-7M19 12l-7 7M19 12H5"/></svg></div><div class="desc">Arrow out — Outward (always rust)</div></div>
+  <div class="row"><div class="name">add</div><div class="glyph" style="color:var(--brand-ui)"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></div><div class="desc">Plus — FAB glyph</div></div>
+  <div class="row"><div class="name">unicode ●</div><div class="glyph"><span class="uni" style="color:var(--inward)">●</span></div><div class="desc">Online dot — functional, in copy</div></div>
+  <div class="row"><div class="name">unicode ⚡</div><div class="glyph"><span class="uni" style="color:var(--pending)">⚡</span></div><div class="desc">Offline-queued — functional, in copy</div></div>
+  <div class="row"><div class="name">unicode ✓</div><div class="glyph"><span class="uni" style="color:var(--inward)">✓</span></div><div class="desc">Confirmed — functional, in copy</div></div>
+</body>
+</html>

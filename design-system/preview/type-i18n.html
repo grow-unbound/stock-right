@@ -1,0 +1,23 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8"/>
+<link rel="stylesheet" href="../colors_and_type.css"/>
+<style>
+  body { padding: 24px; background: var(--bg-page); }
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .card { padding: 14px 16px; background: var(--bg-surface); border: 1px solid var(--border-default); border-radius: var(--radius-md); }
+  .lang { font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--text-tertiary); margin-bottom: 6px; }
+  .head { font-family: var(--font-display); font-size: 22px; font-weight: 600; color: var(--text-primary); line-height: 1.2; }
+  .body { font-family: var(--font-body); font-size: 14px; color: var(--text-secondary); margin-top: 4px; line-height: 1.5; }
+</style>
+</head>
+<body>
+  <div class="grid">
+    <div class="card"><div class="lang">Telugu · te-IN</div><div class="head">నేటి స్టాక్ నమోదు</div><div class="body">240 బస్తాలు రికార్డ్ చేయబడ్డాయి ✓</div></div>
+    <div class="card"><div class="lang">Hindi · hi-IN</div><div class="head">आज का स्टॉक रजिस्टर</div><div class="body">240 बोरे दर्ज किए गए ✓</div></div>
+    <div class="card"><div class="lang">Tamil · ta-IN</div><div class="head">இன்றைய பதிவேடு</div><div class="body">240 மூட்டைகள் பதிவு செய்யப்பட்டது ✓</div></div>
+    <div class="card"><div class="lang">English · en-IN · fallback</div><div class="head">Today's inward register</div><div class="body">240 bags recorded ✓</div></div>
+  </div>
+</body>
+</html>

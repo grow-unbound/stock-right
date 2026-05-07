@@ -1,0 +1,22 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8"/>
+<link rel="stylesheet" href="../colors_and_type.css"/>
+<style>
+  body { padding: 20px; background: var(--bg-page); }
+  .row { display: grid; grid-template-columns: 100px 1fr 90px 90px; gap: 12px; align-items: center; padding: 14px 16px; background: var(--bg-surface); border: 1px solid var(--border-default); border-radius: var(--radius-md); margin-bottom: 8px; }
+  .swatch { width: 88px; height: 40px; border-radius: var(--radius-sm); border: 1px solid var(--border-default); }
+  .name { font-family: var(--font-mono); font-size: 12px; font-weight: 500; color: var(--text-primary); letter-spacing: 0.03em; }
+  .sample { font-family: var(--font-body); font-size: 15px; }
+  .hex { font-family: var(--font-mono); font-size: 11px; color: var(--text-tertiary); }
+  .ratio { font-family: var(--font-mono); font-size: 11px; font-weight: 500; color: var(--inward); }
+</style>
+</head>
+<body>
+  <div class="row"><div class="swatch" style="background:#1C1A16"></div><div><div class="name">text-primary</div><div class="sample" style="color:#1C1A16">240 bags recorded</div></div><div class="hex">#1C1A16</div><div class="ratio">17.37:1</div></div>
+  <div class="row"><div class="swatch" style="background:#4A4237"></div><div><div class="name">text-secondary</div><div class="sample" style="color:#4A4237">Lot AP-1247 · Cold Storage 3</div></div><div class="hex">#4A4237</div><div class="ratio">9.88:1</div></div>
+  <div class="row"><div class="swatch" style="background:#7A6F61"></div><div><div class="name">text-tertiary</div><div class="sample" style="color:#7A6F61; font-size: 13px;">Updated 2 minutes ago</div></div><div class="hex">#7A6F61</div><div class="ratio">4.91:1</div></div>
+  <div class="row"><div class="swatch" style="background:#C0B8B0"></div><div><div class="name">text-placeholder</div><div class="sample" style="color:#C0B8B0">Search parties or lots</div></div><div class="hex">#C0B8B0</div><div class="ratio" style="color:var(--text-tertiary)">decorative</div></div>
+</body>
+</html>

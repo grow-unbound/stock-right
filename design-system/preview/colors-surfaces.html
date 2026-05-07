@@ -1,0 +1,24 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8"/>
+<link rel="stylesheet" href="../colors_and_type.css"/>
+<style>
+  body { padding: 20px; background: var(--bg-page); }
+  .grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+  .swatch { border: 1px solid var(--border-default); border-radius: var(--radius-md); overflow: hidden; }
+  .chip { height: 72px; }
+  .meta { padding: 10px 12px; background: var(--bg-surface); border-top: 1px solid var(--border-default); }
+  .name { font-family: var(--font-mono); font-size: 11px; font-weight: 500; color: var(--text-primary); letter-spacing: 0.04em; }
+  .hex { font-family: var(--font-mono); font-size: 11px; color: var(--text-tertiary); margin-top: 2px; }
+</style>
+</head>
+<body>
+  <div class="grid">
+    <div class="swatch"><div class="chip" style="background:#FEFCF8; border-bottom: 1px solid var(--border-default);"></div><div class="meta"><div class="name">bg-page</div><div class="hex">#FEFCF8</div></div></div>
+    <div class="swatch"><div class="chip" style="background:#FFFFFF; border-bottom: 1px solid var(--border-default);"></div><div class="meta"><div class="name">bg-surface</div><div class="hex">#FFFFFF</div></div></div>
+    <div class="swatch"><div class="chip" style="background:#F5F0E8;"></div><div class="meta"><div class="name">bg-subtle</div><div class="hex">#F5F0E8</div></div></div>
+    <div class="swatch"><div class="chip" style="background:#EDE6D9;"></div><div class="meta"><div class="name">bg-inset</div><div class="hex">#EDE6D9</div></div></div>
+  </div>
+</body>
+</html>

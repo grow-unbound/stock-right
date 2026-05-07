@@ -1,0 +1,531 @@
+Title,Description,Parent Issue ID,Priority,Labels
+GROW-M5-1: CSV Lot Import Endpoint,"**Role:** Backend
+**Branch:** `backend/M5-csv-import`
+
+## Acceptance Criteria
+- [ ] POST /api/admin/import/lots endpoint
+- [ ] Accepts CSV with columns: customerName, productName, originalBags, lodgementDate, rentalMode, rentalAmount
+- [ ] Validates all rows before importing
+- [ ] Returns success count + error list
+- [ ] Logs import to audit_log
+- [ ] Handles 500+ lots efficiently
+
+## Deliverables
+- Working CSV import endpoint tested",GROCOLD-6,1,Backend
+GROW-M5-2: CSV Upload UI,"**Role:** Frontend
+**Branch:** `frontend/M5-csv-upload`
+
+## Acceptance Criteria
+- [ ] Admin page with file picker
+- [ ] Drag-and-drop CSV upload
+- [ ] Shows preview of 5 rows before submit
+- [ ] Progress bar during import
+- [ ] Success notification + error list display
+- [ ] Mobile responsive
+
+## Deliverables
+- Full CSV upload UI working",GROCOLD-6,2,Frontend
+GROW-M5-3: Rent Accrual Job,"**Role:** Backend
+**Branch:** `backend/M5-rent-accrual-job`
+
+## Acceptance Criteria
+- [ ] Edge Function for nightly rent accrual
+- [ ] Handles MONTHLY: Creates accrual 1 day after lodgement, then monthly
+- [ ] Handles YEARLY: Creates accrual 1 month after lodgement, then yearly on cutoff date
+- [ ] Handles BROUGHT_FORWARD: Manual trigger only
+- [ ] Skips lots with chargesFrozen=true
+- [ ] Logs all accruals to rent_accruals table
+- [ ] Idempotent (safe to run multiple times)
+
+## Deliverables
+- Working rent accrual job",GROCOLD-6,1,Backend
+GROW-M5-4: Job Monitoring & Alerts,"**Role:** DevOps/Backend
+**Branch:** `backend/M5-monitoring`
+
+## Acceptance Criteria
+- [ ] Dashboard endpoint: GET /api/admin/jobs/status
+- [ ] Returns last run time + status for: stale-check, rent-accrual, csv-import
+- [ ] Alert if job hasn't run in 24+ hours
+- [ ] Sentry integration for job failures
+- [ ] Admin dashboard shows job health
+
+## Deliverables
+- Job monitoring live",GROCOLD-6,2,DevOps
+GROW-M6-1: Unit Tests Backend,"**Role:** QA/Backend
+**Branch:** `test/unit-backend`
+
+## Acceptance Criteria
+- [ ] 100% coverage on calculations: daysOld, daysUntilStale, outstanding, spoilageRiskLevel
+- [ ] 100% coverage on auth middleware
+- [ ] 100% coverage on API response formatting
+- [ ] Tests use Jest + Supertest
+- [ ] Target: >90% overall backend coverage
+- [ ] All tests passing
+
+## Deliverables
+- Unit tests with >90% coverage",GROCOLD-7,1,Testing
+GROW-M6-2: Integration Tests,"**Role:** QA
+**Branch:** `test/integration`
+
+## Acceptance Criteria
+- [ ] Delivery flow: Record 3 deliveries, verify lot updates correctly
+- [ ] Payment flow: Record payment, verify FIFO allocation, lot clears
+- [ ] Offline sync: Queue 10 deliveries, sync, verify all created
+- [ ] Stale detection: Create lot, simulate 181 days, verify STALE status
+- [ ] Owner override: Block delivery, override, verify log
+- [ ] All tests passing
+
+## Deliverables
+- Integration test suite",GROCOLD-7,1,Testing
+GROW-M6-3: E2E Tests (Cypress),"**Role:** QA
+**Branch:** `test/e2e`
+
+## Acceptance Criteria
+- [ ] Scenario 1: Login → View lots → Filter → See details → Pass
+- [ ] Scenario 2: Record delivery (normal) → Sync offline delivery → Pass
+- [ ] Scenario 3: Final delivery blocked → Override as owner → Pass
+- [ ] Scenario 4: Record payment → Auto-allocate FIFO → Lot cleared → Pass
+- [ ] All scenarios on staging environment
+- [ ] Tests run in CI/CD
+
+## Deliverables
+- Full E2E test suite passing",GROCOLD-7,1,Testing
+GROW-M6-4: Load Testing,"**Role:** QA
+**Branch:** `test/load`
+
+## Acceptance Criteria
+- [ ] 10,000 lots in database
+- [ ] GET /api/lots query: <100ms p95
+- [ ] Outstanding calculation: <50ms p95
+- [ ] 100 concurrent users: <200ms p95 latency
+- [ ] Zero errors under load
+- [ ] Report: Performance profile
+
+## Deliverables
+- Load test results + performance profile",GROCOLD-7,2,Testing
+GROW-M6-5: Security Audit,"**Role:** QA/DevOps
+**Branch:** `test/security`
+
+## Acceptance Criteria
+- [ ] RLS policies verified (users see only their warehouse)
+- [ ] No SQL injection vectors
+- [ ] No data leaks in error messages
+- [ ] JWT validation on all endpoints
+- [ ] CORS configured correctly
+- [ ] Rate limiting in place
+- [ ] Audit trail complete
+
+## Deliverables
+- Security audit report + fixes applied",GROCOLD-7,2,Testing
+GROW-M6-6: Mobile E2E Tests,"**Role:** QA
+**Branch:** `test/mobile-e2e`
+
+## Acceptance Criteria
+- [ ] React Native app tested on Android + iOS
+- [ ] Delivery form works with fat fingers
+- [ ] Offline delivery + sync works
+- [ ] Crashes: Zero on critical flows
+- [ ] App size: <50MB
+
+## Deliverables
+- Mobile E2E tests passing",GROCOLD-7,2,Testing
+GROW-M7-1: Production Infrastructure,"**Role:** DevOps
+**Branch:** `devops/M7-production`
+
+## Acceptance Criteria
+- [ ] Production Supabase project (India region)
+- [ ] Backups automated (daily)
+- [ ] Monitoring: Sentry + Datadog live
+- [ ] Alerts configured (error rate, latency, job failures)
+- [ ] Domain + SSL configured
+- [ ] Load balancer for API
+- [ ] Staging → Production promotion workflow
+
+## Deliverables
+- Production infrastructure live",GROCOLD-8,1,DevOps
+GROW-M7-2: Pilot Onboarding,"**Role:** Product/Ops
+**Branch:** `product/M7-onboarding`
+
+## Acceptance Criteria
+- [ ] Identify 3-5 pilot warehouse partners
+- [ ] Onboarding script prepared
+- [ ] Training video (5 min) on core flows
+- [ ] Support playbook for common issues
+- [ ] Demo instance with sample data
+- [ ] Sign legal T&C + data privacy
+
+## Deliverables
+- Pilots onboarded, using app daily",GROCOLD-8,2,Product
+GROW-M7-3: Metrics Dashboard,"**Role:** Product/Analytics
+**Branch:** `product/M7-metrics`
+
+## Acceptance Criteria
+- [ ] Daily active users (DAU) tracking
+- [ ] Feature usage: % who record deliveries, % who pay online
+- [ ] Time-to-value: Days until first delivery recorded
+- [ ] Conversion: % converting to paid
+- [ ] Error rate monitoring
+- [ ] Performance monitoring
+
+## Deliverables
+- Metrics dashboard live, tracked daily",GROCOLD-8,2,Product
+GROW-M7-4: Feedback Loop & Iteration,"**Role:** Product
+**Branch:** `product/M7-feedback`
+
+## Acceptance Criteria
+- [ ] Weekly calls with 3-5 pilots
+- [ ] Collect: UX friction points, feature requests, bugs
+- [ ] Prioritize fixes (critical vs nice-to-have)
+- [ ] Weekly sprints to address blockers
+- [ ] Measure: Adoption increasing week-over-week
+
+## Deliverables
+- Feedback loop running, iterations shipped",GROCOLD-8,2,Product
+GROW-M8-1: Landing Page,"**Role:** Content/Design
+**Branch:** `content/M8-landing`
+
+## Acceptance Criteria
+- [ ] 1-page website with: Problem, Solution, Features, Pricing, CTA
+- [ ] Mobile responsive
+- [ ] Feature walkthrough video (2 min)
+- [ ] Case studies from pilots (3-5)
+- [ ] FAQ section
+- [ ] Contact form
+
+## Deliverables
+- Landing page live + driving signups",GROCOLD-9,2,Content
+GROW-M8-2: Pricing Page,"**Role:** Product/Ops
+**Branch:** `product/M8-pricing`
+
+## Acceptance Criteria
+- [ ] 3 tiers: Free (1 warehouse, limited), Pro (3 warehouses, full features), Enterprise (unlimited)
+- [ ] Monthly + Annual pricing
+- [ ] Feature comparison table
+- [ ] Pricing page live
+- [ ] Stripe payment integration (v1.1)
+
+## Deliverables
+- Pricing strategy published",GROCOLD-9,2,Product
+GROW-M8-3: Case Studies,"**Role:** Marketing/Content
+**Branch:** `content/M8-case-studies`
+
+## Acceptance Criteria
+- [ ] 3-5 case studies from pilot warehouses
+- [ ] Format: Problem → Solution → Results (e.g., '20% reduction in spoilage')
+- [ ] Include: Warehouse name, location, operator quote
+- [ ] Published on website + PDF downloads
+
+## Deliverables
+- 3-5 case studies published",GROCOLD-9,2,Content
+GROW-M8-4: Legal & Compliance,"**Role:** Legal/Ops
+**Branch:** `ops/M8-legal`
+
+## Acceptance Criteria
+- [ ] Terms & Conditions drafted
+- [ ] Privacy Policy drafted
+- [ ] Data Processing Agreement (GDPR-lite)
+- [ ] Billing T&C
+- [ ] Review by lawyer
+- [ ] Published on website
+
+## Deliverables
+- Legal documents live",GROCOLD-9,2,Legal
+GROW-M8-5: Sales Deck & Pitch,"**Role:** Sales/Product
+**Branch:** `sales/M8-sales-deck`
+
+## Acceptance Criteria
+- [ ] 15-slide deck: Problem, Market, Solution, Traction, Ask
+- [ ] Pitch perfected (60 sec version)
+- [ ] Demo video for cold email (90 sec)
+- [ ] Sales playbook for different personas (Owner vs Manager)
+
+## Deliverables
+- Sales materials ready",GROCOLD-9,2,Sales
+GROW-M1-5: Calculations Utilities,"**Role:** Backend
+**Branch:** `backend/M1-calculations`
+
+## Acceptance Criteria
+- [ ] calculateDaysOld(lodgementDate) function
+- [ ] calculateDaysUntilStale(lodgementDate, staleDaysLimit, blanketDefault) function
+- [ ] calculateOutstanding(lotID) function
+- [ ] getSpoilageRiskLevel(daysUntilStale) function
+- [ ] All tested + documented
+
+## Deliverables
+- Utilities module with full test coverage",GROCOLD-2,1,Backend
+GROW-M1-6: Lot Status Transitions,"**Role:** Backend
+**Branch:** `backend/M1-status-transitions`
+
+## Acceptance Criteria
+- [ ] ACTIVE → DELIVERED when balanceBags = 0
+- [ ] DELIVERED → CLEARED when outstanding = 0
+- [ ] ACTIVE → STALE via daily job
+- [ ] All transitions logged to lot_status_history
+- [ ] Tests verify state machine
+
+## Deliverables
+- Status transition logic working",GROCOLD-2,1,Backend
+GROW-M2-3: Payment Reallocation,"**Role:** Backend
+**Branch:** `backend/M2-reallocation`
+
+## Acceptance Criteria
+- [ ] POST /api/customers/:id/receipts/:id/reallocate endpoint
+- [ ] Validate total allocation = receipt amount
+- [ ] Clear old allocations, create new ones
+- [ ] Log old + new to audit_log
+- [ ] Returns updated allocations
+
+## Deliverables
+- Manual reallocation working",GROCOLD-3,2,Backend
+GROW-M2-4: Outstanding Calculation,"**Role:** Frontend
+**Branch:** `frontend/M2-outstanding`
+
+## Acceptance Criteria
+- [ ] Outstanding = SUM(unpaid rents) + SUM(unpaid charges)
+- [ ] daysOutstanding calculated correctly
+- [ ] followUpRequired flag set if daysOutstanding > 30
+- [ ] Tests verify calculations
+
+## Deliverables
+- Outstanding calculation utility",GROCOLD-3,1,Frontend
+GROW-M0-10: Lighthouse Performance,"**Role:** Frontend
+**Branch:** `frontend/M0-lighthouse`
+
+## Acceptance Criteria
+- [ ] Lighthouse score on staging: >75
+- [ ] Performance: First Contentful Paint <2s
+- [ ] Accessibility: >90
+- [ ] Best Practices: >90
+- [ ] Report saved + tracked weekly
+
+## Deliverables
+- Baseline Lighthouse metrics",GROCOLD-1,2,Frontend
+GROW-M4-3: Admin Dashboard,"**Role:** Frontend
+**Branch:** `frontend/M4-admin-dashboard`
+
+## Acceptance Criteria
+- [ ] Admin-only page showing:
+  - [ ] Total lots, active, stale, cleared
+  - [ ] Collections follow-up due (>30 days outstanding)
+  - [ ] Override audit (overrides without payment in 7 days)
+  - [ ] Job status (last run time)
+- [ ] Charts: Lots by status, collections trend
+
+## Deliverables
+- Admin dashboard working",GROCOLD-5,2,Frontend
+GROW-M4-4: Audit Log Viewer,"**Role:** Frontend
+**Branch:** `frontend/M4-audit-log`
+
+## Acceptance Criteria
+- [ ] Audit log page (admin only)
+- [ ] Filters: Action, User, Date range
+- [ ] Display: What changed, who, when, why
+- [ ] Exports to CSV for compliance
+
+## Deliverables
+- Audit log viewer working",GROCOLD-5,2,Frontend
+GROW-M4-5: Role-Based Navigation,"**Role:** Frontend
+**Branch:** `frontend/M4-rbac-nav`
+
+## Acceptance Criteria
+- [ ] OPS_MANAGER: Hide Settings, Write-off, Dispute buttons
+- [ ] ADMIN/OWNER: Show all
+- [ ] Navigation tabs filtered per role
+- [ ] Backend validates on all endpoints
+
+## Deliverables
+- Role-based UI working",GROCOLD-5,2,Frontend
+GROW-M3-3: 7-Day Override Audit,"**Role:** Backend
+**Branch:** `backend/M3-override-audit`
+
+## Acceptance Criteria
+- [ ] Flag deliveries where: override happened but no payment within 7 days
+- [ ] Query: GET /api/admin/overrides/unpaid-7-days
+- [ ] Show: Delivery ID, reason, days since override
+- [ ] Alert admins daily
+
+## Deliverables
+- Override audit flagging working",GROCOLD-4,2,Backend
+GROW-M1-7: Stock as Leverage Testing,"**Role:** QA
+**Branch:** `test/M1-blocking-logic`
+
+## Acceptance Criteria
+- [ ] Test: Final delivery blocked when outstanding > 0
+- [ ] Test: Final delivery allowed when outstanding = 0
+- [ ] Test: Normal delivery allowed even with outstanding
+- [ ] Test: Error message clear + actionable
+
+## Deliverables
+- Full test suite for delivery blocking",GROCOLD-2,1,Testing
+GROW-M2-5: Collections Follow-up Logic,"**Role:** Backend
+**Branch:** `backend/M2-followup-logic`
+
+## Acceptance Criteria
+- [ ] Calculate followUpRequired = (daysOutstanding > FOLLOW_UP_OUTSTANDING_DAYS)
+- [ ] GET /api/dashboard/collections-due returns sorted by daysOutstanding DESC
+- [ ] Returns customer name, outstanding amount, days outstanding
+- [ ] Tests verify calculation
+
+## Deliverables
+- Collections follow-up logic working",GROCOLD-3,1,Backend
+GROW-M5-5: Data Cleanup Job,"**Role:** Backend
+**Branch:** `backend/M5-cleanup`
+
+## Acceptance Criteria
+- [ ] Weekly job to soft-delete stale records
+- [ ] Archive very old audit logs
+- [ ] Optimize database indexes
+- [ ] Run during off-hours (Sunday 2am)
+
+## Deliverables
+- Cleanup job configured",GROCOLD-6,3,Backend
+GROW-M6-7: Performance Optimization,"**Role:** Backend/DevOps
+**Branch:** `devops/M6-perf`
+
+## Acceptance Criteria
+- [ ] Database query profiling
+- [ ] Identify slow queries (>100ms)
+- [ ] Add indexes where needed
+- [ ] Cache warehouse settings (1h TTL)
+- [ ] p95 latency target: <200ms
+
+## Deliverables
+- Performance profile optimized",GROCOLD-7,2,DevOps
+GROW-M7-5: Support Playbook,"**Role:** Ops
+**Branch:** `ops/M7-support`
+
+## Acceptance Criteria
+- [ ] Document common issues + fixes
+- [ ] FAQ (10-15 questions)
+- [ ] Video tutorials (3-5 x 2 min each)
+- [ ] Support email template
+- [ ] Escalation procedure
+
+## Deliverables
+- Support playbook ready",GROCOLD-8,3,Ops
+GROW-M7-6: Analytics & Insights,"**Role:** Product/Analytics
+**Branch:** `analytics/M7-insights`
+
+## Acceptance Criteria
+- [ ] Cohort analysis: Pilot 1 vs Pilot 2 vs Pilot 3
+- [ ] Funnel: Onboard → First delivery → Payment → Cleared
+- [ ] Churn risk: Identify inactive users
+- [ ] NPS/CSAT surveys (pilot feedback)
+
+## Deliverables
+- Analytics dashboard + weekly insights",GROCOLD-8,2,Analytics
+GROW-M8-6: Blog & Content Marketing,"**Role:** Content
+**Branch:** `content/M8-blog`
+
+## Acceptance Criteria
+- [ ] 3-5 blog posts: Cold storage challenges, spoilage solutions, collections best practices
+- [ ] SEO optimized (keywords, meta descriptions)
+- [ ] Published on website
+- [ ] Social media promotion plan
+
+## Deliverables
+- Blog posts published + shared",GROCOLD-9,3,Content
+GROW-M0-11: API Contract Documentation,"**Role:** Backend
+**Branch:** `backend/M0-api-docs`
+
+## Acceptance Criteria
+- [ ] OpenAPI/Swagger docs generated
+- [ ] All endpoints documented
+- [ ] Request/response examples
+- [ ] Error codes + explanations
+- [ ] Available on /api/docs
+
+## Deliverables
+- API documentation live",GROCOLD-1,2,Backend
+GROW-M1-8: Rent Accrual Algorithm,"**Role:** Backend
+**Branch:** `backend/M1-accrual-algorithm`
+
+## Acceptance Criteria
+- [ ] Monthly: First accrual on day 2, then monthly
+- [ ] Yearly: First accrual on date + 1 month, then yearly on cutoff
+- [ ] Brought-forward: Manual only
+- [ ] Tests for all 3 modes
+
+## Deliverables
+- Rent accrual algorithm working + tested",GROCOLD-2,1,Backend
+GROW-M4-6: Multi-Language Testing,"**Role:** QA
+**Branch:** `test/M4-i18n`
+
+## Acceptance Criteria
+- [ ] All UI labels appear in English + Telugu
+- [ ] Date/currency formatting correct in each language
+- [ ] No broken layouts with longer text
+- [ ] Tested on mobile + web
+
+## Deliverables
+- i18n testing complete",GROCOLD-5,2,Testing
+GROW-M3-4: Dispute Resolution Workflow,"**Role:** Frontend
+**Branch:** `frontend/M3-dispute-resolution`
+
+## Acceptance Criteria
+- [ ] Disputed lots show clear status
+- [ ] Owner can resolve dispute → back to ACTIVE
+- [ ] Owner can convert to WRITTEN_OFF
+- [ ] Manual note-taking on dispute reason
+- [ ] Audit trail captured
+
+## Deliverables
+- Dispute workflow UI ready",GROCOLD-4,2,Frontend
+GROW-M6-8: Browser Compatibility Testing,"**Role:** QA
+**Branch:** `test/M6-compat`
+
+## Acceptance Criteria
+- [ ] Chrome (latest 2)
+- [ ] Firefox (latest 2)
+- [ ] Safari (latest 2)
+- [ ] Android Chrome (latest 2)
+- [ ] iOS Safari (latest 2)
+- [ ] All core workflows work
+
+## Deliverables
+- Cross-browser compatibility verified",GROCOLD-7,3,Testing
+GROW-M7-7: Churn Prevention,"**Role:** Product
+**Branch:** `product/M7-churn`
+
+## Acceptance Criteria
+- [ ] Monitor: User activity, feature usage, support tickets
+- [ ] Alert: If user hasn't logged in 7+ days
+- [ ] Intervention: Send email, call, offer help
+- [ ] Measure: Churn rate < 10%/month
+
+## Deliverables
+- Churn monitoring + prevention running",GROCOLD-8,3,Product
+GROW-M8-7: Partnership Strategy,"**Role:** Sales/Business Dev
+**Branch:** `business/M8-partnerships`
+
+## Acceptance Criteria
+- [ ] Identify potential partners (logistics, payment platforms)
+- [ ] Partnership agreements drafted
+- [ ] Co-marketing plan
+- [ ] Pilot partnerships with 1-2 partners
+
+## Deliverables
+- Partnership strategy + 1-2 agreements",GROCOLD-9,3,Sales
+GROW-M6-9: Accessibility Audit,"**Role:** QA
+**Branch:** `test/M6-a11y`
+
+## Acceptance Criteria
+- [ ] WCAG 2.1 AA compliance
+- [ ] Screen reader testing (NVDA, JAWS)
+- [ ] Keyboard navigation works
+- [ ] Color contrast ratios verified
+- [ ] Alt text on all images
+
+## Deliverables
+- A11y audit report + fixes applied",GROCOLD-7,3,Testing
+GROW-M1-9: Transaction Charges Logic,"**Role:** Backend
+**Branch:** `backend/M1-charges`
+
+## Acceptance Criteria
+- [ ] Charge types: HAMALI, PLATFORM, KATA_COOLIE, MAMULLE
+- [ ] Create charges on each delivery
+- [ ] Calculate based on numBagsOut + ratePerUnit
+- [ ] Tests verify calculations
+
+## Deliverables
+- Transaction charges working",GROCOLD-2,1,Backend

@@ -1,0 +1,50 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8"/>
+<link rel="stylesheet" href="../colors_and_type.css"/>
+<style>
+  body { padding: 20px; background: var(--bg-page); }
+  .row { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; }
+  .stack { border: 1px solid var(--border-default); border-radius: var(--radius-md); overflow: hidden; background: var(--bg-surface); }
+  .header { padding: 12px 14px; display: flex; justify-content: space-between; align-items: baseline; border-bottom: 1px solid var(--border-default); }
+  .label { font-family: var(--font-mono); font-size: 11px; font-weight: 500; letter-spacing: 0.08em; text-transform: uppercase; }
+  .meaning { font-family: var(--font-body); font-size: 11px; color: var(--text-tertiary); }
+  .swatches { display: grid; grid-template-rows: repeat(3, 30px); }
+  .sw { display: flex; align-items: center; padding: 0 14px; font-family: var(--font-mono); font-size: 11px; gap: 12px; }
+  .sw .dot { width: 14px; height: 14px; border-radius: 3px; border: 1px solid rgba(0,0,0,0.06); flex-shrink: 0; }
+  .badge { display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 9999px; font-family: var(--font-body); font-size: 12px; font-weight: 500; margin: 12px 14px; }
+</style>
+</head>
+<body>
+  <div class="row">
+    <div class="stack">
+      <div class="header"><span class="label" style="color:#0B7B6E">inward</span><span class="meaning">arriving · positive</span></div>
+      <span class="badge" style="background:#E6F5F3; color:#0B7B6E; border:1px solid #A8DDD7;">✓ Inward recorded</span>
+      <div class="swatches">
+        <div class="sw"><span class="dot" style="background:#0B7B6E"></span>inward · #0B7B6E</div>
+        <div class="sw"><span class="dot" style="background:#E6F5F3"></span>inward-bg · #E6F5F3</div>
+        <div class="sw"><span class="dot" style="background:#A8DDD7"></span>inward-border · #A8DDD7</div>
+      </div>
+    </div>
+    <div class="stack">
+      <div class="header"><span class="label" style="color:#A83422">outward</span><span class="meaning">leaving · errors</span></div>
+      <span class="badge" style="background:#F7EAE7; color:#A83422; border:1px solid #E0B8B0;">↓ Outward · 80 bags</span>
+      <div class="swatches">
+        <div class="sw"><span class="dot" style="background:#A83422"></span>outward · #A83422</div>
+        <div class="sw"><span class="dot" style="background:#F7EAE7"></span>outward-bg · #F7EAE7</div>
+        <div class="sw"><span class="dot" style="background:#E0B8B0"></span>outward-border · #E0B8B0</div>
+      </div>
+    </div>
+    <div class="stack">
+      <div class="header"><span class="label" style="color:#7B5200">pending</span><span class="meaning">waiting · queued</span></div>
+      <span class="badge" style="background:#FAF2D9; color:#7B5200; border:1px solid #E0CC88;">⚡ 3 queued</span>
+      <div class="swatches">
+        <div class="sw"><span class="dot" style="background:#7B5200"></span>pending · #7B5200</div>
+        <div class="sw"><span class="dot" style="background:#FAF2D9"></span>pending-bg · #FAF2D9</div>
+        <div class="sw"><span class="dot" style="background:#E0CC88"></span>pending-border · #E0CC88</div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

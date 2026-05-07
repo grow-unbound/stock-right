@@ -1,0 +1,21 @@
+{
+  "name": "@growcold/supabase",
+  "private": true,
+  "version": "0.0.1",
+  "exports": {
+    "./types": {
+      "types": "./types.ts",
+      "import": "./types.ts",
+      "default": "./types.ts"
+    }
+  },
+  "scripts": {
+    "db:start": "supabase start",
+    "db:reset": "supabase db reset",
+    "db:stop": "supabase stop",
+    "db:types": "supabase gen types typescript --local > types.ts"
+  },
+  "devDependencies": {
+    "supabase": "^2.51.0"
+  }
+}
