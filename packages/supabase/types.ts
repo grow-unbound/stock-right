@@ -169,6 +169,7 @@ export type Database = {
           id: string
           notes: string | null
           payment_method: Database["public"]["Enums"]["payment_method"] | null
+          receipt_allocated: boolean
           receipt_date: string
           recorded_by: string | null
           reference_number: string | null
@@ -184,6 +185,7 @@ export type Database = {
           id?: string
           notes?: string | null
           payment_method?: Database["public"]["Enums"]["payment_method"] | null
+          receipt_allocated?: boolean
           receipt_date: string
           recorded_by?: string | null
           reference_number?: string | null
@@ -199,6 +201,7 @@ export type Database = {
           id?: string
           notes?: string | null
           payment_method?: Database["public"]["Enums"]["payment_method"] | null
+          receipt_allocated?: boolean
           receipt_date?: string
           recorded_by?: string | null
           reference_number?: string | null
@@ -814,6 +817,7 @@ export type Database = {
           payment_type_id: string | null
           product_charge_type_id: string | null
           recorded_by: string | null
+          reference_number: string | null
           status: Database["public"]["Enums"]["op_payment_status"]
           tenant_id: string
           updated_at: string
@@ -836,6 +840,7 @@ export type Database = {
           payment_type_id?: string | null
           product_charge_type_id?: string | null
           recorded_by?: string | null
+          reference_number?: string | null
           status?: Database["public"]["Enums"]["op_payment_status"]
           tenant_id?: string
           updated_at?: string
@@ -858,6 +863,7 @@ export type Database = {
           payment_type_id?: string | null
           product_charge_type_id?: string | null
           recorded_by?: string | null
+          reference_number?: string | null
           status?: Database["public"]["Enums"]["op_payment_status"]
           tenant_id?: string
           updated_at?: string
@@ -1423,70 +1429,6 @@ export type Database = {
           },
         ]
       }
-      warehouse_cash_payments: {
-        Row: {
-          created_at: string
-          id: string
-          notes: string | null
-          payment_date: string
-          payment_method: Database["public"]["Enums"]["payment_method"] | null
-          recipient_name: string
-          recorded_by: string | null
-          tenant_id: string
-          total_amount: number
-          updated_at: string
-          warehouse_id: string
-        }
-        Insert: {
-          created_at?: string
-          id?: string
-          notes?: string | null
-          payment_date: string
-          payment_method?: Database["public"]["Enums"]["payment_method"] | null
-          recipient_name: string
-          recorded_by?: string | null
-          tenant_id?: string
-          total_amount: number
-          updated_at?: string
-          warehouse_id: string
-        }
-        Update: {
-          created_at?: string
-          id?: string
-          notes?: string | null
-          payment_date?: string
-          payment_method?: Database["public"]["Enums"]["payment_method"] | null
-          recipient_name?: string
-          recorded_by?: string | null
-          tenant_id?: string
-          total_amount?: number
-          updated_at?: string
-          warehouse_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "warehouse_cash_payments_recorded_by_fkey"
-            columns: ["recorded_by"]
-            isOneToOne: false
-            referencedRelation: "user_profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "warehouse_cash_payments_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "tenants"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "warehouse_cash_payments_warehouse_id_fkey"
-            columns: ["warehouse_id"]
-            isOneToOne: false
-            referencedRelation: "warehouses"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       warehouse_settings: {
         Row: {
           blanket_stale_days: number
@@ -1716,6 +1658,26 @@ export type Database = {
       }
     }
     Views: {
+      money_activity: {
+        Row: {
+          amount: number | null
+          counterparty_name: string | null
+          created_at: string | null
+          customer_code: string | null
+          event_id: string | null
+          expenditure_head: string | null
+          notes: string | null
+          occurred_at: string | null
+          payment_method: string | null
+          payment_type_name: string | null
+          receipt_allocated: boolean | null
+          reference_number: string | null
+          tenant_id: string | null
+          transaction_type: string | null
+          warehouse_id: string | null
+        }
+        Relationships: []
+      }
       money_events: {
         Row: {
           amount: number | null
@@ -1773,6 +1735,14 @@ export type Database = {
           p_receipt_id: string
         }
         Returns: Json
+      }
+      count_money_movements: {
+        Args: {
+          p_search?: string | null
+          p_transaction_type?: string | null
+          p_warehouse_id: string
+        }
+        Returns: number
       }
       current_tenant_id: { Args: never; Returns: string }
       customer_outstanding_allocatable: {
@@ -1867,22 +1837,28 @@ export type Database = {
       }
       list_money_movements: {
         Args: {
-          p_cursor_created_at?: string
-          p_cursor_event_id?: string
-          p_cursor_kind?: string
-          p_cursor_tx_date?: string
-          p_limit?: number
+          p_page?: number
+          p_page_size?: number
+          p_search?: string | null
+          p_sort_column?: string
+          p_sort_direction?: string
+          p_transaction_type?: string | null
           p_warehouse_id: string
         }
         Returns: {
-          counterparty: string
+          amount: number
+          counterparty_name: string
           created_at: string
+          customer_code: string | null
           event_id: string
-          kind: string
-          notes: string
-          payment_method: string
-          total_amount: number
-          tx_date: string
+          expenditure_head: string | null
+          notes: string | null
+          occurred_at: string
+          payment_method: string | null
+          payment_type_name: string | null
+          receipt_allocated: boolean | null
+          reference_number: string | null
+          transaction_type: string
         }[]
       }
       list_parties_tab: {
@@ -1945,6 +1921,7 @@ export type Database = {
           updated_at: string
         }[]
       }
+      user_can_manage_money: { Args: never; Returns: boolean }
       rent_yearly_cutoff_in_year: {
         Args: { p_cut_day: number; p_cut_month: number; p_year: number }
         Returns: string

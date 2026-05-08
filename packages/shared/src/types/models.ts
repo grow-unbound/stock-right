@@ -41,6 +41,18 @@ export type NextStep =
   | "select_warehouse"
   | "home";
 
+export interface UserSessionContext {
+  userId: string;
+  fullName: string | null;
+  phone: string;
+  initials: string;
+  role: UserRole | null;
+  roleLabel: string;
+  tenantName: string | null;
+  warehouseId: string | null;
+  warehouseName: string | null;
+}
+
 export interface SendOtpResult {
   challengeId: string;
   sentTo: string;

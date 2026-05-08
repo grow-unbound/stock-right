@@ -3,8 +3,9 @@ import { View, Text, TextInput, ScrollView, StyleSheet } from "react-native";
 import { useRouter } from "expo-router";
 import { Button } from "@/components/ui/Button";
 import { createWarehouse } from "@stockright/shared/api";
-import { createWarehouseSchema } from "@stockright/shared/utils";
+import { createWarehouseSchema, ACTIVE_WAREHOUSE_ID_KEY } from "@stockright/shared/utils";
 import { getSupabaseClient } from "@/lib/supabase";
+import { storage } from "@/lib/storage";
 import { tokens } from "@stockright/shared/tokens";
 
 export default function CreateWarehouseScreen() {
@@ -37,14 +38,8 @@ export default function CreateWarehouseScreen() {
     setIsLoading(true);
     try {
       const client = getSupabaseClient();
-      const { data: { session } } = await client.auth.getSession();
-      if (!session) { router.replace("/(auth)/login"); return; }
-
-      await createWarehouse(
-        process.env.EXPO_PUBLIC_SUPABASE_URL!,
-        session.access_token,
-        parsed.data
-      );
+      const { warehouseId } = await createWarehouse(client, process.env.EXPO_PUBLIC_SUPABASE_URL!, parsed.data);
+      await storage.set(ACTIVE_WAREHOUSE_ID_KEY, warehouseId);
       router.replace("/");
     } catch (err: unknown) {
       setErrors({ _form: (err as Error).message ?? "Failed to create warehouse." });

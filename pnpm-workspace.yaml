@@ -2,6 +2,10 @@ packages:
   - "apps/*"
   - "packages/*"
 
+allowBuilds:
+  sharp: false
+  unrs-resolver: false
+
 # pnpm 10+: allow install scripts for packages that download/prebuild native binaries.
 onlyBuiltDependencies:
   - sharp

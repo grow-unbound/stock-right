@@ -9,13 +9,20 @@
     "./utils": "./src/utils/index.ts",
     "./i18n": "./src/i18n/index.ts",
     "./tokens": "./src/tokens/index.ts",
-    "./demo": "./src/demo/index.ts"
+    "./demo": "./src/demo/index.ts",
+    "./money": "./src/money/index.ts",
+    "./offline/app-cache": "./src/offline/app-cache/index.ts"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.49.4",
     "zod": "^3.24.2"
   },
+  "peerDependencies": {
+    "react": "^18.0.0 || ^19.0.0"
+  },
   "devDependencies": {
+    "@types/react": "^19.1.0",
+    "react": "^19.1.0",
     "typescript": "^5.7.3"
   }
 }

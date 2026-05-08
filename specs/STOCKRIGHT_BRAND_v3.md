@@ -117,12 +117,14 @@ One type family system across three roles. Chosen for **full Indian script cover
 | Small | 13px | 400 | Noto Sans | Captions, helper text |
 | Label | 11px | 500 | Noto Sans Mono | Column headers, tags — UPPERCASE, ls 0.1em |
 | Number | 38px | 700 | Noto Serif | KPI values, currency |
+| Number (activity row) | 28px | 700 | Noto Serif | Money / register list amounts — see `design-system/preview/components-cards.html` |
 
 ### 2.3 i18n Rules
 
 - Default language on first open: detect device locale → Telugu (AP/TG), Hindi (North), Tamil (TN), Kannada (KA). English is the fallback, not the default.
 - No hardcoded English strings in UI components. All labels go through i18n keys.
-- Date format: `DD/MM/YYYY` always
+- Date format: `DD/MM/YYYY` for forms, confirmations, and formal display.
+- **Money activity** rows may use a compact calendar form **`d MMM`** (e.g. `12 Jan`) for scannable lists — implement via `formatMoneyListDate` in `@stockright/shared/utils`; keep `DD/MM/YYYY` everywhere else unless a screen spec says otherwise.
 - Currency format: `₹2,47,500` (Indian system) — never `₹247500` or `₹247.5K`
 - Number words: "2.5 Lakh" not "250K", "1 Crore" not "10M"
 
@@ -212,6 +214,16 @@ Offline → badge-offline: "⚡ N queued" — always show count when shown
 
 Do **not** use `badge-online` / “● Online” on desktop web.
 
+### 3.8 Money tab — KPI cards and activity list
+
+- **KPI cards (two-column, dashboard):** Match `design-system/preview/type-numbers.html`: mono **Label** row (11px, uppercase, `letter-spacing: 0.1em`), **Number** value at **38px / 700** Noto Serif tabular, caption line **13px** Noto Sans in secondary text color. On very narrow grids, values may step down one size (e.g. 32px) if clipping occurs.
+- **Searchable activity list:** Use `@stockright/shared/money` (`filterMoneyRowsLocal`, `mergeUniqueMoneyRows`, party display helpers) and `@stockright/shared/offline/app-cache` for persisted snapshots:
+  - **`localData`** holds rows in memory; **`searchResults`** = immediate `filterMoneyRowsLocal(localData, …)` on each keystroke.
+  - **Debounce 400ms** before Supabase `list_money_movements` / count; **merge** pages with a **Map** keyed by `transaction_type` + `event_id` so duplicates never render.
+  - **Search field:** subtle **spinner** (e.g. Lucide `Loader2`) only while the **search** network call is in flight; **empty** state: **SearchX** + short copy.
+  - **Clearing search** resets **page 1** offset paging and refetches the default window.
+  - **Offline:** hydrate from device storage (last list per warehouse + chip + optional pending rows); same local filter applies; no live Supabase reads until online.
+
 ---
 
 ## 4. Navigation
@@ -272,6 +284,10 @@ Do **not** use `badge-online` / “● Online” on desktop web.
 - **Label:** “Preferences” (not “Profile & settings”) in nav and page title.
 - **Back control:** show **only** on mobile app and mobile-web (`<640px`). **Desktop web:** no back affordance — users navigate via SideNav.
 - **Log out:** last primary action on the page (dedicated row / section), not in the global tab bar.
+- **Desktop web cursor:** On viewports `≥640px` with a fine pointer, **buttons and submit controls** use **`cursor: pointer`** (hand) — global rule in `globals.css` / design-system; nav links already use pointer. Applies to **Log out** and all list CTAs.
+- **Section rhythm:** Same as Home **Recent entries** / Money **Recent transactions**: uppercase section label and card are **siblings in a column with `gap-4` (`sp-4`, 16px)** — see spacing table (`sp-4` row) and `design-system/colors_and_type.css` spacing notes. **No** extra margin on the label (`mb-*`, `marginBottom`, or `marginTop` on the label alone). Web: wrap each block in `flex flex-col gap-4`. Mobile: same **`gap: sp-4`** between scroll children as Home/Money tab bodies.
+- **Account rows:** **Organization** and **Your role** are read-only rows **without** trailing chevrons. **Warehouse** shows a **Switch warehouse** row (with chevron) **only** when the user has **more than one** warehouse for the tenant. **Language** shows the current choice in **native script** (e.g. English, తెలుగు, हिंदी); tapping opens a picker with the same native labels (optional small English subtitle). Preference is stored under `sr_ui_locale` (`en` | `te` | `hi`). **Number format** is not configurable — **Indian grouping** for everyone (no row in Preferences).
+- **Data block:** When **online**, copy reassures that data is **synced / saved on the server** (inward-toned badge, e.g. “Up to date”). When **offline**, show **offline queue** messaging and counts as before.
 
 ---
 
@@ -311,7 +327,7 @@ Every action must produce immediate, visible feedback. Our users come from a pap
 | `sp-1` | 4px | Icon gap, small nudge |
 | `sp-2` | 8px | Input padding, badge padding |
 | `sp-3` | 12px | Component gap |
-| `sp-4` | 16px | Card padding, list item padding |
+| `sp-4` | 16px | Card padding, list item padding; **section label → content** (stack with `gap-4` / `gap: sp-4`, same as Home recent / Money recent) |
 | `sp-5` | 20px | Section inner padding |
 | `sp-6` | 24px | Card padding (large) |
 | `sp-8` | 32px | Section gap |
@@ -410,3 +426,7 @@ Before shipping any screen, verify:
 
 *StockRight Brand Language v3 — Foundation for design system implementation*  
 *Review this document before making any color, typography, or component decisions.*
+
+### Related
+
+- **Desktop-only data tables** (sortable columns, offset pagination with totals, skeleton-first loading): see `design-system/README.md` → *Desktop data tables (web, sm and up)*.

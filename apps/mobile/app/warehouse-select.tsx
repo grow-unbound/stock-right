@@ -1,15 +1,18 @@
 import { useState, useEffect } from "react";
 import { View, Text, TouchableOpacity, ScrollView, StyleSheet } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { useRouter } from "expo-router";
+import { useRouter, useLocalSearchParams } from "expo-router";
 import { listWarehouses } from "@stockright/shared/api";
 import type { Warehouse } from "@stockright/shared/types";
+import { ACTIVE_WAREHOUSE_ID_KEY } from "@stockright/shared/utils";
 import { getSupabaseClient } from "@/lib/supabase";
 import { storage } from "@/lib/storage";
 import { tokens } from "@stockright/shared/tokens";
 
 export default function WarehouseSelectScreen() {
   const router = useRouter();
+  const { switch: switchParam } = useLocalSearchParams<{ switch?: string }>();
+  const isSwitch = switchParam === "1";
   const [warehouses, setWarehouses] = useState<Warehouse[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
@@ -31,15 +34,18 @@ export default function WarehouseSelectScreen() {
 
   async function handleSelect(warehouseId: string) {
     setSelecting(warehouseId);
-    await storage.set("active_warehouse_id", warehouseId);
+    await storage.set(ACTIVE_WAREHOUSE_ID_KEY, warehouseId);
     router.replace("/");
   }
+
+  const title = isSwitch ? "Switch warehouse" : "Select warehouse";
+  const subtitle = isSwitch ? "Choose which warehouse to work in" : "Choose which warehouse to open";
 
   return (
     <SafeAreaView style={styles.safe} edges={["top", "bottom", "left", "right"]}>
       <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
-        <Text style={styles.heading}>Select warehouse</Text>
-        <Text style={styles.subheading}>Choose which warehouse to open</Text>
+        <Text style={styles.heading}>{title}</Text>
+        <Text style={styles.subheading}>{subtitle}</Text>
 
         {isLoading ? (
           <View style={styles.skeletonList}>
@@ -64,7 +70,7 @@ export default function WarehouseSelectScreen() {
             <TouchableOpacity
               key={wh.id}
               style={[styles.card, selecting === wh.id && styles.cardSelecting]}
-              onPress={() => handleSelect(wh.id)}
+              onPress={() => void handleSelect(wh.id)}
               disabled={!!selecting}
               activeOpacity={0.7}
             >

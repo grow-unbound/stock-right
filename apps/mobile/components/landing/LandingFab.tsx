@@ -12,18 +12,19 @@ import {
 } from "@stockright/shared/demo";
 import { tokens } from "@stockright/shared/tokens";
 import { FabActionSheet } from "./FabActionSheet";
+import { useMoneyAccessContext } from "@/contexts/MoneyAccessContext";
 
 /** Keep in sync with `DashboardTabBar` height + `globals.css` `--tabbar-height` */
 const TABBAR_BASE = 64;
 const STROKE = 2;
 
-function resolveFabConfig(segmentTab: string | undefined): {
+function resolveFabConfig(segmentTab: string | undefined, allowMoneyFab: boolean): {
   title: string;
   actions: LandingFabAction[];
 } | null {
   if (segmentTab === "stock") return { title: "Add to stock", actions: DEMO_FAB_STOCK_ACTIONS };
   if (segmentTab === "parties") return { title: "Add party", actions: DEMO_FAB_PARTIES_ACTIONS };
-  if (segmentTab === "money") return { title: "Record money", actions: DEMO_FAB_MONEY_ACTIONS };
+  if (segmentTab === "money" && allowMoneyFab) return { title: "Record money", actions: DEMO_FAB_MONEY_ACTIONS };
   return null;
 }
 
@@ -31,6 +32,7 @@ export function LandingFab() {
   const pathname = usePathname();
   const insets = useSafeAreaInsets();
   const [open, setOpen] = useState(false);
+  const { canManageMoney, loaded: moneyAccessLoaded } = useMoneyAccessContext();
 
   const segmentTab = useMemo(() => {
     if (pathname === "/stock") return "stock";
@@ -39,7 +41,8 @@ export function LandingFab() {
     return undefined;
   }, [pathname]);
 
-  const config = resolveFabConfig(segmentTab);
+  const allowMoneyFab = !moneyAccessLoaded || canManageMoney;
+  const config = resolveFabConfig(segmentTab, allowMoneyFab);
   const bottomPad = Math.max(insets.bottom, 8);
   const bottomOffset = TABBAR_BASE + bottomPad + 16;
 

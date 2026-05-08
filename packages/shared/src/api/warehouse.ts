@@ -31,10 +31,31 @@ export async function listWarehouses(
 }
 
 export async function createWarehouse(
+  client: SupabaseClient,
   supabaseUrl: string,
-  accessToken: string,
   input: CreateWarehouseInput
 ): Promise<{ warehouseId: string }> {
+  const {
+    data: { user },
+  } = await client.auth.getUser();
+  if (!user) throw new Error("Not authenticated");
+
+  const { data: sessionData } = await client.auth.getSession();
+  const accessToken = sessionData.session?.access_token;
+  if (!accessToken) throw new Error("Not authenticated");
+
+  const { data: roleRow, error: roleErr } = await client
+    .from("user_roles")
+    .select("tenant_id")
+    .eq("user_id", user.id)
+    .order("tenant_id", { ascending: true })
+    .limit(1)
+    .maybeSingle();
+
+  if (roleErr || !roleRow?.tenant_id) {
+    throw new Error("No organization found");
+  }
+
   const res = await fetch(`${supabaseUrl}/functions/v1/create-warehouse`, {
     method: "POST",
     headers: {
@@ -42,6 +63,7 @@ export async function createWarehouse(
       Authorization: `Bearer ${accessToken}`,
     },
     body: JSON.stringify({
+      tenant_id: roleRow.tenant_id,
       name: input.warehouseName,
       location: input.location,
       capacity_tonnes: input.capacityTonnes,

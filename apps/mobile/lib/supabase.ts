@@ -12,3 +12,7 @@ export function getSupabaseClient() {
   }
   return client;
 }
+
+export function resetSupabaseClientSingleton(): void {
+  client = null;
+}

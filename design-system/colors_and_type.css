@@ -63,6 +63,7 @@
   --border-strong:  #C9BFB0;
   --border-focus:   var(--brand-ui);
   --focus-ring:     rgba(200, 113, 42, 0.12);
+  --overlay-scrim:  rgba(28, 26, 22, 0.4); /* modal / sheet backdrop — matches tokens.overlayScrim */
 
   /* ------------------------------------------------------------
      6. Typography — Families
@@ -97,6 +98,9 @@
   --sp-10: 40px;
   --sp-12: 48px;  /* touch target minimum */
   --sp-16: 64px;
+
+  /* Section heading → card/list: stack with gap --sp-4 only (Home “Recent entries”, Money
+     “Recent transactions”, Preferences). Do not add margin-bottom on the heading. */
 
   /* ------------------------------------------------------------
      9. Radius
@@ -176,6 +180,7 @@
   --border-default: #3A3325;
   --border-strong:  #5A4F3D;
   --focus-ring:     rgba(232, 148, 58, 0.18);
+  --overlay-scrim:  rgba(18, 16, 11, 0.55);
 
   --shadow-1: 0 1px 2px rgba(0, 0, 0, 0.4), 0 1px 1px rgba(0, 0, 0, 0.25);
   --shadow-2: 0 4px 12px rgba(0, 0, 0, 0.5), 0 2px 4px rgba(0, 0, 0, 0.3);
@@ -290,6 +295,19 @@ a {
   transition: border-color var(--duration-fast) var(--ease-out);
 }
 a:hover { border-bottom-color: var(--brand-text); }
+
+/* ------------------------------------------------------------
+   Desktop web — interactive cursor (fine pointer, hover-capable)
+   Matches apps/web globals.css — keep in sync.
+   ------------------------------------------------------------ */
+@media (min-width: 640px) and (hover: hover) and (pointer: fine) {
+  button:not(:disabled),
+  [type="submit"]:not(:disabled),
+  [role="button"]:not([aria-disabled="true"]),
+  summary {
+    cursor: pointer;
+  }
+}
 
 /* Skeleton shimmer */
 @keyframes shimmer {

@@ -43,6 +43,7 @@
   --border-strong:  #C9BFB0;
   --border-focus:   var(--brand-ui);
   --focus-ring:     rgba(200, 113, 42, 0.12);
+  --overlay-scrim:  rgba(28, 26, 22, 0.4);
 
   /* Typography */
   --font-display: "Noto Serif", Georgia, serif;
@@ -111,6 +112,7 @@
   --border-default: #3A3325;
   --border-strong:  #5A4F3D;
   --focus-ring:     rgba(232, 148, 58, 0.18);
+  --overlay-scrim:  rgba(18, 16, 11, 0.55);
 }
 
 @theme inline {
@@ -167,6 +169,15 @@ html, body {
 h1, h2, h3 { font-family: var(--font-display); margin: 0; }
 p { margin: 0; }
 a { color: var(--brand-text); text-decoration: none; }
+
+@media (min-width: 640px) and (hover: hover) and (pointer: fine) {
+  button:not(:disabled),
+  [type="submit"]:not(:disabled),
+  [role="button"]:not([aria-disabled="true"]),
+  summary {
+    cursor: pointer;
+  }
+}
 
 /* Skeleton shimmer */
 @keyframes shimmer {

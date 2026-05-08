@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
-import { Pressable, Text, View, StyleSheet } from "react-native";
-import { Search } from "lucide-react-native";
+import { Pressable, Text, TextInput, View, StyleSheet } from "react-native";
+import { Search, X } from "lucide-react-native";
 import type { LandingFilterChip } from "@stockright/shared/demo";
 import { tokens } from "@stockright/shared/tokens";
 import { FilterChipRow } from "./FilterChipRow";
@@ -12,6 +12,10 @@ interface TabScreenHeaderProps {
   chipActiveId: string;
   onChipChange: (id: string) => void;
   trailing?: ReactNode;
+  searchValue?: string;
+  onSearchChange?: (text: string) => void;
+  /** Shown after the search field (e.g. in-flight search indicator). */
+  searchAccessory?: ReactNode;
 }
 
 export function TabScreenHeader({
@@ -21,7 +25,12 @@ export function TabScreenHeader({
   chipActiveId,
   onChipChange,
   trailing,
+  searchValue,
+  onSearchChange,
+  searchAccessory,
 }: TabScreenHeaderProps) {
+  const controlledSearch = searchValue !== undefined && onSearchChange !== undefined;
+
   return (
     <View style={styles.wrap}>
       <View style={styles.titleRow}>
@@ -29,10 +38,38 @@ export function TabScreenHeader({
         {trailing}
       </View>
       <View style={styles.searchOuter}>
-        <Pressable style={styles.searchInner}>
-          <Search size={18} color={tokens.textTertiary} strokeWidth={2} />
-          <Text style={styles.searchPlaceholder}>{searchPlaceholder}</Text>
-        </Pressable>
+        {controlledSearch ? (
+          <View style={styles.searchInner}>
+            <Search size={18} color={tokens.textTertiary} strokeWidth={2} />
+            <TextInput
+              value={searchValue}
+              onChangeText={onSearchChange}
+              placeholder={searchPlaceholder}
+              placeholderTextColor={tokens.textPlaceholder}
+              style={styles.searchInput}
+              autoCapitalize="none"
+              autoCorrect={false}
+              accessibilityLabel={searchPlaceholder}
+            />
+            {searchValue.trim() !== "" ? (
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Clear search"
+                hitSlop={12}
+                onPress={() => onSearchChange("")}
+                style={({ pressed }) => [styles.clearSearch, pressed && styles.clearSearchPressed]}
+              >
+                <X size={18} color={tokens.textTertiary} strokeWidth={2} />
+              </Pressable>
+            ) : null}
+            {searchAccessory}
+          </View>
+        ) : (
+          <Pressable style={styles.searchInner} accessibilityRole="button">
+            <Search size={18} color={tokens.textTertiary} strokeWidth={2} />
+            <Text style={styles.searchPlaceholder}>{searchPlaceholder}</Text>
+          </Pressable>
+        )}
       </View>
       <FilterChipRow chips={chips} activeId={chipActiveId} onChange={onChipChange} />
     </View>
@@ -66,7 +103,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: tokens.sp2,
-    height: 40,
+    minHeight: 48,
     paddingHorizontal: tokens.sp3,
     backgroundColor: tokens.bgSurface,
     borderWidth: 1,
@@ -79,4 +116,19 @@ const styles = StyleSheet.create({
     fontSize: tokens.fsInput,
     color: tokens.textPlaceholder,
   },
+  searchInput: {
+    flex: 1,
+    fontFamily: "NotoSans-Regular",
+    fontSize: tokens.fsInput,
+    color: tokens.textPrimary,
+    paddingVertical: 0,
+  },
+  clearSearch: {
+    width: 40,
+    height: 40,
+    alignItems: "center",
+    justifyContent: "center",
+    marginRight: -4,
+  },
+  clearSearchPressed: { opacity: 0.85 },
 });

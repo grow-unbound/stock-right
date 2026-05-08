@@ -66,5 +66,27 @@
   "empty": {
     "no_stock": "No stock yet. Tap + to record your first inward.",
     "no_parties": "No parties yet. Add a customer to get started."
+  },
+  "preferences": {
+    "title": "Preferences",
+    "account": "Account",
+    "display": "Display",
+    "data": "Data",
+    "session": "Session",
+    "organization": "Organization",
+    "your_role": "Your role",
+    "warehouse": "Warehouse",
+    "language": "Language",
+    "choose_language": "Choose language",
+    "switch_warehouse": "Switch warehouse",
+    "dark_mode": "Dark mode",
+    "offline_queue": "Offline queue",
+    "offline_sub": "{{count}} entries waiting to upload",
+    "offline_badge": "{{count}} queued",
+    "synced_title": "Data status",
+    "synced_sub": "Everything is saved on the server.",
+    "synced_badge": "Up to date",
+    "log_out": "Log out",
+    "back_home": "Back to Home"
   }
 }
