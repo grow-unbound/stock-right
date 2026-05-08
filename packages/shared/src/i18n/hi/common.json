@@ -1,0 +1,92 @@
+{
+  "app_name": "StockRight",
+  "auth": {
+    "login_title": "Log in to StockRight",
+    "login_subtitle": "We'll send a verification code to your email",
+    "signup_title": "Create Your StockRight Account",
+    "otp_title": "Enter Verification Code",
+    "otp_subtitle": "We sent a 6-digit code to {{sentTo}}",
+    "phone_label": "Phone Number",
+    "phone_placeholder": "+919876543210",
+    "full_name_label": "Full Name",
+    "full_name_placeholder": "e.g., Ravi Kumar",
+    "email_label": "Email Address",
+    "email_placeholder": "e.g., ravi@example.com",
+    "company_label": "Company / Warehouse Name",
+    "company_placeholder": "e.g., Ravi Cold Storage",
+    "terms_label": "I agree to Terms & Conditions and Privacy Policy",
+    "send_code_btn": "Send Verification Code",
+    "create_account_btn": "Create Account",
+    "verify_btn": "Verify Code",
+    "resend_code": "Resend Code",
+    "resend_in": "Resend in {{seconds}}s",
+    "change_number": "Try a different number",
+    "already_have_account": "Already have an account?",
+    "no_account": "Don't have an account?",
+    "login_link": "Log in",
+    "signup_link": "Create one",
+    "number_not_registered_title": "Number Not Registered",
+    "number_not_registered_body": "{{phone}} is not registered with StockRight.",
+    "number_not_registered_hint": "Contact your warehouse owner to get access.",
+    "create_account_link": "Create New Account"
+  },
+  "warehouse": {
+    "create_title": "Create Your First Godown",
+    "select_title": "Select Godown",
+    "select_subtitle": "Choose which godown to open",
+    "name_label": "Godown Name",
+    "name_placeholder": "e.g., Main Godown",
+    "location_label": "Location / Address",
+    "location_placeholder": "e.g., Hyderabad, Telangana",
+    "capacity_label": "Storage Capacity (optional)",
+    "capacity_placeholder": "e.g., 5000 tonnes",
+    "create_btn": "Create Godown"
+  },
+  "nav": {
+    "home": "Home",
+    "stock": "Stock",
+    "parties": "Parties",
+    "settings": "Settings",
+    "add_inward": "+ Inward"
+  },
+  "status": {
+    "online": "Online",
+    "offline": "Working offline",
+    "queued": "{{count}} queued",
+    "syncing": "Syncing..."
+  },
+  "errors": {
+    "invalid_phone": "Enter a valid 10-digit Indian mobile number",
+    "invalid_otp": "Code is incorrect. Try again.",
+    "expired_otp": "Code expired. Request a new one.",
+    "too_many_attempts": "Too many attempts. Try again in 5 minutes.",
+    "something_wrong": "Something went wrong. Try again.",
+    "network_offline": "You're offline. Entry saved, will upload when connected."
+  },
+  "empty": {
+    "no_stock": "No stock yet. Tap + to record your first inward.",
+    "no_parties": "No parties yet. Add a customer to get started."
+  },
+  "preferences": {
+    "title": "प्राथमिकताएँ",
+    "account": "खाता",
+    "display": "प्रदर्शन",
+    "data": "डेटा",
+    "session": "सत्र",
+    "organization": "संगठन",
+    "your_role": "आपकी भूमिका",
+    "warehouse": "गोदाम",
+    "language": "भाषा",
+    "choose_language": "भाषा चुनें",
+    "switch_warehouse": "गोदाम बदलें",
+    "dark_mode": "डार्क मोड",
+    "offline_queue": "ऑफ़लाइन कतार",
+    "offline_sub": "अपलोड के लिए {{count}} प्रविष्टियाँ इंतज़ार में",
+    "offline_badge": "{{count}} कतार में",
+    "synced_title": "डेटा स्थिति",
+    "synced_sub": "सब कुछ सर्वर पर सुरक्षित है।",
+    "synced_badge": "अप टू डेट",
+    "log_out": "लॉग आउट",
+    "back_home": "होम पर वापस"
+  }
+}

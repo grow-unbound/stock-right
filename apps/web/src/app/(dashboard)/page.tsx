@@ -15,11 +15,13 @@ import {
   formatRupeesPlain,
 } from "@stockright/shared/demo";
 import { DashboardPageShell } from "@/components/dashboard/DashboardPageShell";
+import { useSessionUser } from "@/components/session/session-user-provider";
 import { cn } from "@/lib/utils";
 
 const STROKE = 2;
 
 export default function DashboardHomePage() {
+  const { context } = useSessionUser();
   const initialChip = DEMO_HOME_FILTER_CHIPS[0]?.id ?? "today";
   const [chip, setChip] = useState(initialChip);
   const recent = filterHomeRecent(DEMO_HOME_RECENT_ENTRIES, chip).slice(0, 5);
@@ -34,10 +36,13 @@ export default function DashboardHomePage() {
       trailing={
         <Link
           href="/settings"
-          className="flex size-9 shrink-0 items-center justify-center rounded-full border border-[var(--border-default)] bg-[var(--brand-subtle)] font-[family-name:var(--font-display)] text-[14px] font-semibold text-[var(--brand-text)] transition-opacity hover:opacity-90 focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-[var(--focus-ring)]"
+          className={cn(
+            "flex size-9 shrink-0 items-center justify-center rounded-full border border-[var(--border-default)] bg-[var(--brand-subtle)] font-[family-name:var(--font-display)] text-[14px] font-semibold text-[var(--brand-text)] transition-opacity hover:opacity-90 focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-[var(--focus-ring)]",
+            "sm:hidden"
+          )}
           aria-label="Open Preferences"
         >
-          {DEMO_PROFILE_USER.initials}
+          {context?.initials ?? DEMO_PROFILE_USER.initials}
         </Link>
       }
     >

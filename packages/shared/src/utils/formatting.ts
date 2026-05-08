@@ -35,6 +35,12 @@ export function formatDate(date: Date | string): string {
   return `${dd}/${mm}/${yyyy}`;
 }
 
+/** e.g. "12 Jan" — used on Money lists / compact activity rows */
+export function formatMoneyListDate(iso: Date | string, locale = "en-IN"): string {
+  const d = typeof iso === "string" ? new Date(iso) : iso;
+  return new Intl.DateTimeFormat(locale, { day: "numeric", month: "short" }).format(d);
+}
+
 // Days since a date
 export function daysOld(date: Date | string): number {
   const d = typeof date === "string" ? new Date(date) : date;

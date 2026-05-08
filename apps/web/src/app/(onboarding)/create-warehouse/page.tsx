@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/Button";
 import { createWarehouse } from "@stockright/shared/api";
 import { createWarehouseSchema } from "@stockright/shared/utils";
 import { createBrowserClient } from "@supabase/ssr";
+import { setActiveWarehouseIdAction } from "@/app/actions/session";
 
 function getClient() {
   return createBrowserClient(
@@ -48,15 +49,10 @@ export default function CreateWarehousePage() {
     setIsLoading(true);
     try {
       const client = getClient();
-      const { data: { session } } = await client.auth.getSession();
-      if (!session) { router.replace("/login"); return; }
-
-      await createWarehouse(
-        process.env.NEXT_PUBLIC_SUPABASE_URL!,
-        session.access_token,
-        parsed.data
-      );
+      const { warehouseId } = await createWarehouse(client, process.env.NEXT_PUBLIC_SUPABASE_URL!, parsed.data);
+      await setActiveWarehouseIdAction(warehouseId);
       router.push("/");
+      router.refresh();
     } catch (err: unknown) {
       setErrors({ _form: (err as Error).message ?? "Failed to create warehouse. Try again." });
     } finally {

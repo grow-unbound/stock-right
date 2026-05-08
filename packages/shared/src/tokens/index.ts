@@ -41,6 +41,8 @@ export const tokens = {
   borderDefault: "#E5DED2",
   borderStrong: "#C9BFB0",
   focusRing: "rgba(200, 113, 42, 0.12)",
+  /** Modal / sheet scrim — warm black at ~40% */
+  overlayScrim: "rgba(28, 26, 22, 0.4)",
 
   // Dark mode surfaces
   dmBgPage: "#12100B",

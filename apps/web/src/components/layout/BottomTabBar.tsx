@@ -2,18 +2,29 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import type { LucideIcon } from "lucide-react";
 import { LayoutDashboard, Package, Users, Banknote } from "lucide-react";
+import { useMoneyAccess } from "@/contexts/MoneyAccessContext";
 import { cn } from "@/lib/utils";
 
-const tabs = [
+interface DashboardTabItem {
+  href: string;
+  label: string;
+  icon: LucideIcon;
+  requiresMoney?: boolean;
+}
+
+const tabs: DashboardTabItem[] = [
   { href: "/", label: "Home", icon: LayoutDashboard },
   { href: "/stock", label: "Stock", icon: Package },
   { href: "/parties", label: "Parties", icon: Users },
-  { href: "/money", label: "Money", icon: Banknote },
+  { href: "/money", label: "Money", icon: Banknote, requiresMoney: true },
 ];
 
 export function BottomTabBar() {
   const pathname = usePathname() ?? "";
+  const { canManageMoney, loaded } = useMoneyAccess();
+  const visibleTabs = tabs.filter((t) => !t.requiresMoney || !loaded || canManageMoney);
 
   return (
     <nav
@@ -23,7 +34,7 @@ export function BottomTabBar() {
         paddingBottom: "env(safe-area-inset-bottom)",
       }}
     >
-      {tabs.map(({ href, label, icon: Icon }) => {
+      {visibleTabs.map(({ href, label, icon: Icon }) => {
         const base = pathname.replace(/\/$/, "") || "/";
         const hrefNorm = href.replace(/\/$/, "") || "/";
         const active =

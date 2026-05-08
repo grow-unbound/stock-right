@@ -66,5 +66,27 @@
   "empty": {
     "no_stock": "ఇంకా స్టాక్ లేదు. మీ మొదటి ఇన్‌వార్డ్ నమోదు చేయడానికి + నొక్కండి.",
     "no_parties": "ఇంకా పార్టీలు లేవు. ప్రారంభించడానికి కస్టమర్‌ని జోడించండి."
+  },
+  "preferences": {
+    "title": "ప్రాధాన్యతలు",
+    "account": "ఖాతా",
+    "display": "ప్రదర్శన",
+    "data": "డేటా",
+    "session": "సెషన్",
+    "organization": "సంస్థ",
+    "your_role": "మీ పాత్ర",
+    "warehouse": "గోడౌన్",
+    "language": "భాష",
+    "choose_language": "భాష ఎంచుకోండి",
+    "switch_warehouse": "గోడౌన్ మార్చండి",
+    "dark_mode": "డార్క్ మోడ్",
+    "offline_queue": "ఆఫ్‌లైన్ క్యూ",
+    "offline_sub": "అప్‌లోడ్ కోసం {{count}} ఎంట్రీలు వేచి ఉన్నాయి",
+    "offline_badge": "{{count}} క్యూలో",
+    "synced_title": "డేటా స్థితి",
+    "synced_sub": "అన్నీ సర్వర్‌లో సేవ్ అయ్యాయి.",
+    "synced_badge": "తాజా",
+    "log_out": "లాగ్ అవుట్",
+    "back_home": "హోమ్‌కు వెనక్కి"
   }
 }
