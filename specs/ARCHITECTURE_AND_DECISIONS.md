@@ -386,6 +386,26 @@ Customer sends payment:
 
 ---
 
+### Decision 11: Tab activity lists (RPC + warehouse scope + offline search)
+
+**Decision**: **Money** and **Stock** load warehouse-scoped activity via Postgres RPCs (`list_money_movements`, `count_money_movements`; `list_stock_movements`, `count_stock_movements`) with **`p_search`**, **`p_filter`**, **`p_sort_column`**, **`p_sort_direction`**, **`p_page`**, **`p_page_size`** (bounded page size). **Stock** exposes `transaction_type` as `lodgement` | `delivery`. The **active store** for the selected warehouse remains `active_warehouse_id` in client storage (web `localStorage`, mobile secure storage).
+
+**Client behaviour (aligned across Money + Stock)**:
+- **Desktop web (`sm` and up)** — Offset pagination against the server (`count` matches `list`). **Merged search**: immediate **local filter** on the loaded window (`filterMoneyRowsLocal` / `applyStockTabClientFilters`) for zero-lag typing plus **debounced server refetch** (400ms default) on the trimmed query string; show `searchAccessory` while the delayed request runs.
+- **Mobile web + native** — Same merged search/filter; **`mergeUnique*` accumulation** keyed by `{transaction_type}-{event_id}` plus **near-end sentinel / scroll prefetch** (`IntersectionObserver` on web narrow, `scroll` thresholds on RN) increments `mobilePage`; **stub skeleton** row at list bottom while the next server page loads (no spinner row).
+
+**Stale stock KPI**: **Not** inferred only from latest `daily_stock_summary` snapshot; **`public.stock_tab_stale_kpis(warehouse)`** aggregates live lots with `status = STALE` and `balance_bags > 0`. Stale chips and list filter use the same rule.
+
+**Offline**: When offline, Stock reads **`readStockTabCache`** (baseline rows + last KPI blob from the last successful online write via `writeStockTabCache`). Current chips and the **immediate** search string run client-side on that baseline. Indicate cached source after failed network fallback when applicable.
+
+**Rationale**:
+- ✅ One mental model across register-style tabs (warehouse-scoped, RLS authoritative, `SECURITY INVOKER`)
+- ✅ Desktop tables stay fast (bounded pages); handheld lists prefetch before the viewport hits the bottom
+- ✅ Operators still slice saved data offline after one successful sync
+
+**Mitigation**:
+- Baseline caches can drift; KPI cards may omit fields if summary rows are missing entirely---
+
 ## PART 4: FAILURE MODE ANALYSIS
 
 ### Failure: Stale Job Doesn't Run

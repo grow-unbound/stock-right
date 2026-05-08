@@ -115,18 +115,19 @@ The voice is the **experienced mandi accountant** — calm, honest, brief, never
 
 Used on the Money tab beside filters: same **KPI** scale as `preview/type-numbers.html` — mono label **11px** uppercase **`letter-spacing: 0.1em`**, value **38px / 700** Noto Serif tabular, subline **13px** body. Teal/rust semantic fills for received/paid totals. Narrow viewports may use one step smaller numerals if two columns clip.
 
-### Searchable transaction list (Money + future feeds)
+### Searchable transaction list (Money + Stock)
 
 Shared implementation paths:
 
 | Concern | Package / API |
 |--------|-----------------|
-| Local filter (0ms) | `filterMoneyRowsLocal` in `@stockright/shared/money` |
-| Deduped merge | `mergeUniqueMoneyRows` / `moneyRowKey` |
-| Debounced value | `useDebouncedValue` in `@stockright/shared/hooks` (400ms for Money) |
-| Offline / last list | `loadMoneyListSnapshot`, `saveMoneyListSnapshot`, optional pending rows in `@stockright/shared/offline/app-cache` |
+| Local filter (0ms) | Money: `filterMoneyRowsLocal` in `@stockright/shared/money`. Stock: `applyStockTabClientFilters` / `stockMovementMatchesSearch` in `@stockright/shared/stock-tab` |
+| Deduped merge | Money: `mergeUniqueMoneyRows` / `moneyRowKey`. Stock: `mergeUniqueStockRows` / `stockMovementRowKey` |
+| Server count + pages | Money: `countMoneyMovements` + `listMoneyMovements`. Stock: `countStockMovements` + `listStockMovements` |
+| Debounced value | `useDebouncedValue` in `@stockright/shared/hooks` (400ms Money + Stock feeds) |
+| Offline / last list | Money snapshot helpers in `@stockright/shared/offline/app-cache`; Stock KPI + baseline via `readStockTabCache` / `writeStockTabCache` |
 
-**UI:** optional **`searchAccessory`** beside the search field (web `DashboardPageShell`, mobile `TabScreenHeader`) — **Loader2** (or platform spinner) **only** during the background search request; **SearchX** for empty combined results. Clearing the query resets **page 1** and the server window.
+**UI:** optional **`searchAccessory`** beside the search field (web `DashboardPageShell`, mobile `TabScreenHeader`) — **Loader2** (or platform spinner) **only** during the background search request; **SearchX** for empty combined results. Clearing the query resets **page 1** and the server window. **Stock on mobile**: near-end sentinel / scroll prefetch plus `mergeUniqueStockRows`; **desktop**: sortable tables with totals + rows-per-page (see *Desktop data tables* above).
 
 ### Vibe
 Warm. Honest. Quiet competence. The visual register is **paper-shop confidence**: cream paper, dark soil ink, a single warm amber accent for action. The copy mirrors that — short sentences, soft warmth, specific facts, no marketing words.
