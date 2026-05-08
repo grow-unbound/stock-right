@@ -1,6 +1,0 @@
-{
-  "version": 3,
-  "sources": [],
-  "sections": [
-    {"offset": {"line": 1, "column": 0}, "map": {"version":3,"sources":["turbopack:///[next]/internal/font/google/noto_sans_301111c4.module.css"],"sourcesContent":["@font-face {\n    font-family: 'Noto Sans Fallback';\n    src: local(\"Arial\");\n    ascent-override: 100.54%;\ndescent-override: 27.56%;\nline-gap-override: 0.00%;\nsize-adjust: 106.33%;\n\n}\n.className {\n    font-family: 'Noto Sans', 'Noto Sans Fallback';\n    font-style: normal;\n\n}\n.variable {\n    --font-body: 'Noto Sans', 'Noto Sans Fallback';\n}\n"],"names":[],"mappings":"AAAA;;;;;;;;;AASA;;;;;AAKA","ignoreList":[0]}}]
-}
