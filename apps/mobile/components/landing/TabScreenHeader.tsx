@@ -29,7 +29,7 @@ export function TabScreenHeader({
   onSearchChange,
   searchAccessory,
 }: TabScreenHeaderProps) {
-  const controlledSearch = searchValue !== undefined && onSearchChange !== undefined;
+  const controlledSearch = typeof onSearchChange === "function";
 
   return (
     <View style={styles.wrap}>
@@ -42,7 +42,7 @@ export function TabScreenHeader({
           <View style={styles.searchInner}>
             <Search size={18} color={tokens.textTertiary} strokeWidth={2} />
             <TextInput
-              value={searchValue}
+              value={searchValue ?? ""}
               onChangeText={onSearchChange}
               placeholder={searchPlaceholder}
               placeholderTextColor={tokens.textPlaceholder}
@@ -51,12 +51,12 @@ export function TabScreenHeader({
               autoCorrect={false}
               accessibilityLabel={searchPlaceholder}
             />
-            {searchValue.trim() !== "" ? (
+            {(searchValue ?? "").trim() !== "" ? (
               <Pressable
                 accessibilityRole="button"
                 accessibilityLabel="Clear search"
                 hitSlop={12}
-                onPress={() => onSearchChange("")}
+                onPress={() => onSearchChange?.("")}
                 style={({ pressed }) => [styles.clearSearch, pressed && styles.clearSearchPressed]}
               >
                 <X size={18} color={tokens.textTertiary} strokeWidth={2} />
@@ -110,18 +110,19 @@ const styles = StyleSheet.create({
     borderColor: tokens.borderDefault,
     borderRadius: tokens.radiusMd,
   },
+  searchInput: {
+    flex: 1,
+    minHeight: 44,
+    paddingVertical: 0,
+    fontFamily: "NotoSans-Regular",
+    fontSize: tokens.fsInput,
+    color: tokens.textPrimary,
+  },
   searchPlaceholder: {
     flex: 1,
     fontFamily: "NotoSans-Regular",
     fontSize: tokens.fsInput,
     color: tokens.textPlaceholder,
-  },
-  searchInput: {
-    flex: 1,
-    fontFamily: "NotoSans-Regular",
-    fontSize: tokens.fsInput,
-    color: tokens.textPrimary,
-    paddingVertical: 0,
   },
   clearSearch: {
     width: 40,
