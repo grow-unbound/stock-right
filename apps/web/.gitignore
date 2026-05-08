@@ -1,0 +1,9 @@
+# Next.js
+.next/
+out/
+
+node_modules/
+.vercel
+
+# Local overrides
+.env*.local

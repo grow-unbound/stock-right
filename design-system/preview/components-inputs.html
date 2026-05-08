@@ -1,0 +1,26 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8"/>
+<link rel="stylesheet" href="../colors_and_type.css"/>
+<style>
+  body { padding: 24px; background: var(--bg-page); display: flex; flex-direction: column; gap: 16px; }
+  .field { display: flex; flex-direction: column; gap: 6px; max-width: 360px; }
+  .label { font-family: var(--font-mono); font-size: 11px; font-weight: 500; letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-secondary); }
+  .input { height: 36px; padding: 0 12px; background: var(--bg-surface); border: 1.5px solid var(--border-default); border-radius: var(--radius-md); font-family: var(--font-body); font-size: 16px; color: var(--text-primary); outline: none; transition: border-color 120ms ease, box-shadow 120ms ease; }
+  .input::placeholder { color: var(--text-placeholder); font-size: 15px; }
+  .input.focus { border-color: rgba(200,113,42,0.55); box-shadow: 0 0 0 3px rgba(200,113,42,0.08); }
+  .input.error { border-color: rgba(184,75,42,0.55); box-shadow: 0 0 0 3px rgba(184,75,42,0.08); }
+  .helper { font-family: var(--font-body); font-size: 12px; color: var(--text-tertiary); }
+  .helper.error { color: var(--outward); }
+  .row { display: flex; gap: 16px; }
+</style>
+</head>
+<body>
+  <div class="row">
+    <div class="field"><div class="label">Party name</div><input class="input" placeholder="Search parties or lots"/><div class="helper">15px placeholder · 16px input</div></div>
+    <div class="field"><div class="label">Bags inward</div><input class="input focus" value="240"/><div class="helper">Focused · softened brand-ui border + 8% ring</div></div>
+  </div>
+  <div class="field" style="max-width: 740px;"><div class="label">Lot number</div><input class="input error" value="AP-12"/><div class="helper error">Lot number needs 7 characters</div></div>
+</body>
+</html>

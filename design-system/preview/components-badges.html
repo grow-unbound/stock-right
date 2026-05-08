@@ -1,0 +1,35 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8"/>
+<link rel="stylesheet" href="../colors_and_type.css"/>
+<style>
+  body { padding: 24px; background: var(--bg-page); display: flex; flex-direction: column; gap: 14px; align-items: flex-start; }
+  .badge { display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 9999px; font-family: var(--font-body); font-size: 12px; font-weight: 500; border: 1px solid; }
+  .b-inward { background: var(--inward-bg); color: var(--inward); border-color: var(--inward-border); }
+  .b-outward { background: var(--outward-bg); color: var(--outward); border-color: var(--outward-border); }
+  .b-pending { background: var(--pending-bg); color: var(--pending); border-color: var(--pending-border); }
+  .b-brand { background: var(--brand-subtle); color: var(--brand-text); border-color: var(--brand-border); }
+  .b-neutral { background: var(--bg-subtle); color: var(--text-tertiary); border-color: var(--border-default); }
+  .row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+  .label { font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--text-tertiary); width: 110px; }
+</style>
+</head>
+<body>
+  <div class="row"><div class="label">Status</div>
+    <span class="badge b-inward">✓ Inward · 240 bags</span>
+    <span class="badge b-outward">↓ Outward · 80 bags</span>
+    <span class="badge b-pending">⌛ Collection due</span>
+  </div>
+  <div class="row"><div class="label">Network</div>
+    <span class="badge b-inward">● Online</span>
+    <span class="badge b-pending">⚡ 3 queued</span>
+    <span class="badge b-brand">↑ Syncing…</span>
+  </div>
+  <div class="row"><div class="label">Generic</div>
+    <span class="badge b-brand">Cold Storage 3</span>
+    <span class="badge b-neutral">Lot AP-1247</span>
+    <span class="badge b-neutral">12/05/2026</span>
+  </div>
+</body>
+</html>

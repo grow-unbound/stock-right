@@ -1,0 +1,181 @@
+/* Fonts are loaded via next/font/google in layout.tsx — NOT here (avoids CLS) */
+@import "tailwindcss";
+
+/* ============================================================
+   StockRight Design Tokens — Brand Language v3
+   Source of truth: /design-system/colors_and_type.css
+   ============================================================ */
+:root {
+  /* Surfaces */
+  --bg-page:    #FEFCF8;
+  --bg-surface: #FFFFFF;
+  --bg-subtle:  #F5F0E8;
+  --bg-inset:   #EDE6D9;
+
+  /* Text */
+  --text-primary:     #1C1A16;
+  --text-secondary:   #4A4237;
+  --text-tertiary:    #7A6F61;
+  --text-placeholder: #C0B8B0;
+  --text-on-brand:    #FFFFFF;
+
+  /* Brand — two-token system */
+  --brand-ui:       #C8712A;
+  --brand-ui-hover: #AD5E1F;
+  --brand-ui-press: #9A5418;
+  --brand-text:     #8C4A12;
+  --brand-subtle:   #F5E8D8;
+  --brand-border:   #E0B08A;
+
+  /* Semantic states */
+  --inward:         #0B7B6E;
+  --inward-bg:      #E6F5F3;
+  --inward-border:  #A8DDD7;
+  --outward:        #A83422;
+  --outward-bg:     #F7EAE7;
+  --outward-border: #E0B8B0;
+  --pending:        #7B5200;
+  --pending-bg:     #FAF2D9;
+  --pending-border: #E0CC88;
+
+  /* Borders & focus */
+  --border-default: #E5DED2;
+  --border-strong:  #C9BFB0;
+  --border-focus:   var(--brand-ui);
+  --focus-ring:     rgba(200, 113, 42, 0.12);
+
+  /* Typography */
+  --font-display: "Noto Serif", Georgia, serif;
+  --font-body:    "Noto Sans", system-ui, sans-serif;
+  --font-mono:    "Noto Sans Mono", "SF Mono", Menlo, monospace;
+
+  /* Spacing */
+  --sp-1: 4px;  --sp-2: 8px;   --sp-3: 12px; --sp-4: 16px;
+  --sp-5: 20px; --sp-6: 24px;  --sp-8: 32px; --sp-10: 40px;
+  --sp-12: 48px; --sp-16: 64px;
+
+  /* Radius */
+  --radius-sm: 4px; --radius-md: 8px; --radius-lg: 12px;
+  --radius-xl: 16px; --radius-pill: 9999px;
+
+  /* Shadows */
+  --shadow-1: 0 1px 2px rgba(28,26,22,0.05), 0 1px 1px rgba(28,26,22,0.03);
+  --shadow-2: 0 4px 12px rgba(28,26,22,0.08), 0 2px 4px rgba(28,26,22,0.04);
+  --shadow-3: 0 8px 24px rgba(28,26,22,0.12), 0 4px 8px rgba(28,26,22,0.06);
+
+  /* Motion */
+  --ease-out:      cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-in:       cubic-bezier(0.4, 0, 1, 1);
+  --duration-fast: 120ms;
+  --duration-base: 200ms;
+  --duration-slow: 350ms;
+
+  /* Component sizing */
+  --touch-target:    48px;
+  --adjacent-target-gap: 8px; /* WCAG 2.2 — min space between adjacent interactive targets */
+  --control-default: 36px;
+  --control-sm:      28px;
+  --control-lg:      42px;
+  --topbar-height:   52px;
+  --sidenav-width:   200px;
+  --tabbar-height:   64px;
+  --fab-size:        48px;
+  --cta-tab-min-width: 140px; /* desktop title-row tab CTAs — equal min width */
+}
+
+[data-theme="dark"] {
+  --bg-page:    #12100B;
+  --bg-surface: #1F1C14;
+  --bg-subtle:  #2C281C;
+  --bg-inset:   #3A3325;
+  --text-primary:     #F0EBE0;
+  --text-secondary:   #C4BAA8;
+  --text-tertiary:    #8A7F6E;
+  --text-placeholder: #5A5246;
+  --text-on-brand:    #2A1F12;
+  --brand-ui:       #E8943A;
+  --brand-ui-hover: #F2A451;
+  --brand-ui-press: #D88428;
+  --brand-text:     #E8943A;
+  --brand-subtle:   #3A2A18;
+  --brand-border:   #5A3F22;
+  --inward:         #34C4AD;
+  --inward-bg:      #0F2B27;
+  --inward-border:  #1F4A44;
+  --outward:        #E8705A;
+  --outward-bg:     #2E1A16;
+  --outward-border: #5A2D24;
+  --pending:        #D4A020;
+  --pending-bg:     #2D2210;
+  --pending-border: #5A4520;
+  --border-default: #3A3325;
+  --border-strong:  #5A4F3D;
+  --focus-ring:     rgba(232, 148, 58, 0.18);
+}
+
+@theme inline {
+  --color-bg-page:    var(--bg-page);
+  --color-bg-surface: var(--bg-surface);
+  --color-bg-subtle:  var(--bg-subtle);
+  --color-bg-inset:   var(--bg-inset);
+  --color-text-primary:   var(--text-primary);
+  --color-text-secondary: var(--text-secondary);
+  --color-text-tertiary:  var(--text-tertiary);
+  --color-text-placeholder: var(--text-placeholder);
+  --color-text-on-brand:  var(--text-on-brand);
+  --color-brand-ui:       var(--brand-ui);
+  --color-brand-ui-hover: var(--brand-ui-hover);
+  --color-brand-ui-press: var(--brand-ui-press);
+  --color-brand-text:     var(--brand-text);
+  --color-brand-subtle:   var(--brand-subtle);
+  --color-brand-border:   var(--brand-border);
+  --color-inward:         var(--inward);
+  --color-inward-bg:      var(--inward-bg);
+  --color-inward-border:  var(--inward-border);
+  --color-outward:        var(--outward);
+  --color-outward-bg:     var(--outward-bg);
+  --color-outward-border: var(--outward-border);
+  --color-pending:        var(--pending);
+  --color-pending-bg:     var(--pending-bg);
+  --color-pending-border: var(--pending-border);
+  --color-border-default: var(--border-default);
+  --color-border-strong:  var(--border-strong);
+  --font-display: var(--font-display);
+  --font-body:    var(--font-body);
+  --font-mono:    var(--font-mono);
+  --radius-sm:   var(--radius-sm);
+  --radius-md:   var(--radius-md);
+  --radius-lg:   var(--radius-lg);
+  --radius-xl:   var(--radius-xl);
+  --radius-pill: var(--radius-pill);
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  padding: 0;
+  background: var(--bg-page);
+  color: var(--text-primary);
+  font-family: var(--font-body);
+  font-size: 15px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+h1, h2, h3 { font-family: var(--font-display); margin: 0; }
+p { margin: 0; }
+a { color: var(--brand-text); text-decoration: none; }
+
+/* Skeleton shimmer */
+@keyframes shimmer {
+  0%   { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+.skeleton {
+  background: linear-gradient(90deg, var(--bg-subtle) 25%, var(--bg-inset) 50%, var(--bg-subtle) 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s ease-in-out infinite;
+  border-radius: var(--radius-sm);
+}

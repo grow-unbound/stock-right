@@ -1,0 +1,24 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8"/>
+<link rel="stylesheet" href="../colors_and_type.css"/>
+<style>
+  body { padding: 24px; background: var(--bg-page); }
+  .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+  .kpi { padding: 18px 20px; background: var(--bg-surface); border: 1px solid var(--border-default); border-radius: var(--radius-md); }
+  .label { font-family: var(--font-mono); font-size: 11px; font-weight: 500; letter-spacing: 0.1em; text-transform: uppercase; color: var(--text-tertiary); margin-bottom: 8px; }
+  .num { font-family: var(--font-display); font-size: 38px; font-weight: 700; line-height: 1.1; letter-spacing: -0.01em; font-variant-numeric: tabular-nums; color: var(--text-primary); }
+  .sub { font-family: var(--font-body); font-size: 13px; color: var(--text-secondary); margin-top: 6px; }
+  .delta-up { color: var(--inward); font-weight: 500; }
+  .delta-down { color: var(--outward); font-weight: 500; }
+</style>
+</head>
+<body>
+  <div class="grid">
+    <div class="kpi"><div class="label">Today's Inward</div><div class="num">240</div><div class="sub">bags · <span class="delta-up">+18 from yesterday</span></div></div>
+    <div class="kpi"><div class="label">Collection Due</div><div class="num">₹2,47,500</div><div class="sub">across 7 parties</div></div>
+    <div class="kpi"><div class="label">Stock On Hand</div><div class="num">12.4 <span style="font-size:24px; color:var(--text-secondary)">Lakh</span></div><div class="sub">bags across 4 godowns</div></div>
+  </div>
+</body>
+</html>

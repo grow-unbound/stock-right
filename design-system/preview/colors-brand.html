@@ -1,0 +1,29 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8"/>
+<link rel="stylesheet" href="../colors_and_type.css"/>
+<style>
+  body { padding: 20px; background: var(--bg-page); }
+  .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+  .swatch { border: 1px solid var(--border-default); border-radius: var(--radius-md); overflow: hidden; background: var(--bg-surface); }
+  .chip { height: 64px; display: flex; align-items: center; justify-content: center; font-family: var(--font-body); font-weight: 500; font-size: 14px; }
+  .meta { padding: 10px 12px; border-top: 1px solid var(--border-default); }
+  .name { font-family: var(--font-mono); font-size: 11px; font-weight: 500; color: var(--text-primary); letter-spacing: 0.04em; }
+  .hex { font-family: var(--font-mono); font-size: 11px; color: var(--text-tertiary); margin-top: 2px; }
+  .note { grid-column: 1 / -1; font-family: var(--font-body); font-size: 12px; color: var(--text-secondary); padding: 10px 12px; background: var(--bg-subtle); border-radius: var(--radius-md); border: 1px solid var(--border-default); }
+  .note b { color: var(--text-primary); font-weight: 600; }
+</style>
+</head>
+<body>
+  <div class="grid">
+    <div class="swatch"><div class="chip" style="background:#C8712A; color:#fff;">brand-ui</div><div class="meta"><div class="name">brand-ui · fills only</div><div class="hex">#C8712A · 3.59:1</div></div></div>
+    <div class="swatch"><div class="chip" style="background:#AD5E1F; color:#fff;">hover</div><div class="meta"><div class="name">brand-ui-hover</div><div class="hex">#AD5E1F</div></div></div>
+    <div class="swatch"><div class="chip" style="background:#9A5418; color:#fff;">press</div><div class="meta"><div class="name">brand-ui-press</div><div class="hex">#9A5418</div></div></div>
+    <div class="swatch"><div class="chip" style="background:#FFFFFF; color:#8C4A12;">brand-text</div><div class="meta"><div class="name">brand-text · text only</div><div class="hex">#8C4A12 · 6.77:1 AA+</div></div></div>
+    <div class="swatch"><div class="chip" style="background:#F5E8D8; color:#8C4A12;">subtle</div><div class="meta"><div class="name">brand-subtle</div><div class="hex">#F5E8D8</div></div></div>
+    <div class="swatch"><div class="chip" style="background:#FFFFFF; border: 2px solid #E0B08A; color:#8C4A12;">border</div><div class="meta"><div class="name">brand-border</div><div class="hex">#E0B08A</div></div></div>
+    <div class="note"><b>Rule:</b> If it's text → <code style="font-family:var(--font-mono)">brand-text</code>. If it's a button, icon, or indicator → <code style="font-family:var(--font-mono)">brand-ui</code>. Amber's luminance physically prevents 7:1 contrast on any background — splitting the brand into two tokens is the fix.</div>
+  </div>
+</body>
+</html>

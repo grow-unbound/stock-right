@@ -1,0 +1,34 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8"/>
+<link rel="stylesheet" href="../colors_and_type.css"/>
+<style>
+  body { padding: 22px; background: var(--bg-page); display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  .col { display: flex; flex-direction: column; gap: 8px; }
+  .head { font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase; }
+  .head.good { color: var(--inward); }
+  .head.bad { color: var(--outward); }
+  .line { padding: 10px 14px; background: var(--bg-surface); border: 1px solid var(--border-default); border-radius: var(--radius-md); font-family: var(--font-body); font-size: 13px; color: var(--text-primary); }
+  .line.bad { color: var(--text-tertiary); text-decoration: line-through; text-decoration-color: var(--outward-border); }
+</style>
+</head>
+<body>
+  <div class="col">
+    <div class="head good">Good · plain, past tense, specific</div>
+    <div class="line">240 bags recorded ✓</div>
+    <div class="line">Updated</div>
+    <div class="line">We couldn't find that party</div>
+    <div class="line">Please log in again</div>
+    <div class="line">You're offline. Entry saved, will upload when connected.</div>
+  </div>
+  <div class="col">
+    <div class="head bad">Avoid · technical, vague, blameful</div>
+    <div class="line bad">Transaction committed successfully</div>
+    <div class="line bad">Sync completed</div>
+    <div class="line bad">Record not found</div>
+    <div class="line bad">Session expired</div>
+    <div class="line bad">Network request failed</div>
+  </div>
+</body>
+</html>

@@ -1,0 +1,30 @@
+<!doctype html>
+<html data-theme="dark">
+<head>
+<meta charset="utf-8"/>
+<link rel="stylesheet" href="../colors_and_type.css"/>
+<style>
+  body { padding: 20px; background: var(--bg-page); }
+  .grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+  .swatch { border: 1px solid var(--border-default); border-radius: var(--radius-md); overflow: hidden; background: var(--bg-surface); }
+  .chip { height: 56px; display: flex; align-items: center; justify-content: center; font-family: var(--font-body); font-weight: 500; font-size: 13px; }
+  .meta { padding: 8px 10px; border-top: 1px solid var(--border-default); }
+  .name { font-family: var(--font-mono); font-size: 10px; font-weight: 500; color: var(--text-primary); letter-spacing: 0.04em; }
+  .hex { font-family: var(--font-mono); font-size: 10px; color: var(--text-tertiary); margin-top: 2px; }
+  .note { grid-column: 1 / -1; font-family: var(--font-body); font-size: 12px; color: var(--text-secondary); padding: 10px 12px; background: var(--bg-subtle); border-radius: var(--radius-md); border: 1px solid var(--border-default); }
+</style>
+</head>
+<body>
+  <div class="grid">
+    <div class="swatch"><div class="chip" style="background:#12100B; color:#F0EBE0;">page</div><div class="meta"><div class="name">dm-bg-page</div><div class="hex">#12100B</div></div></div>
+    <div class="swatch"><div class="chip" style="background:#1F1C14; color:#F0EBE0;">surface</div><div class="meta"><div class="name">dm-bg-surface</div><div class="hex">#1F1C14</div></div></div>
+    <div class="swatch"><div class="chip" style="background:#2C281C; color:#F0EBE0;">subtle</div><div class="meta"><div class="name">dm-bg-subtle</div><div class="hex">#2C281C</div></div></div>
+    <div class="swatch"><div class="chip" style="background:#3A3325; color:#F0EBE0;">inset</div><div class="meta"><div class="name">dm-bg-inset</div><div class="hex">#3A3325</div></div></div>
+
+    <div class="swatch"><div class="chip" style="background:#1F1C14; color:#E8943A; font-family:var(--font-display); font-weight:600;">brand</div><div class="meta"><div class="name">dm-brand-ui</div><div class="hex">#E8943A · 7.07:1</div></div></div>
+    <div class="swatch"><div class="chip" style="background:#E8943A; color:#2A1F12; font-weight:600;">CTA</div><div class="meta"><div class="name">dm-cta-text</div><div class="hex">#2A1F12 · soil-tinted, ~6:1 AA</div></div></div>
+    <div class="swatch"><div class="chip" style="background:#1F1C14; color:#34C4AD;">inward</div><div class="meta"><div class="name">dm-inward</div><div class="hex">#34C4AD · 7.81:1</div></div></div>
+    <div class="swatch"><div class="chip" style="background:#1F1C14; color:#E8705A;">outward</div><div class="meta"><div class="name">dm-outward</div><div class="hex">#E8705A · 5.59:1</div></div></div>
+  </div>
+</body>
+</html>

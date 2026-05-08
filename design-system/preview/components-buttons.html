@@ -1,0 +1,25 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8"/>
+<link rel="stylesheet" href="../colors_and_type.css"/>
+<style>
+  body { padding: 24px; background: var(--bg-page); display: flex; flex-direction: column; gap: 16px; align-items: flex-start; }
+  .btn { font-family: var(--font-body); font-weight: 500; border-radius: var(--radius-md); border: 1.5px solid transparent; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 8px; transition: background var(--duration-fast) var(--ease-out); }
+  .btn-primary { background: var(--brand-ui); color: white; height: 36px; padding: 0 16px; font-size: 14px; }
+  .btn-secondary { background: var(--bg-subtle); color: var(--text-primary); border-color: var(--border-default); height: 36px; padding: 0 16px; font-size: 14px; }
+  .btn-ghost { background: transparent; color: var(--text-primary); border-color: var(--border-default); height: 36px; padding: 0 16px; font-size: 14px; }
+  .btn-danger { background: var(--outward-bg); color: var(--outward); border-color: var(--outward-border); height: 36px; padding: 0 16px; font-size: 14px; }
+  .btn-sm { height: 28px; padding: 0 12px; font-size: 13px; }
+  .btn-lg { height: 42px; padding: 0 20px; font-size: 15px; }
+  .btn-pill { border-radius: 9999px; }
+  .row { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+  .label { font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--text-tertiary); width: 90px; }
+</style>
+</head>
+<body>
+  <div class="row"><div class="label">Variants</div><button class="btn btn-primary">Record inward</button><button class="btn btn-secondary">Cancel</button><button class="btn btn-ghost">Skip</button><button class="btn btn-danger">Delete entry</button></div>
+  <div class="row"><div class="label">Sizes</div><button class="btn btn-primary btn-sm">Small</button><button class="btn btn-primary">Default</button><button class="btn btn-primary btn-lg">Large</button></div>
+  <div class="row"><div class="label">Pill</div><button class="btn btn-primary btn-pill">+ New party</button><button class="btn btn-secondary btn-pill">All godowns</button></div>
+</body>
+</html>

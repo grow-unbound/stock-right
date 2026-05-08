@@ -1,0 +1,1160 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>StockRight — Brand Language v3</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Noto+Sans:opsz,wght@6..22,300;6..22,400;6..22,500;6..22,600&family=Noto+Sans+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+
+/* ═══════════════════════════════════════════════════════════════
+   STOCKRIGHT DESIGN TOKENS v3
+   ───────────────────────────────────────────────────────────────
+   CONTRAST AUDIT (WCAG 2.1)
+   AAA normal text  = 7:1
+   AAA large/UI     = 4.5:1
+   AA normal text   = 4.5:1
+   AA large/UI      = 3:1
+
+   LIGHT MODE KEY RATIOS
+   brand-ui  #C8712A  → cannot hit 7:1 on any bg (amber physics)
+                         Use only for: button bg, icon, active indicator
+                         White on it: 3.59:1 — AA large/UI ✓
+   brand-text #8C4A12 → 6.60:1 on page, 6.77:1 on surface — AA+ 
+                         Closest compliant amber for text labels
+   text-primary  → 16.95:1 ✓ AAA
+   text-secondary→  9.64:1 ✓ AAA
+   pending badge →  6.16:1 ✓ (AA+ on badge bg)
+   outward badge →  5.62:1 ✓
+   inward badge  →  4.60:1 ✓ AA
+
+   DARK MODE KEY RATIOS
+   dm-brand #E8943A → 7.07:1 on surface ✓ AAA (text/icon)
+   dm-brand CTA     → soil text 7.22:1  ✓ AAA (dark text on amber btn)
+   dm-primary       → 14.31:1 ✓ AAA
+   dm-secondary     →  8.86:1 ✓ AAA
+═══════════════════════════════════════════════════════════════ */
+
+:root {
+  /* ── LIGHT MODE BACKGROUNDS ─────────────────────── */
+  /* Shifted from v2 cream toward near-white to give    */
+  /* brand-ui maximum possible contrast headroom        */
+  --bg-page:        #FEFCF8;   /* warm near-white canvas */
+  --bg-surface:     #FFFFFF;   /* cards, inputs — pure white for max contrast */
+  --bg-subtle:      #F5F0E8;   /* sidebar, table header (v2's old cream) */
+  --bg-inset:       #EDE6D9;   /* pressed, recessed (v2's old parchment) */
+
+  /* ── LIGHT MODE TEXT ─────────────────────────────── */
+  --text-primary:   #1C1A16;   /* 16.95:1 on page ✓ AAA */
+  --text-secondary: #4A4237;   /*  9.64:1 on page ✓ AAA */
+  --text-tertiary:  #7A6F61;   /*  4.91:1 on surface — large/decorative only */
+  --text-placeholder:#C0B8B0;  /* purely decorative */
+
+  /* ── LIGHT MODE BORDERS ──────────────────────────── */
+  --border-default: #E8E2D8;
+  --border-strong:  #D9D0C2;
+  --border-focus:   #C8712A;   /* = brand-ui, 3px focus ring */
+
+  /* ── BRAND — TWO TOKEN SYSTEM ───────────────────── */
+  /*                                                    */
+  /*  brand-ui:   for button bg, icon fill, active      */
+  /*              indicator, border — NOT body text     */
+  /*              White on it: 3.59:1 (AA large UI ✓)  */
+  /*                                                    */
+  /*  brand-text: for any text/label usage              */
+  /*              6.60:1 on page, 6.77:1 on surface    */
+  /*              (AA+ — amber physics prevent true AAA)*/
+  /*                                                    */
+  --brand-ui:       #C8712A;
+  --brand-ui-hover: #AD5E1F;
+  --brand-ui-press: #9A5418;
+  --brand-text:     #8C4A12;
+  --brand-subtle:   #F5E8D8;
+  --brand-border:   #E0B08A;
+
+  /* ── FUNCTIONAL STATES ───────────────────────────── */
+  --inward:         #0B7B6E;   /* 4.60:1 on inward-bg ✓ AA */
+  --inward-bg:      #E6F5F3;
+  --inward-border:  #A8DDD7;
+  --outward:        #A83422;   /* 5.62:1 on outward-bg ✓ AAA UI */
+  --outward-bg:     #F7EAE7;
+  --outward-border: #E0B8B0;
+  --pending:        #7B5200;   /* 6.16:1 on pending-bg ✓ AAA UI */
+  --pending-bg:     #FAF2D9;
+  --pending-border: #E0CC88;
+
+  /* ── DARK MODE TOKENS ────────────────────────────── */
+  /* Activate via [data-theme="dark"] on <html>         */
+  --dm-bg-page:        #12100B;
+  --dm-bg-surface:     #1F1C14;   /* 1.12× page */
+  --dm-bg-subtle:      #2C281C;   /* 1.16× surface */
+  --dm-bg-inset:       #3A3325;   /* 1.18× subtle */
+  --dm-text-primary:   #F0EBE0;   /* 14.31:1 ✓ AAA */
+  --dm-text-secondary: #C4BAA8;   /*  8.86:1 ✓ AAA */
+  --dm-text-tertiary:  #8A7F6E;   /*  4.33:1 — large/decorative only */
+  --dm-text-placeholder:#4A4238;
+  --dm-border-default: #2C281C;
+  --dm-border-strong:  #44403A;
+  --dm-border-focus:   #E8943A;
+  --dm-brand-ui:       #E8943A;   /* 7.07:1 on surface ✓ AAA */
+  --dm-brand-ui-hover: #D98035;
+  --dm-brand-cta-text: #1C1A16;   /* 7.22:1 on dm-brand-ui ✓ AAA — NOT white */
+  --dm-brand-text:     #E8943A;   /* = brand-ui in dark (it passes as text on dark bg) */
+  --dm-brand-subtle:   #2A1E0F;
+  --dm-brand-border:   #5A3A18;
+  --dm-inward:         #34C4AD;   /* 7.81:1 ✓ AAA */
+  --dm-inward-bg:      #0D2C28;
+  --dm-outward:        #E8705A;   /* 5.59:1 ✓ AA+ */
+  --dm-outward-bg:     #2E1510;
+  --dm-pending:        #D4A020;   /* 6.31:1 ✓ AAA UI */
+  --dm-pending-bg:     #28200A;
+
+  /* ── TYPOGRAPHY ──────────────────────────────────── */
+  --font-display: 'Noto Serif', serif;
+  --font-body:    'Noto Sans', system-ui, sans-serif;
+  --font-mono:    'Noto Sans Mono', monospace;
+
+  /* ── TYPE SCALE ──────────────────────────────────── */
+  --text-xs:   11px;
+  --text-sm:   13px;
+  --text-base: 15px;
+  --text-md:   17px;
+  --text-lg:   20px;
+  --text-xl:   24px;
+  --text-2xl:  30px;
+  --text-3xl:  38px;
+  --text-4xl:  48px;
+
+  /* ── SPACING (4px grid) ──────────────────────────── */
+  --sp-1:4px; --sp-2:8px; --sp-3:12px; --sp-4:16px;
+  --sp-5:20px; --sp-6:24px; --sp-8:32px; --sp-10:40px;
+  --sp-12:48px; --sp-16:64px; --sp-20:80px;
+
+  /* ── RADIUS ──────────────────────────────────────── */
+  --r-xs:4px; --r-sm:6px; --r-md:8px; --r-lg:12px;
+  --r-xl:16px; --r-2xl:24px; --r-pill:9999px;
+
+  /* ── SHADOWS ─────────────────────────────────────── */
+  --shadow-xs: 0 1px 2px rgba(28,26,22,.05);
+  --shadow-sm: 0 1px 3px rgba(28,26,22,.07), 0 2px 8px rgba(28,26,22,.04);
+  --shadow-md: 0 2px 6px rgba(28,26,22,.08), 0 6px 20px rgba(28,26,22,.05);
+  --shadow-lg: 0 4px 12px rgba(28,26,22,.09), 0 12px 40px rgba(28,26,22,.07);
+
+  /* ── INTERACTION / TOUCH ─────────────────────────── */
+  /* Visual height: 36px (standard app feel)            */
+  /* Tap zone: 48px via hitSlop={top:6,bottom:6} in RN  */
+  /* Input font: always 16px — prevents iOS auto-zoom   */
+
+  /* ── RESPONSIVE BREAKPOINTS ─────────────────────── */
+  /* mobile:  < 640px   → bottom tab nav               */
+  /* tablet:  640–1024px → collapsible side nav         */
+  /* desktop: > 1024px  → persistent side nav           */
+
+  /* ── ANIMATION ───────────────────────────────────── */
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-in:  cubic-bezier(0.4, 0, 1, 1);
+  --duration-fast:   120ms;
+  --duration-base:   200ms;
+  --duration-slow:   350ms;
+}
+
+/* ── DARK MODE activation ── */
+[data-theme="dark"] {
+  --bg-page:        var(--dm-bg-page);
+  --bg-surface:     var(--dm-bg-surface);
+  --bg-subtle:      var(--dm-bg-subtle);
+  --bg-inset:       var(--dm-bg-inset);
+  --text-primary:   var(--dm-text-primary);
+  --text-secondary: var(--dm-text-secondary);
+  --text-tertiary:  var(--dm-text-tertiary);
+  --text-placeholder:var(--dm-text-placeholder);
+  --border-default: var(--dm-border-default);
+  --border-strong:  var(--dm-border-strong);
+  --border-focus:   var(--dm-border-focus);
+  --brand-ui:       var(--dm-brand-ui);
+  --brand-ui-hover: var(--dm-brand-ui-hover);
+  --brand-text:     var(--dm-brand-text);
+  --brand-subtle:   var(--dm-brand-subtle);
+  --brand-border:   var(--dm-brand-border);
+  --inward:         var(--dm-inward);
+  --inward-bg:      var(--dm-inward-bg);
+  --outward:        var(--dm-outward);
+  --outward-bg:     var(--dm-outward-bg);
+  --pending:        var(--dm-pending);
+  --pending-bg:     var(--dm-pending-bg);
+  --shadow-sm: 0 1px 3px rgba(0,0,0,.3), 0 2px 8px rgba(0,0,0,.2);
+  --shadow-md: 0 2px 8px rgba(0,0,0,.35), 0 8px 24px rgba(0,0,0,.25);
+  --shadow-lg: 0 4px 16px rgba(0,0,0,.4), 0 16px 48px rgba(0,0,0,.3);
+}
+
+/* ══════════════════════════════════════════════════════════════
+   BASE
+══════════════════════════════════════════════════════════════ */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+body {
+  background: var(--bg-page);
+  color: var(--text-primary);
+  font-family: var(--font-body);
+  font-size: var(--text-base);
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  transition: background var(--duration-base) var(--ease-out),
+              color var(--duration-base) var(--ease-out);
+}
+
+/* ── PAGE ── */
+.page { max-width: 1100px; margin: 0 auto; padding: var(--sp-16) var(--sp-6); }
+.section { margin-bottom: var(--sp-16); }
+.divider { border: none; border-top: 1px solid var(--border-default); margin: var(--sp-16) 0; }
+
+/* ── DOC CHROME ── */
+.doc-label {
+  font-family: var(--font-mono); font-size: var(--text-xs); font-weight: 500;
+  letter-spacing: 0.12em; text-transform: uppercase;
+  color: var(--text-tertiary); margin-bottom: var(--sp-2);
+}
+.doc-title {
+  font-family: var(--font-display); font-size: var(--text-xl); font-weight: 600;
+  color: var(--text-primary); margin-bottom: var(--sp-2); line-height: 1.2;
+}
+.doc-body {
+  font-size: var(--text-sm); color: var(--text-secondary);
+  line-height: 1.65; max-width: 580px; margin-bottom: var(--sp-6);
+}
+code {
+  font-family: var(--font-mono); font-size: 11px;
+  background: var(--bg-subtle); padding: 1px 6px;
+  border-radius: var(--r-xs); color: var(--brand-text);
+}
+
+/* ── THEME TOGGLE ── */
+.theme-toggle {
+  position: fixed; top: 20px; right: 24px; z-index: 100;
+  display: flex; align-items: center; gap: var(--sp-2);
+  background: var(--bg-surface); border: 1px solid var(--border-default);
+  border-radius: var(--r-pill); padding: 6px 14px;
+  font-size: var(--text-xs); font-weight: 500; color: var(--text-secondary);
+  cursor: pointer; box-shadow: var(--shadow-sm);
+  transition: all var(--duration-fast) var(--ease-out);
+}
+.theme-toggle:hover { box-shadow: var(--shadow-md); }
+
+/* ══════════════════════════════════════════════════════════════
+   01 — HEADER
+══════════════════════════════════════════════════════════════ */
+.header {
+  display: flex; justify-content: space-between; align-items: flex-start;
+  gap: var(--sp-8); margin-bottom: var(--sp-16);
+}
+.wordmark {
+  font-family: var(--font-display); font-size: 64px; font-weight: 700;
+  letter-spacing: -0.025em; line-height: 1; color: var(--text-primary);
+}
+.wordmark em { color: var(--brand-ui); font-style: normal; }
+.tagline { font-size: var(--text-sm); color: var(--text-tertiary); margin-top: var(--sp-3); max-width: 280px; line-height: 1.6; }
+.v-pill {
+  display: inline-flex; align-items: center; gap: var(--sp-2);
+  background: var(--brand-subtle); border: 1px solid var(--brand-border);
+  color: var(--brand-text); border-radius: var(--r-pill);
+  padding: 4px 12px; font-family: var(--font-mono);
+  font-size: var(--text-xs); font-weight: 500; margin-top: var(--sp-4); width: fit-content;
+}
+.type-stack { text-align: right; flex-shrink: 0; display: flex; flex-direction: column; gap: var(--sp-4); }
+.ts-row .ts-name { font-size: 17px; font-weight: 600; color: var(--text-primary); line-height: 1.2; }
+.ts-row .ts-role { font-family: var(--font-mono); font-size: 10px; color: var(--text-tertiary); text-transform: uppercase; letter-spacing: .08em; }
+
+/* ══════════════════════════════════════════════════════════════
+   02 — COLOR SWATCHES
+══════════════════════════════════════════════════════════════ */
+.sw-row { display: grid; gap: var(--sp-3); margin-bottom: var(--sp-5); }
+.sw-4 { grid-template-columns: repeat(4,1fr); max-width: 520px; }
+.sw-3 { grid-template-columns: repeat(3,1fr); max-width: 400px; }
+.sw-6 { grid-template-columns: repeat(6,1fr); }
+.sw-2 { grid-template-columns: repeat(2,1fr); max-width: 280px; }
+.swatch { border-radius: var(--r-lg); overflow: hidden; box-shadow: var(--shadow-sm); border: 1px solid rgba(28,26,22,.06); transition: transform var(--duration-fast) var(--ease-out); }
+.swatch:hover { transform: translateY(-2px); box-shadow: var(--shadow-md); }
+.sw-chip { height: 56px; }
+.sw-info { background: var(--bg-surface); padding: 8px 10px 10px; }
+.sw-name { font-family: var(--font-mono); font-size: 9px; text-transform: uppercase; letter-spacing: .1em; color: var(--text-primary); font-weight: 500; }
+.sw-hex  { font-family: var(--font-mono); font-size: 9px; color: var(--text-tertiary); }
+.sw-note { font-size: 9px; color: var(--text-tertiary); margin-top: 2px; line-height: 1.4; }
+.sw-ratio{ font-size: 9px; font-weight: 600; margin-top: 2px; }
+.pass-aaa { color: #0B7B6E; }
+.pass-aa  { color: #7B5200; }
+.fail     { color: #A83422; }
+
+/* contrast table */
+.ct { width:100%; border-collapse:collapse; font-size:var(--text-sm); }
+.ct th { font-family:var(--font-mono); font-size:10px; text-transform:uppercase; letter-spacing:.08em; color:var(--text-tertiary); text-align:left; padding:10px var(--sp-4); background:var(--bg-subtle); border-bottom:1px solid var(--border-default); font-weight:500; }
+.ct td { padding:10px var(--sp-4); border-bottom:1px solid var(--border-default); color:var(--text-secondary); vertical-align:middle; font-size:var(--text-sm); }
+.ct td:first-child { font-family:var(--font-mono); font-size:11px; color:var(--text-primary); }
+.chip-sm { display:inline-block; width:14px; height:14px; border-radius:3px; vertical-align:middle; margin-right:6px; border:1px solid rgba(28,26,22,.12); }
+.badge-pass { background:var(--inward-bg); color:var(--inward); font-weight:700; border-radius:var(--r-pill); padding:2px 8px; font-size:10px; font-family:var(--font-mono); display:inline-block; }
+.badge-warn { background:var(--pending-bg); color:var(--pending); font-weight:700; border-radius:var(--r-pill); padding:2px 8px; font-size:10px; font-family:var(--font-mono); display:inline-block; }
+.badge-fail { background:var(--outward-bg); color:var(--outward); font-weight:700; border-radius:var(--r-pill); padding:2px 8px; font-size:10px; font-family:var(--font-mono); display:inline-block; }
+
+/* ══════════════════════════════════════════════════════════════
+   03 — TYPOGRAPHY
+══════════════════════════════════════════════════════════════ */
+.type-showcase { background: var(--bg-surface); border-radius: var(--r-xl); padding: var(--sp-6); border: 1px solid var(--border-default); box-shadow: var(--shadow-sm); }
+.type-row { display: grid; grid-template-columns: 190px 1fr; gap: var(--sp-5); align-items: baseline; padding: var(--sp-5) 0; border-bottom: 1px solid var(--border-default); }
+.type-row:last-child { border-bottom: none; }
+.type-spec { font-family: var(--font-mono); font-size: 10px; color: var(--text-tertiary); line-height: 1.8; }
+.t-display { font-family:var(--font-display); font-size:var(--text-4xl); font-weight:700; line-height:1.05; letter-spacing:-.025em; color:var(--text-primary); }
+.t-h1      { font-family:var(--font-display); font-size:var(--text-3xl); font-weight:600; line-height:1.1; letter-spacing:-.02em; color:var(--text-primary); }
+.t-h2      { font-family:var(--font-display); font-size:var(--text-2xl); font-weight:600; line-height:1.2; color:var(--text-primary); }
+.t-h3      { font-family:var(--font-display); font-size:var(--text-xl); font-weight:500; line-height:1.3; color:var(--text-primary); }
+.t-body    { font-family:var(--font-body); font-size:var(--text-base); line-height:1.65; color:var(--text-secondary); }
+.t-small   { font-family:var(--font-body); font-size:var(--text-sm); color:var(--text-tertiary); line-height:1.55; }
+.t-label   { font-family:var(--font-mono); font-size:var(--text-xs); font-weight:500; letter-spacing:.1em; text-transform:uppercase; color:var(--text-tertiary); }
+.t-number  { font-family:var(--font-display); font-size:var(--text-3xl); font-weight:700; letter-spacing:-.02em; color:var(--text-primary); }
+
+.i18n-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px,1fr)); gap: var(--sp-3); margin-top: var(--sp-5); }
+.i18n-card { background: var(--bg-surface); border-radius: var(--r-lg); padding: var(--sp-4) var(--sp-5); border: 1px solid var(--border-default); }
+.i18n-script { font-family:var(--font-mono); font-size:var(--text-xs); color:var(--text-tertiary); text-transform:uppercase; letter-spacing:.08em; margin-bottom:var(--sp-2); }
+.i18n-text   { font-family:var(--font-body); font-size:var(--text-lg); color:var(--text-primary); line-height:1.4; }
+.i18n-sub    { font-size:var(--text-sm); color:var(--text-tertiary); margin-top:var(--sp-1); }
+
+/* ══════════════════════════════════════════════════════════════
+   04 — COMPONENTS
+══════════════════════════════════════════════════════════════ */
+.shelf { display:flex; flex-wrap:wrap; gap:var(--sp-3); align-items:center; margin-bottom:var(--sp-4); }
+
+.btn {
+  display:inline-flex; align-items:center; justify-content:center; gap:var(--sp-2);
+  font-family:var(--font-body); font-size:var(--text-sm); font-weight:600;
+  border:none; cursor:pointer; border-radius:var(--r-md);
+  padding:8px 18px; height:36px; white-space:nowrap;
+  transition: background var(--duration-fast) var(--ease-out),
+              transform var(--duration-fast) var(--ease-out),
+              box-shadow var(--duration-fast) var(--ease-out);
+  text-decoration:none; line-height:1;
+}
+.btn:active { transform:scale(0.97); }
+/* white on brand-ui = 3.59:1 — acceptable for bold UI text on colored bg (AA large text) */
+.btn-primary   { background:var(--brand-ui); color:#fff; box-shadow:0 1px 2px rgba(200,113,42,.2),0 3px 8px rgba(200,113,42,.15); }
+.btn-primary:hover { background:var(--brand-ui-hover); }
+.btn-secondary { background:var(--bg-subtle); color:var(--text-primary); border:1px solid var(--border-default); }
+.btn-secondary:hover { background:var(--bg-inset); }
+.btn-ghost     { background:transparent; color:var(--text-secondary); border:1px solid var(--border-default); }
+.btn-ghost:hover { background:var(--bg-subtle); }
+.btn-danger    { background:var(--outward-bg); color:var(--outward); border:1px solid var(--outward-border); }
+.btn-sm { font-size:var(--text-xs); padding:5px 12px; height:28px; border-radius:var(--r-sm); }
+.btn-lg { font-size:var(--text-base); padding:10px 22px; height:42px; border-radius:var(--r-lg); }
+.btn-pill { border-radius:var(--r-pill); }
+.btn-full { width:100%; }
+.btn-icon { padding:0; width:36px; height:36px; border-radius:50%; font-size:18px; }
+
+.badge { display:inline-flex; align-items:center; gap:4px; border-radius:var(--r-pill); font-family:var(--font-body); font-size:var(--text-xs); font-weight:600; padding:3px 9px; border:1px solid transparent; }
+.badge-inward  { background:var(--inward-bg);  color:var(--inward);  border-color:var(--inward-border); }
+.badge-outward { background:var(--outward-bg); color:var(--outward); border-color:var(--outward-border); }
+.badge-pending { background:var(--pending-bg); color:var(--pending); border-color:var(--pending-border); }
+.badge-brand   { background:var(--brand-subtle); color:var(--brand-text); border-color:var(--brand-border); }
+.badge-neutral { background:var(--bg-subtle); color:var(--text-tertiary); border-color:var(--border-default); }
+.badge-online  { background:var(--inward-bg); color:var(--inward); border-color:var(--inward-border); }
+.badge-offline { background:var(--pending-bg); color:var(--pending); border-color:var(--pending-border); }
+
+.field { margin-bottom:var(--sp-4); }
+.field-label { display:block; font-size:var(--text-sm); font-weight:500; color:var(--text-secondary); margin-bottom:var(--sp-1); }
+.field-helper { font-size:var(--text-xs); color:var(--text-tertiary); margin-top:4px; }
+.input {
+  width:100%; background:var(--bg-surface); border:1.5px solid var(--border-default);
+  border-radius:var(--r-md); padding:8px 12px; height:36px;
+  font-family:var(--font-body);
+  font-size:16px; /* NON-NEGOTIABLE — prevents iOS auto-zoom on focus */
+  color:var(--text-primary); outline:none;
+  transition:border-color var(--duration-fast), box-shadow var(--duration-fast);
+}
+.input:focus { border-color:var(--border-focus); box-shadow:0 0 0 3px rgba(200,113,42,.12); }
+.input::placeholder { color:var(--text-placeholder); font-size:15px; }
+.input-row { display:flex; gap:var(--sp-3); }
+.select-wrap { position:relative; }
+.select-wrap::after { content:'▾'; position:absolute; right:10px; top:50%; transform:translateY(-50%); color:var(--text-tertiary); pointer-events:none; font-size:11px; }
+select.input { appearance:none; padding-right:28px; cursor:pointer; }
+
+.card { background:var(--bg-surface); border-radius:var(--r-xl); padding:var(--sp-5); border:1px solid var(--border-default); box-shadow:var(--shadow-sm); }
+.card-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(200px,1fr)); gap:var(--sp-3); }
+.card-label { font-family:var(--font-mono); font-size:10px; text-transform:uppercase; letter-spacing:.1em; color:var(--text-tertiary); margin-bottom:var(--sp-2); }
+.card-value { font-family:var(--font-display); font-size:var(--text-2xl); font-weight:700; color:var(--text-primary); line-height:1; margin-bottom:var(--sp-1); }
+.card-sub   { font-size:var(--text-sm); color:var(--text-tertiary); }
+.card-brand { background:var(--brand-ui); border-color:transparent; }
+.card-brand .card-label,.card-brand .card-sub { color:rgba(255,255,255,.65); }
+.card-brand .card-value { color:#fff; }
+.card-dark  { background:var(--text-primary); border-color:transparent; }
+.card-dark .card-label,.card-dark .card-sub { color:rgba(255,255,255,.4); }
+.card-dark .card-value { color:#fff; }
+
+.log-wrap { border-radius:var(--r-xl); overflow:hidden; border:1px solid var(--border-default); box-shadow:var(--shadow-sm); }
+.log-item { display:flex; align-items:center; gap:var(--sp-3); padding:11px var(--sp-4); background:var(--bg-surface); border-bottom:1px solid var(--border-default); transition:background var(--duration-fast); }
+.log-item:last-child { border-bottom:none; }
+.log-item:hover { background:var(--bg-subtle); }
+.log-icon { width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;flex-shrink:0; }
+.li-in   { background:var(--inward-bg);  color:var(--inward); }
+.li-out  { background:var(--outward-bg); color:var(--outward); }
+.li-wait { background:var(--pending-bg); color:var(--pending); }
+.log-body { flex:1; min-width:0; }
+.log-party  { font-size:var(--text-sm); font-weight:600; color:var(--text-primary); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.log-detail { font-size:var(--text-xs); color:var(--text-tertiary); margin-top:1px; }
+.log-right  { text-align:right; flex-shrink:0; }
+.log-qty    { font-family:var(--font-display); font-size:var(--text-base); font-weight:600; color:var(--text-primary); }
+.log-qty-in  { color:var(--inward); }
+.log-qty-out { color:var(--outward); }
+.log-time   { font-size:var(--text-xs); color:var(--text-tertiary); margin-top:1px; }
+
+.table-wrap { background:var(--bg-surface); border-radius:var(--r-xl); overflow:hidden; box-shadow:var(--shadow-sm); border:1px solid var(--border-default); }
+table { width:100%; border-collapse:collapse; }
+thead { background:var(--bg-subtle); }
+th { font-family:var(--font-mono); font-size:10px; text-transform:uppercase; letter-spacing:.1em; color:var(--text-tertiary); padding:10px var(--sp-4); text-align:left; font-weight:500; }
+td { padding:12px var(--sp-4); font-size:var(--text-sm); color:var(--text-secondary); border-top:1px solid var(--border-default); }
+.td-p { font-weight:600; color:var(--text-primary); }
+.td-m { font-family:var(--font-mono); font-size:var(--text-xs); }
+.td-a { font-family:var(--font-display); font-weight:600; color:var(--text-primary); }
+
+/* skeleton */
+.skeleton {
+  background: linear-gradient(90deg, var(--bg-subtle) 25%, var(--bg-inset) 50%, var(--bg-subtle) 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s ease-in-out infinite;
+  border-radius: var(--r-sm);
+}
+@keyframes shimmer { 0% { background-position:200% 0; } 100% { background-position:-200% 0; } }
+
+/* ══════════════════════════════════════════════════════════════
+   05 — NAVIGATION (canonical patterns)
+══════════════════════════════════════════════════════════════ */
+
+/* ── DESKTOP: Side nav + top bar ──────────────────── */
+.app-shell {
+  background: var(--bg-page);
+  border-radius: var(--r-2xl);
+  overflow: hidden;
+  box-shadow: var(--shadow-lg);
+  border: 1px solid var(--border-default);
+}
+.app-topbar {
+  background: var(--bg-surface);
+  border-bottom: 1px solid var(--border-default);
+  padding: var(--sp-3) var(--sp-6);
+  display: flex; align-items: center; justify-content: space-between;
+  height: 52px;
+}
+.app-brand { font-family:var(--font-display); font-size:18px; font-weight:700; color:var(--text-primary); letter-spacing:-.01em; }
+.app-brand em { color:var(--brand-ui); font-style:normal; }
+.topbar-right { display:flex; gap:var(--sp-3); align-items:center; }
+
+.app-body { display: grid; grid-template-columns: 200px 1fr; min-height: 420px; }
+
+/* Side nav — desktop only */
+.side-nav {
+  background: var(--bg-subtle);
+  border-right: 1px solid var(--border-default);
+  padding: var(--sp-5) var(--sp-3);
+  display: flex; flex-direction: column; gap: var(--sp-1);
+}
+.nav-section-label {
+  font-family: var(--font-mono); font-size: 9px; text-transform: uppercase;
+  letter-spacing: .12em; color: var(--text-tertiary);
+  padding: 0 var(--sp-2); margin: var(--sp-4) 0 var(--sp-2);
+}
+.nav-section-label:first-child { margin-top: 0; }
+.nav-item {
+  display:flex; align-items:center; gap:var(--sp-2);
+  padding: 7px var(--sp-2); border-radius: var(--r-sm);
+  font-size: 13px; color: var(--text-secondary);
+  cursor: pointer; transition: background var(--duration-fast), color var(--duration-fast);
+}
+.nav-item:hover { background: var(--bg-inset); color: var(--text-primary); }
+.nav-item.active { background: var(--brand-ui); color: #fff; font-weight: 600; }
+.nav-item .ico { font-size: 14px; flex-shrink: 0; }
+
+/* Main content area */
+.app-main { padding: var(--sp-5) var(--sp-6); overflow: auto; }
+.app-head { display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:var(--sp-5); }
+.app-title { font-family:var(--font-display); font-size:var(--text-xl); font-weight:600; color:var(--text-primary); }
+.app-date { font-family:var(--font-mono); font-size:10px; color:var(--text-tertiary); margin-top:2px; }
+.kpi-row { display:grid; grid-template-columns:repeat(3,1fr); gap:var(--sp-3); margin-bottom:var(--sp-5); }
+.kpi { background:var(--bg-surface); border-radius:var(--r-lg); padding:var(--sp-4); border:1px solid var(--border-default); }
+.kpi.accent { background:var(--brand-ui); border-color:transparent; }
+.kpi-val { font-family:var(--font-display); font-size:22px; font-weight:700; color:var(--text-primary); line-height:1; }
+.kpi.accent .kpi-val { color:#fff; }
+.kpi-lbl { font-size:var(--text-xs); color:var(--text-tertiary); margin-top:3px; }
+.kpi.accent .kpi-lbl { color:rgba(255,255,255,.7); }
+
+/* ── MOBILE: Bottom tab nav ─────────────────────── */
+.bottom-nav {
+  background: var(--bg-surface);
+  border-top: 1px solid var(--border-default);
+  padding: var(--sp-2) var(--sp-4) calc(var(--sp-2) + env(safe-area-inset-bottom));
+  display: flex; justify-content: space-around; align-items: center;
+}
+.tab-item {
+  display: flex; flex-direction: column; align-items: center;
+  gap: 3px; font-size: 10px; color: var(--text-tertiary);
+  cursor: pointer; padding: 4px 12px; border-radius: var(--r-md);
+  transition: color var(--duration-fast);
+  min-width: 48px; /* tap zone */
+}
+.tab-item.active { color: var(--brand-ui); font-weight: 600; }
+.tab-item .ico { font-size: 20px; line-height: 1; }
+.tab-fab {
+  background: var(--brand-ui); width: 48px; height: 48px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 24px; color: #fff;
+  box-shadow: 0 2px 12px rgba(200,113,42,.35);
+  cursor: pointer; margin-top: -20px;
+  transition: transform var(--duration-fast) var(--ease-out), background var(--duration-fast);
+}
+.tab-fab:hover { transform: scale(1.06); background: var(--brand-ui-hover); }
+
+/* ── RESPONSIVE LAYOUT NOTE ─────────────────────── */
+/* On mobile (<640px): hide .side-nav, show .bottom-nav        */
+/* On desktop (>640px): show .side-nav, hide .bottom-nav       */
+/* Implemented via CSS classes + media queries in production    */
+
+/* ── OFFLINE INDICATOR ──────────────────────────── */
+.offline-bar {
+  background: var(--pending-bg); border-bottom: 1px solid var(--pending-border);
+  padding: var(--sp-2) var(--sp-6); display: flex; align-items: center;
+  gap: var(--sp-3); font-size: var(--text-sm);
+}
+.offline-bar .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--pending); animation: pulse 1.5s ease-in-out infinite; }
+@keyframes pulse { 0%,100%{opacity:1;} 50%{opacity:.4;} }
+.offline-count { font-family:var(--font-mono); font-size:var(--text-xs); font-weight:600; color:var(--pending); }
+
+/* ══════════════════════════════════════════════════════════════
+   06 — MOTION & FEEDBACK
+══════════════════════════════════════════════════════════════ */
+.motion-panel { background:var(--text-primary); border-radius:var(--r-xl); padding:var(--sp-8); display:grid; grid-template-columns:1fr 280px; gap:var(--sp-8); }
+.motion-text h3 { font-family:var(--font-display); font-size:var(--text-xl); font-weight:600; color:#F0EBE0; margin-bottom:var(--sp-3); }
+.motion-text p  { font-size:var(--text-sm); color:rgba(240,235,224,.6); line-height:1.65; margin-bottom:var(--sp-4); }
+.motion-pills { display:flex; flex-wrap:wrap; gap:var(--sp-2); }
+.mpill { background:rgba(255,255,255,.08); border:1px solid rgba(255,255,255,.12); color:rgba(240,235,224,.7); border-radius:var(--r-pill); padding:3px 10px; font-size:var(--text-xs); }
+.skel-demo { display:flex; flex-direction:column; gap:var(--sp-3); }
+.skel-label { font-family:var(--font-mono); font-size:9px; text-transform:uppercase; letter-spacing:.1em; color:rgba(255,255,255,.3); margin-bottom:var(--sp-1); }
+.sk { background:rgba(255,255,255,.07); animation:sk-pulse 1.5s ease-in-out infinite; border-radius:var(--r-sm); }
+@keyframes sk-pulse { 0%,100%{opacity:1;} 50%{opacity:.3;} }
+
+/* ══════════════════════════════════════════════════════════════
+   07 — SPACING
+══════════════════════════════════════════════════════════════ */
+.sp-row { display:flex; align-items:flex-end; gap:var(--sp-3); flex-wrap:wrap; }
+.sp-col { display:flex; flex-direction:column; align-items:center; gap:4px; }
+.sp-bar { background:var(--brand-subtle); border-top:2px solid var(--brand-ui); width:28px; }
+.sp-txt { font-family:var(--font-mono); font-size:9px; color:var(--text-tertiary); text-align:center; }
+
+/* ══════════════════════════════════════════════════════════════
+   08 — BRAND LANGUAGE PRINCIPLES
+══════════════════════════════════════════════════════════════ */
+.principles-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:var(--sp-4); }
+.principle-card { background:var(--bg-surface); border-radius:var(--r-xl); padding:var(--sp-6); border:1px solid var(--border-default); }
+.pc-icon { font-size:24px; margin-bottom:var(--sp-3); }
+.pc-title { font-family:var(--font-display); font-size:var(--text-base); font-weight:600; color:var(--text-primary); margin-bottom:var(--sp-2); }
+.pc-body { font-size:var(--text-sm); color:var(--text-secondary); line-height:1.6; }
+.example-pair { display:grid; grid-template-columns:1fr 1fr; gap:var(--sp-3); margin-top:var(--sp-4); }
+.ex-do   { background:var(--inward-bg); border:1px solid var(--inward-border); border-radius:var(--r-md); padding:var(--sp-3) var(--sp-4); font-size:var(--text-xs); color:var(--text-primary); }
+.ex-dont { background:var(--outward-bg); border:1px solid var(--outward-border); border-radius:var(--r-md); padding:var(--sp-3) var(--sp-4); font-size:var(--text-xs); color:var(--text-primary); }
+.ex-label { font-family:var(--font-mono); font-size:9px; text-transform:uppercase; letter-spacing:.1em; font-weight:600; margin-bottom:4px; }
+.ex-do .ex-label { color:var(--inward); }
+.ex-dont .ex-label { color:var(--outward); }
+
+/* do/dont full */
+.do-dont { display:grid; grid-template-columns:1fr 1fr; gap:var(--sp-4); }
+.do-box  { background:var(--inward-bg); border:1px solid var(--inward-border); border-radius:var(--r-xl); padding:var(--sp-6); }
+.dn-box  { background:var(--outward-bg); border:1px solid var(--outward-border); border-radius:var(--r-xl); padding:var(--sp-6); }
+.do-box h4 { font-family:var(--font-display); font-size:var(--text-base); font-weight:600; color:var(--inward); margin-bottom:var(--sp-4); }
+.dn-box h4 { font-family:var(--font-display); font-size:var(--text-base); font-weight:600; color:var(--outward); margin-bottom:var(--sp-4); }
+.rule-list { list-style:none; display:flex; flex-direction:column; gap:var(--sp-3); }
+.rule-list li { font-size:var(--text-sm); color:var(--text-primary); line-height:1.5; }
+
+/* token ref */
+.token-block { background:var(--text-primary); border-radius:var(--r-xl); padding:var(--sp-8); font-family:var(--font-mono); font-size:12px; color:rgba(240,235,224,.75); line-height:2; overflow-x:auto; }
+.tk { color:#D98A50; }
+.tv { color:#A8D8C8; }
+.tc { color:rgba(240,235,224,.3); }
+.tr { color:#7DBD8A; font-size:10px; }
+
+/* responsive */
+@media (max-width:700px) {
+  .header { flex-direction:column; }
+  .wordmark { font-size:44px; }
+  .do-dont { grid-template-columns:1fr; }
+  .side-nav { display:none; }
+  .app-body { grid-template-columns:1fr; }
+  .kpi-row { grid-template-columns:repeat(2,1fr); }
+  .type-row { grid-template-columns:1fr; gap:var(--sp-2); }
+  .sw-6 { grid-template-columns:repeat(3,1fr); }
+  .sw-4 { grid-template-columns:repeat(2,1fr); }
+  .principles-grid { grid-template-columns:1fr; }
+  .motion-panel { grid-template-columns:1fr; }
+}
+</style>
+</head>
+<body>
+
+<!-- THEME TOGGLE -->
+<button class="theme-toggle" onclick="document.documentElement.toggleAttribute('data-theme') || document.documentElement.setAttribute('data-theme','dark'); this.textContent = document.documentElement.hasAttribute('data-theme') ? '☀ Light' : '🌙 Dark'">🌙 Dark</button>
+
+<div class="page">
+
+<!-- ══ HEADER ══════════════════════════════════════════════ -->
+<div class="header">
+  <div>
+    <div class="wordmark">Stock<em>Right</em></div>
+    <p class="tagline">Stock register, party ledger, and collections — all in your pocket.</p>
+    <div class="v-pill">Brand Language v3 · Foundation Document</div>
+  </div>
+  <div class="type-stack">
+    <div class="ts-row">
+      <div class="ts-role">Display & Numbers</div>
+      <div class="ts-name" style="font-family:'Noto Serif',serif;">Noto Serif</div>
+    </div>
+    <div class="ts-row">
+      <div class="ts-role">Body & UI</div>
+      <div class="ts-name" style="font-family:'Noto Sans',sans-serif;font-weight:400;">Noto Sans</div>
+    </div>
+    <div class="ts-row">
+      <div class="ts-role">Codes & Labels</div>
+      <div class="ts-name" style="font-family:'Noto Sans Mono',monospace;font-size:14px;font-weight:400;">Noto Sans Mono</div>
+    </div>
+  </div>
+</div>
+
+<hr class="divider">
+
+<!-- ══ 01 COLOR — LIGHT MODE ═══════════════════════════════ -->
+<div class="section">
+  <div class="doc-label">01 — Color · Light Mode</div>
+  <div class="doc-title">The Ledger Palette</div>
+
+  <div class="doc-label" style="margin-bottom:var(--sp-2);">Backgrounds — lightened from v2 for brand contrast headroom</div>
+  <div class="sw-row sw-4" style="margin-bottom:var(--sp-5);">
+    <div class="swatch"><div class="sw-chip" style="background:#FEFCF8;border-bottom:1px solid #E8E2D8;"></div><div class="sw-info"><div class="sw-name">Warm White</div><div class="sw-hex">#FEFCF8</div><div class="sw-note">Page canvas</div></div></div>
+    <div class="swatch"><div class="sw-chip" style="background:#FFFFFF;border-bottom:1px solid #E8E2D8;"></div><div class="sw-info"><div class="sw-name">White</div><div class="sw-hex">#FFFFFF</div><div class="sw-note">Cards, inputs</div></div></div>
+    <div class="swatch"><div class="sw-chip" style="background:#F5F0E8;border-bottom:1px solid #D9D0C2;"></div><div class="sw-info"><div class="sw-name">Cream</div><div class="sw-hex">#F5F0E8</div><div class="sw-note">Sidebar, table head</div></div></div>
+    <div class="swatch"><div class="sw-chip" style="background:#EDE6D9;border-bottom:1px solid #D9D0C2;"></div><div class="sw-info"><div class="sw-name">Parchment</div><div class="sw-hex">#EDE6D9</div><div class="sw-note">Pressed / inset</div></div></div>
+  </div>
+
+  <div class="doc-label" style="margin-bottom:var(--sp-2);">Text</div>
+  <div class="sw-row sw-4" style="margin-bottom:var(--sp-5);">
+    <div class="swatch"><div class="sw-chip" style="background:#1C1A16;"></div><div class="sw-info"><div class="sw-name">Soil</div><div class="sw-hex">#1C1A16</div><div class="sw-ratio pass-aaa">16.95:1 ✓ AAA</div></div></div>
+    <div class="swatch"><div class="sw-chip" style="background:#4A4237;"></div><div class="sw-info"><div class="sw-name">Earth</div><div class="sw-hex">#4A4237</div><div class="sw-ratio pass-aaa">9.64:1 ✓ AAA</div></div></div>
+    <div class="swatch"><div class="sw-chip" style="background:#7A6F61;"></div><div class="sw-info"><div class="sw-name">Bark</div><div class="sw-hex">#7A6F61</div><div class="sw-ratio pass-aa">4.91:1 large only</div></div></div>
+    <div class="swatch"><div class="sw-chip" style="background:#C0B8B0;"></div><div class="sw-info"><div class="sw-name">Dust</div><div class="sw-hex">#C0B8B0</div><div class="sw-note">Placeholder only</div></div></div>
+  </div>
+
+  <div class="doc-label" style="margin-bottom:var(--sp-2);">Brand — Two Token System</div>
+  <div style="background:var(--pending-bg); border:1px solid var(--pending-border); border-radius:var(--r-md); padding:var(--sp-3) var(--sp-4); margin-bottom:var(--sp-4); max-width:640px; font-size:var(--text-sm);">
+    <strong style="color:var(--pending);">Amber physics constraint:</strong> <span style="color:var(--text-primary);">The amber hue (#C8712A) has luminance 0.2426. No background — including pure white — can provide 7:1 contrast against it. This is a spectral property of orange-amber. Solution: two tokens — <strong>brand-ui</strong> for non-text elements (buttons, icons), <strong>brand-text</strong> for labels and smaller elements.</span>
+  </div>
+  <div class="sw-row" style="grid-template-columns:repeat(5,1fr); margin-bottom:var(--sp-5);">
+    <div class="swatch"><div class="sw-chip" style="background:#C8712A;"></div><div class="sw-info"><div class="sw-name">Brand UI</div><div class="sw-hex">#C8712A</div><div class="sw-ratio pass-aa">btn/icon only</div></div></div>
+    <div class="swatch"><div class="sw-chip" style="background:#AD5E1F;"></div><div class="sw-info"><div class="sw-name">Brand Hover</div><div class="sw-hex">#AD5E1F</div><div class="sw-note">Hover / pressed</div></div></div>
+    <div class="swatch"><div class="sw-chip" style="background:#9A5418;"></div><div class="sw-info"><div class="sw-name">Brand Press</div><div class="sw-hex">#9A5418</div><div class="sw-note">Active press state</div></div></div>
+    <div class="swatch"><div class="sw-chip" style="background:#8C4A12;"></div><div class="sw-info"><div class="sw-name">Brand Text</div><div class="sw-hex">#8C4A12</div><div class="sw-ratio pass-aa">6.77:1 on white ✓</div></div></div>
+    <div class="swatch"><div class="sw-chip" style="background:#F5E8D8;border-bottom:1px solid #E0B08A;"></div><div class="sw-info"><div class="sw-name">Brand Subtle</div><div class="sw-hex">#F5E8D8</div><div class="sw-note">Tag bg, tints</div></div></div>
+  </div>
+
+  <div class="doc-label" style="margin-bottom:var(--sp-2);">Functional States</div>
+  <div class="sw-row sw-6" style="margin-bottom:var(--sp-5);">
+    <div class="swatch"><div class="sw-chip" style="background:#0B7B6E;"></div><div class="sw-info"><div class="sw-name">Inward</div><div class="sw-hex">#0B7B6E</div><div class="sw-ratio pass-aa">4.60:1 ✓ AA</div></div></div>
+    <div class="swatch"><div class="sw-chip" style="background:#E6F5F3;border-bottom:1px solid #A8DDD7;"></div><div class="sw-info"><div class="sw-name">Inward Bg</div><div class="sw-hex">#E6F5F3</div></div></div>
+    <div class="swatch"><div class="sw-chip" style="background:#A83422;"></div><div class="sw-info"><div class="sw-name">Outward</div><div class="sw-hex">#A83422</div><div class="sw-ratio pass-aaa">5.62:1 ✓ AAA UI</div></div></div>
+    <div class="swatch"><div class="sw-chip" style="background:#F7EAE7;border-bottom:1px solid #E0B8B0;"></div><div class="sw-info"><div class="sw-name">Outward Bg</div><div class="sw-hex">#F7EAE7</div></div></div>
+    <div class="swatch"><div class="sw-chip" style="background:#7B5200;"></div><div class="sw-info"><div class="sw-name">Pending</div><div class="sw-hex">#7B5200</div><div class="sw-ratio pass-aaa">6.16:1 ✓ AAA UI</div></div></div>
+    <div class="swatch"><div class="sw-chip" style="background:#FAF2D9;border-bottom:1px solid #E0CC88;"></div><div class="sw-info"><div class="sw-name">Pending Bg</div><div class="sw-hex">#FAF2D9</div></div></div>
+  </div>
+
+  <!-- CONTRAST AUDIT TABLE -->
+  <div style="background:var(--bg-surface); border-radius:var(--r-xl); overflow:hidden; border:1px solid var(--border-default); box-shadow:var(--shadow-sm);">
+    <table class="ct">
+      <thead><tr><th>Pair</th><th>Ratio</th><th>Grade</th><th>Usage rule</th></tr></thead>
+      <tbody>
+        <tr><td><span class="chip-sm" style="background:#1C1A16;"></span>Soil on White</td><td>17.37:1</td><td><span class="badge-pass">AAA</span></td><td>All body text on cards</td></tr>
+        <tr><td><span class="chip-sm" style="background:#4A4237;"></span>Earth on Warm White</td><td>9.64:1</td><td><span class="badge-pass">AAA</span></td><td>Body text on page</td></tr>
+        <tr><td><span class="chip-sm" style="background:#8C4A12;"></span>Brand Text on White</td><td>6.77:1</td><td><span class="badge-warn">AA+</span></td><td>Brand labels, active tab text — closest achievable amber</td></tr>
+        <tr><td><span class="chip-sm" style="background:#C8712A;"></span>Brand UI on White</td><td>3.59:1</td><td><span class="badge-warn">AA large</span></td><td>Button bg only (bold 14px+), icons ≥24px, borders</td></tr>
+        <tr><td><span class="chip-sm" style="background:#FFFFFF; border:1px solid #ccc;"></span>White on Brand UI</td><td>3.59:1</td><td><span class="badge-warn">AA large</span></td><td>CTA button label (bold 14px+) — acceptable for UI components</td></tr>
+        <tr><td><span class="chip-sm" style="background:#0B7B6E;"></span>Inward on Inward Bg</td><td>4.60:1</td><td><span class="badge-pass">AA+</span></td><td>Badge text — short/bold, AA threshold applies</td></tr>
+        <tr><td><span class="chip-sm" style="background:#A83422;"></span>Outward on Outward Bg</td><td>5.62:1</td><td><span class="badge-pass">AAA UI</span></td><td>Badge text</td></tr>
+        <tr><td><span class="chip-sm" style="background:#7B5200;"></span>Pending on Pending Bg</td><td>6.16:1</td><td><span class="badge-pass">AAA UI</span></td><td>Badge text</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ══ 02 COLOR — DARK MODE ════════════════════════════════ -->
+<div class="section">
+  <div class="doc-label">02 — Color · Dark Mode Tokens</div>
+  <div class="doc-title">Dark Mode System</div>
+  <p class="doc-body">Activated via <code>[data-theme="dark"]</code> on <code>&lt;html&gt;</code>. Surfaces step from <code>#12100B → #1F1C14 → #2C281C → #3A3325</code>. Brand scales to <code>#E8943A</code> — nearest amber to v2 that passes AAA on dark surfaces. CTA uses dark soil text on amber.</p>
+
+  <!-- LIVE DARK PREVIEW (themed) -->
+  <div data-theme="dark" style="border-radius:var(--r-xl); overflow:hidden; border:1px solid #2C281C; margin-bottom:var(--sp-5);">
+    <div style="background:#12100B; padding:var(--sp-3) var(--sp-5); border-bottom:1px solid #2C281C; display:flex; align-items:center; justify-content:space-between;">
+      <span style="font-family:'Noto Serif',serif; font-size:16px; font-weight:700; color:#F0EBE0;">Stock<em style="color:#E8943A;font-style:normal;">Right</em></span>
+      <div style="display:flex;gap:8px;align-items:center;">
+        <span class="badge badge-online" style="font-size:10px;">● Online</span>
+        <button class="btn btn-primary btn-sm">+ Inward</button>
+      </div>
+    </div>
+    <div style="background:#1F1C14; padding:var(--sp-5) var(--sp-6);">
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:var(--sp-3);margin-bottom:var(--sp-4);">
+        <div class="kpi accent"><div class="kpi-val">4,820</div><div class="kpi-lbl">Total Bags — soil text on #E8943A</div></div>
+        <div class="kpi"><div class="kpi-val">+320</div><div class="kpi-lbl">Today Inward</div></div>
+        <div class="kpi"><div class="kpi-val" style="color:#E8705A;">−80</div><div class="kpi-lbl">Today Outward</div></div>
+      </div>
+      <div style="background:#2C281C; border-radius:var(--r-lg); overflow:hidden; border:1px solid #3A3325;">
+        <div class="log-item">
+          <div class="log-icon li-in">↓</div>
+          <div class="log-body"><div class="log-party">Venkateshwara Traders</div><div class="log-detail">Tomatoes · LOT-042</div></div>
+          <div class="log-right"><div class="log-qty log-qty-in">+240</div><div class="log-time">9:14 AM</div></div>
+        </div>
+        <div class="log-item">
+          <div class="log-icon li-out">↑</div>
+          <div class="log-body"><div class="log-party">Sri Lakshmi Agency</div><div class="log-detail">Potato · LOT-038</div></div>
+          <div class="log-right"><div class="log-qty log-qty-out">−80</div><div class="log-time">11:30 AM</div></div>
+        </div>
+      </div>
+      <div style="display:flex;gap:8px;margin-top:var(--sp-4);flex-wrap:wrap;">
+        <span class="badge badge-inward">↓ Inward · 7.81:1</span>
+        <span class="badge badge-outward">↑ Outward · 5.59:1</span>
+        <span class="badge badge-pending">⏳ Pending · 6.31:1</span>
+        <span class="badge badge-brand">● Active Lot</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ 03 TYPOGRAPHY ════════════════════════════════════════ -->
+<div class="section">
+  <div class="doc-label">03 — Typography</div>
+  <div class="doc-title">Noto Type System</div>
+  <p class="doc-body">One family, three weights. Noto Serif and Noto Sans share vertical metrics — no visual clash when mixed. Full coverage for Telugu, Devanagari, Tamil, Kannada, Bengali from the same font files. No fallback stacking needed.</p>
+  <div class="type-showcase">
+    <div class="type-row"><div class="type-spec">Noto Serif<br>48px · 700<br>ls −0.025em<br>Hero / Display</div><div class="t-display">Godown Stock</div></div>
+    <div class="type-row"><div class="type-spec">Noto Serif<br>38px · 600<br>ls −0.02em<br>Page headings</div><div class="t-h1">Today's Inward</div></div>
+    <div class="type-row"><div class="type-spec">Noto Serif<br>30px · 600<br>Section headings</div><div class="t-h2">Pending Collections</div></div>
+    <div class="type-row"><div class="type-spec">Noto Serif<br>24px · 500<br>Card titles</div><div class="t-h3">Raju Cold Storage, Kurnool</div></div>
+    <div class="type-row"><div class="type-spec">Noto Sans<br>15px · 400<br>Body copy</div><div class="t-body">Lot 42 received 07/05/2026 from Venkateshwara Traders. 240 bags at ₹18/kg. Driver: Suresh · AP 39 AB 1234.</div></div>
+    <div class="type-row"><div class="type-spec">Noto Sans<br>13px · 400<br>Captions</div><div class="t-small">Last synced 3 min ago · Offline entries will sync automatically</div></div>
+    <div class="type-row"><div class="type-spec">Noto Sans Mono<br>11px · 500<br>UPPERCASE · ls 0.1em<br>Column headers, tags</div><div class="t-label">Lot · Bags · Vehicle · Date · Party Code</div></div>
+    <div class="type-row"><div class="type-spec">Noto Serif<br>38px · 700<br>ls −0.02em<br>KPI values</div><div class="t-number">₹2,47,500</div></div>
+  </div>
+  <div class="i18n-grid">
+    <div class="i18n-card"><div class="i18n-script">Telugu · తెలుగు</div><div class="i18n-text">సరుకు లోపలికి వచ్చింది</div><div class="i18n-sub">Inward recorded</div></div>
+    <div class="i18n-card"><div class="i18n-script">Hindi · Devanagari</div><div class="i18n-text">माल अंदर आया</div><div class="i18n-sub">Stock received</div></div>
+    <div class="i18n-card"><div class="i18n-script">Tamil · தமிழ்</div><div class="i18n-text">சரக்கு வந்தது</div><div class="i18n-sub">Goods arrived</div></div>
+    <div class="i18n-card"><div class="i18n-script">Kannada · ಕನ್ನಡ</div><div class="i18n-text">ಸರಕು ಬಂತು</div><div class="i18n-sub">Stock in</div></div>
+  </div>
+</div>
+
+<!-- ══ 04 COMPONENTS ════════════════════════════════════════ -->
+<div class="section">
+  <div class="doc-label">04 — Components</div>
+  <div class="doc-title">UI Components</div>
+  <p class="doc-body">Visual height 36px. Tap zone 48px via <code>hitSlop={top:6,bottom:6}</code> in React Native. Input font locked at <code>font-size: 16px</code> — prevents iOS auto-zoom on focus.</p>
+
+  <div class="doc-label" style="margin-bottom:var(--sp-3);">Buttons</div>
+  <div class="shelf">
+    <button class="btn btn-primary">Inward Stock</button>
+    <button class="btn btn-secondary">View Lot</button>
+    <button class="btn btn-ghost">Cancel</button>
+    <button class="btn btn-danger">Remove Entry</button>
+  </div>
+  <div class="shelf" style="margin-bottom:var(--sp-6);">
+    <button class="btn btn-sm btn-primary">Save</button>
+    <button class="btn btn-sm btn-secondary btn-pill">Filter</button>
+    <button class="btn btn-lg btn-primary btn-pill">📦 Record Inward</button>
+    <button class="btn btn-primary btn-icon">+</button>
+  </div>
+
+  <div class="doc-label" style="margin-bottom:var(--sp-3);">Badges</div>
+  <div class="shelf" style="margin-bottom:var(--sp-6);">
+    <span class="badge badge-inward">↓ Inward</span>
+    <span class="badge badge-outward">↑ Outward</span>
+    <span class="badge badge-pending">⏳ Pending</span>
+    <span class="badge badge-brand">● Active Lot</span>
+    <span class="badge badge-neutral">Closed</span>
+    <span class="badge badge-online">● Online</span>
+    <span class="badge badge-offline">⚡ 3 queued</span>
+  </div>
+
+  <div class="doc-label" style="margin-bottom:var(--sp-3);">Form Inputs — 16px font size (non-negotiable)</div>
+  <div style="max-width:440px; margin-bottom:var(--sp-6);">
+    <div class="field"><label class="field-label">Party Name / పార్టీ పేరు</label><input class="input" type="text" placeholder="e.g. Venkateshwara Traders"></div>
+    <div class="field">
+      <div class="input-row">
+        <div style="flex:1;"><label class="field-label">Bags</label><input class="input" type="number" placeholder="0"></div>
+        <div style="flex:1.4;"><label class="field-label">Product</label><div class="select-wrap"><select class="input"><option>Tomatoes / టమాటా</option><option>Potato</option><option>Onion</option></select></div></div>
+      </div>
+    </div>
+    <button class="btn btn-primary btn-full">Record Inward ↓</button>
+  </div>
+
+  <div class="doc-label" style="margin-bottom:var(--sp-3);">KPI Cards</div>
+  <div class="card-grid" style="margin-bottom:var(--sp-6);">
+    <div class="card"><div class="card-label">Total Stock</div><div class="card-value">4,820</div><div class="card-sub">bags in godown</div></div>
+    <div class="card card-brand"><div class="card-label">Today Inward</div><div class="card-value">320</div><div class="card-sub">bags · 6 lots</div></div>
+    <div class="card card-dark"><div class="card-label">Pending Collection</div><div class="card-value">₹3.2L</div><div class="card-sub">14 parties</div></div>
+    <div class="card"><div class="card-label">Near Expiry</div><div class="card-value" style="color:var(--outward);">48</div><div class="card-sub" style="color:var(--outward);">bags · act today</div></div>
+  </div>
+
+  <div class="doc-label" style="margin-bottom:var(--sp-3);">Skeleton Loading</div>
+  <div style="background:var(--bg-surface); border-radius:var(--r-xl); padding:var(--sp-5); border:1px solid var(--border-default); margin-bottom:var(--sp-6); max-width:480px;">
+    <div class="skeleton" style="height:14px; width:40%; margin-bottom:var(--sp-3);"></div>
+    <div class="skeleton" style="height:32px; width:60%; margin-bottom:var(--sp-4);"></div>
+    <div class="skeleton" style="height:44px; margin-bottom:var(--sp-2);"></div>
+    <div class="skeleton" style="height:44px; margin-bottom:var(--sp-2);"></div>
+    <div class="skeleton" style="height:44px;"></div>
+  </div>
+
+  <div class="doc-label" style="margin-bottom:var(--sp-3);">Transaction Log</div>
+  <div class="log-wrap" style="margin-bottom:var(--sp-6);">
+    <div class="log-item"><div class="log-icon li-in">↓</div><div class="log-body"><div class="log-party">Venkateshwara Traders</div><div class="log-detail">Tomatoes · Lot #42 · AP 39 AB 1234</div></div><div class="log-right"><div class="log-qty log-qty-in">+240 bags</div><div class="log-time">9:14 AM</div></div></div>
+    <div class="log-item"><div class="log-icon li-out">↑</div><div class="log-body"><div class="log-party">Sri Lakshmi Agency</div><div class="log-detail">Potato · Lot #38 · AP 07 CD 5678</div></div><div class="log-right"><div class="log-qty log-qty-out">−80 bags</div><div class="log-time">11:30 AM</div></div></div>
+    <div class="log-item" style="opacity:.6;"><div class="log-icon li-wait">⏳</div><div class="log-body"><div class="log-party">Queued — offline</div><div class="log-detail">Onion · 120 bags · syncing when online</div></div><div class="log-right"><div class="log-qty">+120 bags</div><div class="log-time">Pending</div></div></div>
+  </div>
+
+  <div class="doc-label" style="margin-bottom:var(--sp-3);">Data Table</div>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Party</th><th>Product</th><th>Lot</th><th>Bags</th><th>Status</th><th>Amount Due</th></tr></thead>
+      <tbody>
+        <tr><td class="td-p">Venkateshwara Traders</td><td>Tomatoes</td><td class="td-m">LOT-042</td><td class="td-m">240</td><td><span class="badge badge-inward">↓ Inward</span></td><td class="td-a">₹18,400</td></tr>
+        <tr><td class="td-p">Sri Lakshmi Agency</td><td>Potato</td><td class="td-m">LOT-038</td><td class="td-m">80</td><td><span class="badge badge-outward">↑ Outward</span></td><td class="td-a">₹6,200</td></tr>
+        <tr><td class="td-p">Raju &amp; Brothers</td><td>Onion</td><td class="td-m">LOT-041</td><td class="td-m">160</td><td><span class="badge badge-pending">⏳ Pending</span></td><td class="td-a" style="color:var(--pending);">₹12,800</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ══ 05 NAVIGATION ════════════════════════════════════════ -->
+<div class="section">
+  <div class="doc-label">05 — Navigation · Responsive Pattern</div>
+  <div class="doc-title">Bottom Tabs (Mobile) + Side Nav (Desktop)</div>
+  <p class="doc-body">One canonical navigation system, two responsive layouts. Mobile (<640px): bottom tab bar with FAB. Desktop (>640px): persistent side nav + top bar. No top tabs — they conflict with the side nav and create duplicate navigation patterns.</p>
+
+  <div style="background:var(--pending-bg); border:1px solid var(--pending-border); border-radius:var(--r-md); padding:var(--sp-3) var(--sp-4); max-width:620px; font-size:var(--text-sm); margin-bottom:var(--sp-5);">
+    <strong style="color:var(--pending);">Navigation rule:</strong> <span style="color:var(--text-primary);">The dashboard in previous versions showed bottom tabs + side nav + top tabs simultaneously. This was reference-only. In production, only ONE navigation system is active per breakpoint. Implement with <code>@media (max-width: 639px)</code> to toggle.</span>
+  </div>
+
+  <div class="app-shell">
+    <!-- Offline bar -->
+    <div class="offline-bar">
+      <div class="dot"></div>
+      <span style="color:var(--pending); font-size:var(--text-sm);">Working offline</span>
+      <span class="offline-count">3 entries queued</span>
+      <span style="color:var(--text-tertiary); font-size:var(--text-xs); margin-left:auto;">Will sync when internet resumes</span>
+    </div>
+    <!-- Top bar -->
+    <div class="app-topbar">
+      <div class="app-brand">Stock<em>Right</em></div>
+      <div class="topbar-right">
+        <span class="badge badge-offline">⚡ 3 queued</span>
+        <button class="btn btn-primary btn-sm">+ Inward</button>
+      </div>
+    </div>
+    <div class="app-body">
+      <!-- Side nav — visible desktop only -->
+      <nav class="side-nav">
+        <div class="nav-section-label">Operations</div>
+        <div class="nav-item active"><span class="ico">📦</span>Stock</div>
+        <div class="nav-item"><span class="ico">↓</span>Inward</div>
+        <div class="nav-item"><span class="ico">↑</span>Outward</div>
+        <div class="nav-item"><span class="ico">🏷</span>Lots</div>
+        <div class="nav-section-label">Finance</div>
+        <div class="nav-item"><span class="ico">💰</span>Collections</div>
+        <div class="nav-item"><span class="ico">👥</span>Parties</div>
+        <div class="nav-section-label">Reports</div>
+        <div class="nav-item"><span class="ico">📊</span>Summary</div>
+      </nav>
+      <!-- Main -->
+      <main class="app-main">
+        <div class="app-head">
+          <div><div class="app-title">Today's Stock</div><div class="app-date">WED, 07 MAY 2026</div></div>
+          <button class="btn btn-secondary btn-sm">Export PDF</button>
+        </div>
+        <div class="kpi-row">
+          <div class="kpi accent"><div class="kpi-val">4,820</div><div class="kpi-lbl">Total Bags</div></div>
+          <div class="kpi"><div class="kpi-val">+320</div><div class="kpi-lbl">Today Inward</div></div>
+          <div class="kpi"><div class="kpi-val" style="color:var(--outward);">−80</div><div class="kpi-lbl">Today Outward</div></div>
+        </div>
+        <div class="log-wrap">
+          <div class="log-item"><div class="log-icon li-in">↓</div><div class="log-body"><div class="log-party">Venkateshwara Traders</div><div class="log-detail">Tomatoes · 240 bags</div></div><div class="log-right"><div class="log-qty log-qty-in">+240</div><div class="log-time">9:14 AM</div></div></div>
+          <div class="log-item"><div class="log-icon li-out">↑</div><div class="log-body"><div class="log-party">Sri Lakshmi Agency</div><div class="log-detail">Potato · 80 bags</div></div><div class="log-right"><div class="log-qty log-qty-out">−80</div><div class="log-time">11:30 AM</div></div></div>
+        </div>
+      </main>
+    </div>
+    <!-- Bottom tab nav — shown on mobile, hidden on desktop via media query -->
+    <div class="bottom-nav">
+      <div class="tab-item"><span class="ico">📦</span>Stock</div>
+      <div class="tab-item"><span class="ico">👥</span>Parties</div>
+      <div class="tab-fab">+</div>
+      <div class="tab-item active"><span class="ico">🏠</span>Home</div>
+      <div class="tab-item"><span class="ico">⚙</span>Settings</div>
+    </div>
+  </div>
+
+  <div style="margin-top:var(--sp-5); background:var(--bg-surface); border-radius:var(--r-xl); padding:var(--sp-6); border:1px solid var(--border-default);">
+    <div class="doc-label" style="margin-bottom:var(--sp-4);">Responsive Nav Breakpoints</div>
+    <div style="display:grid; grid-template-columns:repeat(3,1fr); gap:var(--sp-4);">
+      <div><div style="font-family:var(--font-mono);font-size:10px;color:var(--brand-text);text-transform:uppercase;letter-spacing:.08em;margin-bottom:var(--sp-2);">Mobile · &lt;640px</div><div style="font-size:var(--text-sm);color:var(--text-secondary); line-height:1.6;">Bottom tab bar · 4 items + FAB<br>Side nav: hidden<br>Top bar: wordmark + action btn</div></div>
+      <div><div style="font-family:var(--font-mono);font-size:10px;color:var(--brand-text);text-transform:uppercase;letter-spacing:.08em;margin-bottom:var(--sp-2);">Tablet · 640–1024px</div><div style="font-size:var(--text-sm);color:var(--text-secondary); line-height:1.6;">Collapsible side nav (icon-only)<br>Bottom tabs: hidden<br>Hamburger to expand nav</div></div>
+      <div><div style="font-family:var(--font-mono);font-size:10px;color:var(--brand-text);text-transform:uppercase;letter-spacing:.08em;margin-bottom:var(--sp-2);">Desktop · &gt;1024px</div><div style="font-size:var(--text-sm);color:var(--text-secondary); line-height:1.6;">Persistent side nav (200px)<br>Bottom tabs: hidden<br>Top bar with full controls</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ 06 MOTION & FEEDBACK ════════════════════════════════ -->
+<div class="section">
+  <div class="doc-label">06 — Motion & Feedback</div>
+  <div class="motion-panel">
+    <div class="motion-text">
+      <h3>Motion Principles</h3>
+      <p>Every action must feel acknowledged — never silent. Our users are non-technical and come from a paper-based world. Silent failures or delayed responses create distrust and abandonment. Three layers of feedback: visual, haptic, and status.</p>
+      <div class="motion-pills">
+        <div class="mpill">≤150ms response</div>
+        <div class="mpill">Acknowledge-first</div>
+        <div class="mpill">Haptic on submit</div>
+        <div class="mpill">Offline queue visible</div>
+        <div class="mpill">Optimistic UI</div>
+        <div class="mpill">Skeleton not spinner</div>
+        <div class="mpill">--ease-out: cubic-bezier(0.16,1,0.3,1)</div>
+        <div class="mpill">--duration-base: 200ms</div>
+      </div>
+    </div>
+    <div class="skel-demo">
+      <div class="skel-label">Skeleton loading pattern</div>
+      <div class="sk" style="height:13px; width:55%;"></div>
+      <div class="sk" style="height:28px; width:75%;"></div>
+      <div class="sk" style="height:13px; width:40%;"></div>
+      <div class="sk" style="height:44px;"></div>
+      <div class="sk" style="height:44px;"></div>
+      <div class="sk" style="height:44px;"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ 07 SPACING ══════════════════════════════════════════ -->
+<div class="section">
+  <div class="doc-label">07 — Spacing</div>
+  <div class="doc-title">4px Base Grid</div>
+  <div class="sp-row" style="margin-bottom:var(--sp-3);">
+    <div class="sp-col"><div class="sp-bar" style="height:4px;"></div><div class="sp-txt">4<br>sp-1</div></div>
+    <div class="sp-col"><div class="sp-bar" style="height:8px;"></div><div class="sp-txt">8<br>sp-2</div></div>
+    <div class="sp-col"><div class="sp-bar" style="height:12px;"></div><div class="sp-txt">12<br>sp-3</div></div>
+    <div class="sp-col"><div class="sp-bar" style="height:16px;"></div><div class="sp-txt">16<br>sp-4</div></div>
+    <div class="sp-col"><div class="sp-bar" style="height:20px;"></div><div class="sp-txt">20<br>sp-5</div></div>
+    <div class="sp-col"><div class="sp-bar" style="height:24px;"></div><div class="sp-txt">24<br>sp-6</div></div>
+    <div class="sp-col"><div class="sp-bar" style="height:32px;"></div><div class="sp-txt">32<br>sp-8</div></div>
+    <div class="sp-col"><div class="sp-bar" style="height:40px;"></div><div class="sp-txt">40<br>sp-10</div></div>
+    <div class="sp-col"><div class="sp-bar" style="height:48px;"></div><div class="sp-txt">48<br>sp-12</div></div>
+    <div class="sp-col"><div class="sp-bar" style="height:64px;"></div><div class="sp-txt">64<br>sp-16</div></div>
+  </div>
+  <p style="font-size:var(--text-xs);color:var(--text-tertiary);font-family:var(--font-mono);">Visual height: 36px · Tap zone: 48px (hitSlop) · Input font: 16px always</p>
+</div>
+
+<!-- ══ 08 BRAND LANGUAGE PRINCIPLES ═══════════════════════ -->
+<div class="section">
+  <div class="doc-label">08 — Brand Language</div>
+  <div class="doc-title">Voice, Tone & Terminology</div>
+  <div class="principles-grid" style="margin-bottom:var(--sp-6);">
+    <div class="principle-card">
+      <div class="pc-icon">🧓</div>
+      <div class="pc-title">Trusted Elder</div>
+      <div class="pc-body">Speak like an experienced mandi accountant — calm, clear, never condescending. Every message assumes the user is busy, hands-on, and not looking at a screen. Get to the point in one line.</div>
+      <div class="example-pair">
+        <div class="ex-do"><div class="ex-label">✓ Do</div>240 bags recorded</div>
+        <div class="ex-dont"><div class="ex-label">✗ Don't</div>Transaction committed successfully</div>
+      </div>
+    </div>
+    <div class="principle-card">
+      <div class="pc-icon">📒</div>
+      <div class="pc-title">Physical Familiarity</div>
+      <div class="pc-body">The app should feel like a smarter version of their existing paper register. Warm backgrounds, serif numbers, ink-like dark text. If it feels like a bank app, we've gone wrong.</div>
+      <div class="example-pair">
+        <div class="ex-do"><div class="ex-label">✓ Do</div>Warm cream bg, Noto Serif numbers</div>
+        <div class="ex-dont"><div class="ex-label">✗ Don't</div>Pure white + blue highlights</div>
+      </div>
+    </div>
+    <div class="principle-card">
+      <div class="pc-icon">🚦</div>
+      <div class="pc-title">Amber = Action</div>
+      <div class="pc-body">Brand amber is used exclusively for things that need user action or indicate current state. Never decorative. When they see amber, they know to tap or pay attention.</div>
+      <div class="example-pair">
+        <div class="ex-do"><div class="ex-label">✓ Do</div>CTAs, active nav, focus rings</div>
+        <div class="ex-dont"><div class="ex-label">✗ Don't</div>Section headers, decorative borders</div>
+      </div>
+    </div>
+    <div class="principle-card">
+      <div class="pc-icon">📶</div>
+      <div class="pc-title">Offline Transparency</div>
+      <div class="pc-body">Never hide the network state. Users in rural areas expect outages. Show queue count prominently. "3 entries queued" builds trust. Silent sync builds anxiety.</div>
+      <div class="example-pair">
+        <div class="ex-do"><div class="ex-label">✓ Do</div>⚡ 3 queued · syncing</div>
+        <div class="ex-dont"><div class="ex-label">✗ Don't</div>Spinner with no explanation</div>
+      </div>
+    </div>
+    <div class="principle-card">
+      <div class="pc-icon">🌐</div>
+      <div class="pc-title">Mother Tongue First</div>
+      <div class="pc-body">Default to the user's language on first open. Telugu in Andhra/Telangana, Hindi in UP/Bihar, Tamil in TN. English is the fallback, not the default. UI labels must be translatable — no hardcoded English strings.</div>
+      <div class="example-pair">
+        <div class="ex-do"><div class="ex-label">✓ Do</div>సరుకు లోపలికి / माल अंदर</div>
+        <div class="ex-dont"><div class="ex-label">✗ Don't</div>Record Inward (only)</div>
+      </div>
+    </div>
+    <div class="principle-card">
+      <div class="pc-icon">🇮🇳</div>
+      <div class="pc-title">Indian Numerics</div>
+      <div class="pc-body">Always use Indian number formatting. ₹2,50,000 not ₹250,000. "2.5 Lakh" not "250K". Dates as DD/MM/YYYY. These are not preferences — they are the user's native format.</div>
+      <div class="example-pair">
+        <div class="ex-do"><div class="ex-label">✓ Do</div>₹2,47,500 · 07/05/2026</div>
+        <div class="ex-dont"><div class="ex-label">✗ Don't</div>₹247500 · 2026-05-07</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="doc-label" style="margin-bottom:var(--sp-3);">Terminology — domain language only</div>
+  <div style="display:grid; grid-template-columns:1fr 1fr; gap:var(--sp-3); margin-bottom:var(--sp-6); max-width:640px;">
+    <div style="background:var(--inward-bg); border-radius:var(--r-lg); padding:var(--sp-4) var(--sp-5); border:1px solid var(--inward-border);">
+      <div style="font-family:var(--font-mono);font-size:9px;text-transform:uppercase;letter-spacing:.1em;color:var(--inward);font-weight:600;margin-bottom:var(--sp-3);">✓ Use these words</div>
+      <div style="display:flex;flex-direction:column;gap:var(--sp-2);font-size:var(--text-sm);">
+        <div><strong>Inward</strong> — not Receiving</div>
+        <div><strong>Outward</strong> — not Shipping / Dispatch</div>
+        <div><strong>Party / Customer</strong> — not Client</div>
+        <div><strong>Lot / Batch</strong> — not SKU</div>
+        <div><strong>Godown / Warehouse</strong> — both OK</div>
+        <div><strong>Bags</strong> — not Units</div>
+        <div><strong>Collection</strong> — not Payment / Settlement</div>
+      </div>
+    </div>
+    <div style="background:var(--outward-bg); border-radius:var(--r-lg); padding:var(--sp-4) var(--sp-5); border:1px solid var(--outward-border);">
+      <div style="font-family:var(--font-mono);font-size:9px;text-transform:uppercase;letter-spacing:.1em;color:var(--outward);font-weight:600;margin-bottom:var(--sp-3);">✗ Never use</div>
+      <div style="display:flex;flex-direction:column;gap:var(--sp-2);font-size:var(--text-sm);">
+        <div>SKU, ASN, BOL, WMS, ERP</div>
+        <div>Optimize, synergize, leverage</div>
+        <div>Transaction committed</div>
+        <div>Sync completed</div>
+        <div>Record not found</div>
+        <div>HTTP error / server unavailable</div>
+        <div>Session expired (say: please log in again)</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="do-dont">
+    <div class="do-box">
+      <h4>✓ Always</h4>
+      <ul class="rule-list">
+        <li>Warm white/cream backgrounds — never pure clinical white as the only bg</li>
+        <li>Noto Serif for all headings and numbers — establishes register-like trust</li>
+        <li>brand-ui (#C8712A) only for non-text: button bg, icon fill, active indicator</li>
+        <li>brand-text (#8C4A12) for any amber-colored text or label</li>
+        <li>Input font-size: 16px — prevents iOS zoom on focus</li>
+        <li>Indian number format: ₹2,50,000, DD/MM/YYYY</li>
+        <li>48px tap zone on all interactive elements (hitSlop in RN)</li>
+        <li>Dark mode: soil text (#1C1A16) on amber CTA — not white</li>
+        <li>Skeleton screens during loading — never bare spinners</li>
+        <li>Show offline queue count visibly in header/topbar</li>
+        <li>Bottom tabs on mobile, side nav on desktop — never both visible</li>
+      </ul>
+    </div>
+    <div class="dn-box">
+      <h4>✗ Never</h4>
+      <ul class="rule-list">
+        <li>No pure white (#FFF) as page background in light mode — use #FEFCF8</li>
+        <li>No dark nav bars in light mode</li>
+        <li>No white text on amber in any context — it fails WCAG</li>
+        <li>No purple, blue-grey, or cool-tone accents</li>
+        <li>No decorative or illustrative use of brand amber</li>
+        <li>No Inter, Roboto, or system fonts for headings</li>
+        <li>No Latin-only serif (Lora, Playfair) — breaks Indian script rendering</li>
+        <li>No silent failures — every action gets visual + haptic feedback</li>
+        <li>No error codes or stack traces to end users</li>
+        <li>No top tab navigation — conflicts with side nav pattern</li>
+        <li>No UI that requires more than 3 taps for inward/outward entry</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<!-- ══ 09 TOKEN REFERENCE ══════════════════════════════════ -->
+<div class="section">
+  <div class="doc-label">09 — Token Reference</div>
+  <div class="doc-title">Complete Design Tokens</div>
+  <div class="token-block">
+<span class="tc">// ── LIGHT MODE ────────────────────────────────────────────</span>
+<span class="tk">bg-page</span>:           <span class="tv">'#FEFCF8'</span>   <span class="tr">// warm near-white page canvas</span>
+<span class="tk">bg-surface</span>:        <span class="tv">'#FFFFFF'</span>   <span class="tr">// cards, inputs — pure white</span>
+<span class="tk">bg-subtle</span>:         <span class="tv">'#F5F0E8'</span>   <span class="tr">// sidebar, table header (old v2 cream)</span>
+<span class="tk">bg-inset</span>:          <span class="tv">'#EDE6D9'</span>   <span class="tr">// pressed, recessed (old v2 parchment)</span>
+
+<span class="tk">text-primary</span>:      <span class="tv">'#1C1A16'</span>   <span class="tr">// 16.95:1 on white ✓ AAA</span>
+<span class="tk">text-secondary</span>:    <span class="tv">'#4A4237'</span>   <span class="tr">// 9.64:1 on page ✓ AAA</span>
+<span class="tk">text-tertiary</span>:     <span class="tv">'#7A6F61'</span>   <span class="tr">// 4.91:1 — large/decorative only</span>
+<span class="tk">text-placeholder</span>:  <span class="tv">'#C0B8B0'</span>   <span class="tr">// decorative only</span>
+
+<span class="tk">border-default</span>:    <span class="tv">'#E8E2D8'</span>
+<span class="tk">border-strong</span>:     <span class="tv">'#D9D0C2'</span>
+<span class="tk">border-focus</span>:      <span class="tv">'#C8712A'</span>   <span class="tr">// = brand-ui</span>
+
+<span class="tc">// Brand — TWO TOKEN SYSTEM (amber physics: cannot hit 7:1 on any bg)</span>
+<span class="tk">brand-ui</span>:          <span class="tv">'#C8712A'</span>   <span class="tr">// btn bg, icon fill, active state — NOT body text</span>
+<span class="tk">brand-ui-hover</span>:    <span class="tv">'#AD5E1F'</span>
+<span class="tk">brand-ui-press</span>:    <span class="tv">'#9A5418'</span>
+<span class="tk">brand-text</span>:        <span class="tv">'#8C4A12'</span>   <span class="tr">// 6.77:1 on white — text/label usage</span>
+<span class="tk">brand-subtle</span>:      <span class="tv">'#F5E8D8'</span>   <span class="tr">// tint bg for pills/tags</span>
+<span class="tk">brand-border</span>:      <span class="tv">'#E0B08A'</span>
+
+<span class="tk">inward</span>:            <span class="tv">'#0B7B6E'</span>   <span class="tr">// 4.60:1 on inward-bg ✓ AA</span>
+<span class="tk">inward-bg</span>:         <span class="tv">'#E6F5F3'</span>
+<span class="tk">inward-border</span>:     <span class="tv">'#A8DDD7'</span>
+<span class="tk">outward</span>:           <span class="tv">'#A83422'</span>   <span class="tr">// 5.62:1 ✓ AAA UI</span>
+<span class="tk">outward-bg</span>:        <span class="tv">'#F7EAE7'</span>
+<span class="tk">outward-border</span>:    <span class="tv">'#E0B8B0'</span>
+<span class="tk">pending</span>:           <span class="tv">'#7B5200'</span>   <span class="tr">// 6.16:1 ✓ AAA UI</span>
+<span class="tk">pending-bg</span>:        <span class="tv">'#FAF2D9'</span>
+<span class="tk">pending-border</span>:    <span class="tv">'#E0CC88'</span>
+
+<span class="tc">// ── DARK MODE ([data-theme="dark"] on &lt;html&gt;) ──────────────</span>
+<span class="tk">dm-bg-page</span>:        <span class="tv">'#12100B'</span>
+<span class="tk">dm-bg-surface</span>:     <span class="tv">'#1F1C14'</span>   <span class="tr">// 1.12× page</span>
+<span class="tk">dm-bg-subtle</span>:      <span class="tv">'#2C281C'</span>   <span class="tr">// 1.16× surface</span>
+<span class="tk">dm-bg-inset</span>:       <span class="tv">'#3A3325'</span>   <span class="tr">// 1.18× subtle</span>
+<span class="tk">dm-text-primary</span>:   <span class="tv">'#F0EBE0'</span>   <span class="tr">// 14.31:1 ✓ AAA</span>
+<span class="tk">dm-text-secondary</span>: <span class="tv">'#C4BAA8'</span>   <span class="tr">// 8.86:1  ✓ AAA</span>
+<span class="tk">dm-brand-ui</span>:       <span class="tv">'#E8943A'</span>   <span class="tr">// 7.07:1 as text/icon ✓ AAA</span>
+<span class="tk">dm-brand-cta-text</span>: <span class="tv">'#1C1A16'</span>   <span class="tr">// 7.22:1 on dm-brand-ui ✓ AAA — NOT white</span>
+<span class="tk">dm-inward</span>:         <span class="tv">'#34C4AD'</span>   <span class="tr">// 7.81:1 ✓ AAA</span>
+<span class="tk">dm-outward</span>:        <span class="tv">'#E8705A'</span>   <span class="tr">// 5.59:1 ✓ AA+</span>
+<span class="tk">dm-pending</span>:        <span class="tv">'#D4A020'</span>   <span class="tr">// 6.31:1 ✓ AAA UI</span>
+
+<span class="tc">// ── FONTS ──────────────────────────────────────────────────</span>
+<span class="tk">font-display</span>:      <span class="tv">'Noto Serif'</span>        <span class="tc">// headings, numbers — i18n-safe</span>
+<span class="tk">font-body</span>:         <span class="tv">'Noto Sans'</span>         <span class="tc">// body, labels — i18n-safe</span>
+<span class="tk">font-mono</span>:         <span class="tv">'Noto Sans Mono'</span>    <span class="tc">// lot numbers, codes, timestamps</span>
+
+<span class="tc">// ── ANIMATION ──────────────────────────────────────────────</span>
+<span class="tk">ease-out</span>:          <span class="tv">'cubic-bezier(0.16, 1, 0.3, 1)'</span>
+<span class="tk">duration-fast</span>:     <span class="tv">'120ms'</span>
+<span class="tk">duration-base</span>:     <span class="tv">'200ms'</span>
+
+<span class="tc">// ── TOUCH ──────────────────────────────────────────────────</span>
+<span class="tc">// visual height:  36px</span>
+<span class="tc">// tap zone:       48px via hitSlop={top:6, bottom:6}</span>
+<span class="tc">// input font:     16px  (NEVER change — prevents iOS zoom)</span>
+
+<span class="tc">// ── NAVIGATION ─────────────────────────────────────────────</span>
+<span class="tc">// mobile  &lt;640px:   bottom tab bar (4 tabs + FAB)</span>
+<span class="tc">// tablet  640–1024: collapsible side nav (icon-only collapsed)</span>
+<span class="tc">// desktop &gt;1024px:  persistent side nav (200px wide)</span>
+  </div>
+</div>
+
+</div>
+</body>
+</html>

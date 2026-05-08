@@ -1,0 +1,43 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8"/>
+<link rel="stylesheet" href="../colors_and_type.css"/>
+<style>
+  body { padding: 24px; background: var(--bg-page); display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .card { background: var(--bg-surface); border: 1px solid var(--border-default); border-radius: var(--radius-md); padding: 16px; }
+  .card-row { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; }
+  .lot { font-family: var(--font-mono); font-size: 12px; color: var(--text-tertiary); letter-spacing: 0.04em; }
+  .name { font-family: var(--font-display); font-size: 20px; font-weight: 600; color: var(--text-primary); margin-top: 2px; line-height: 1.2; }
+  .meta { font-family: var(--font-body); font-size: 13px; color: var(--text-secondary); margin-top: 6px; }
+  .num { font-family: var(--font-display); font-size: 28px; font-weight: 700; line-height: 1; font-variant-numeric: tabular-nums; }
+  .badge { display: inline-flex; align-items: center; gap: 6px; padding: 3px 9px; border-radius: 9999px; font-family: var(--font-body); font-size: 11px; font-weight: 500; border: 1px solid; margin-top: 6px; }
+  .b-inward { background: var(--inward-bg); color: var(--inward); border-color: var(--inward-border); }
+  .b-outward { background: var(--outward-bg); color: var(--outward); border-color: var(--outward-border); }
+</style>
+</head>
+<body>
+  <div class="card">
+    <div class="card-row">
+      <div>
+        <div class="lot">AP-1247-23 · 12/05/2026</div>
+        <div class="name">Sri Lakshmi Traders</div>
+        <div class="meta">Cold Storage 3 · Paddy</div>
+        <span class="badge b-inward">✓ Inward · confirmed</span>
+      </div>
+      <div style="text-align:right;"><div class="num">240</div><div class="lot">bags</div></div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-row">
+      <div>
+        <div class="lot">AP-1245-23 · 12/05/2026</div>
+        <div class="name">Reddy Rice Mills</div>
+        <div class="meta">Cold Storage 1 · Rice</div>
+        <span class="badge b-outward">↓ Outward · ₹1,12,000 due</span>
+      </div>
+      <div style="text-align:right;"><div class="num">80</div><div class="lot">bags</div></div>
+    </div>
+  </div>
+</body>
+</html>
