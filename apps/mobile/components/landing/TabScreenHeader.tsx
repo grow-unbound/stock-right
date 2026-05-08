@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import { Pressable, Text, TextInput, View, StyleSheet } from "react-native";
-import { Search } from "lucide-react-native";
+import { Search, X } from "lucide-react-native";
 import type { LandingFilterChip } from "@stockright/shared/demo";
 import { tokens } from "@stockright/shared/tokens";
 import { FilterChipRow } from "./FilterChipRow";
@@ -14,6 +14,8 @@ interface TabScreenHeaderProps {
   trailing?: ReactNode;
   searchValue?: string;
   onSearchChange?: (text: string) => void;
+  /** Shown after the search field (e.g. in-flight search indicator). */
+  searchAccessory?: ReactNode;
 }
 
 export function TabScreenHeader({
@@ -25,6 +27,7 @@ export function TabScreenHeader({
   trailing,
   searchValue,
   onSearchChange,
+  searchAccessory,
 }: TabScreenHeaderProps) {
   const controlledSearch = searchValue !== undefined && onSearchChange !== undefined;
 
@@ -48,6 +51,18 @@ export function TabScreenHeader({
               autoCorrect={false}
               accessibilityLabel={searchPlaceholder}
             />
+            {searchValue.trim() !== "" ? (
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Clear search"
+                hitSlop={12}
+                onPress={() => onSearchChange("")}
+                style={({ pressed }) => [styles.clearSearch, pressed && styles.clearSearchPressed]}
+              >
+                <X size={18} color={tokens.textTertiary} strokeWidth={2} />
+              </Pressable>
+            ) : null}
+            {searchAccessory}
           </View>
         ) : (
           <Pressable style={styles.searchInner} accessibilityRole="button">
@@ -108,4 +123,12 @@ const styles = StyleSheet.create({
     color: tokens.textPrimary,
     paddingVertical: 0,
   },
+  clearSearch: {
+    width: 40,
+    height: 40,
+    alignItems: "center",
+    justifyContent: "center",
+    marginRight: -4,
+  },
+  clearSearchPressed: { opacity: 0.85 },
 });

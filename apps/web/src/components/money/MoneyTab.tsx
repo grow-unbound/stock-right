@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { HandCoins, Wallet } from "lucide-react";
+import { HandCoins, Loader2, SearchX, Wallet } from "lucide-react";
 import {
   type MoneyMovementRow,
   type MoneySortColumn,
@@ -14,14 +14,20 @@ import {
   fetchMoneyMonthTotals,
   listMoneyMovements,
 } from "@stockright/shared/api";
-import { formatDate, formatIndianCurrency } from "@stockright/shared/utils";
+import { useDebouncedValue } from "@stockright/shared/hooks";
+import { displayMoneyPartyPrimary, displayMoneyPartySecondary, filterMoneyRowsLocal, mergeUniqueMoneyRows } from "@stockright/shared/money";
+import { loadMoneyListSnapshot, loadMoneyPendingRows, saveMoneyListSnapshot } from "@stockright/shared/offline/app-cache";
+import { formatIndianCurrency, formatMoneyListDate } from "@stockright/shared/utils";
 import { DEMO_FAB_MONEY_ACTIONS } from "@stockright/shared/demo";
 import { DashboardPageShell } from "@/components/dashboard/DashboardPageShell";
 import { LandingFabActionSheet } from "@/components/dashboard/LandingFabActionSheet";
 import { Button } from "@/components/ui/Button";
 import { MoneyActivityTable } from "@/components/money/MoneyActivityTable";
 import { useMoneyAccess } from "@/contexts/MoneyAccessContext";
+import { useSessionUser } from "@/components/session/session-user-provider";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
+import { webMoneyAppCacheAdapter } from "@/lib/money-app-cache";
+import { useIsOffline } from "@/hooks/useIsOffline";
 
 const STROKE = 2;
 
@@ -39,11 +45,6 @@ function paymentMethodLabel(raw: string | null): string {
   return lower.replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
-function formatRowAmount(row: MoneyMovementRow): string {
-  const prefix = row.transaction_type === "receipt" ? "+" : "−";
-  return `${prefix}${formatIndianCurrency(row.amount)}`;
-}
-
 function MoneyListSkeleton() {
   return (
     <ul className="flex flex-col gap-2">
@@ -56,12 +57,15 @@ function MoneyListSkeleton() {
 
 export function MoneyTab() {
   const router = useRouter();
+  const offline = useIsOffline();
   const { canManageMoney, loaded: accessLoaded } = useMoneyAccess();
+  const { context } = useSessionUser();
+  const warehouseId = context?.warehouseId ?? null;
   const supabase = useMemo(() => createSupabaseBrowserClient(), []);
+  const moneyCache = webMoneyAppCacheAdapter;
 
-  const [warehouseId, setWarehouseId] = useState<string | null>(null);
   const [searchInput, setSearchInput] = useState("");
-  const [debouncedSearch, setDebouncedSearch] = useState("");
+  const debouncedSearch = useDebouncedValue(searchInput.trim(), 400);
   const [chip, setChip] = useState<ChipId>("all");
   const [desktopSheet, setDesktopSheet] = useState<DesktopMoneySheet>(null);
 
@@ -70,32 +74,50 @@ export function MoneyTab() {
   const [desktopPage, setDesktopPage] = useState(1);
   const [desktopPageSize, setDesktopPageSize] = useState(20);
 
-  const [mobileRows, setMobileRows] = useState<MoneyMovementRow[]>([]);
+  const [localData, setLocalData] = useState<MoneyMovementRow[]>([]);
   const [mobilePage, setMobilePage] = useState(1);
   const [mobilePageSize] = useState(15);
   const [mobileLoadingMore, setMobileLoadingMore] = useState(false);
-  const [mobileListRevision, setMobileListRevision] = useState(0);
 
   const [totalCount, setTotalCount] = useState(0);
-  const [desktopRows, setDesktopRows] = useState<MoneyMovementRow[]>([]);
 
   const [kpis, setKpis] = useState<{ received: number; paid: number; rCount: number; pCount: number } | null>(null);
 
   const [initialLoading, setInitialLoading] = useState(true);
   const [desktopLoading, setDesktopLoading] = useState(false);
+  const [remoteSearchPending, setRemoteSearchPending] = useState(false);
+
+  const [wide, setWide] = useState(true);
 
   const mobileNearEndRef = useRef<() => void>(() => {});
   const sentinelRef = useRef<HTMLDivElement>(null);
+  const localDataRef = useRef<MoneyMovementRow[]>([]);
+  localDataRef.current = localData;
+  const prevDesktopSearchRef = useRef<string | null>(null);
+  const prevMobileSearchRef = useRef<string | null>(null);
+  const prevDesktopChipRef = useRef<ChipId | null>(null);
+  const prevMobileChipRef = useRef<ChipId | null>(null);
+
+  const searchResults = useMemo(() => filterMoneyRowsLocal(localData, searchInput, chip), [localData, searchInput, chip]);
 
   useEffect(() => {
-    const wid = typeof window !== "undefined" ? window.localStorage.getItem("active_warehouse_id") : null;
-    setWarehouseId(wid && wid.length > 0 ? wid : null);
+    const mq = window.matchMedia("(min-width: 640px)");
+    const apply = () => setWide(mq.matches);
+    apply();
+    mq.addEventListener("change", apply);
+    return () => mq.removeEventListener("change", apply);
   }, []);
 
   useEffect(() => {
-    const t = window.setTimeout(() => setDebouncedSearch(searchInput.trim()), 350);
-    return () => window.clearTimeout(t);
-  }, [searchInput]);
+    setDesktopPage(1);
+    setMobilePage(1);
+    setLocalData([]);
+    setInitialLoading(true);
+    prevDesktopSearchRef.current = null;
+    prevMobileSearchRef.current = null;
+    prevDesktopChipRef.current = null;
+    prevMobileChipRef.current = null;
+  }, [warehouseId]);
 
   useEffect(() => {
     if (!accessLoaded) return;
@@ -103,13 +125,6 @@ export function MoneyTab() {
       router.replace("/");
     }
   }, [accessLoaded, canManageMoney, router]);
-
-  useEffect(() => {
-    setDesktopPage(1);
-    setMobilePage(1);
-    setMobileRows([]);
-    setMobileListRevision((r) => r + 1);
-  }, [debouncedSearch, chip, warehouseId]);
 
   useEffect(() => {
     if (!warehouseId || !accessLoaded || !canManageMoney) return;
@@ -133,36 +148,73 @@ export function MoneyTab() {
   }, [warehouseId, accessLoaded, canManageMoney, supabase]);
 
   useEffect(() => {
-    if (!warehouseId || !canManageMoney) return;
+    if (!warehouseId || !canManageMoney || !offline) return;
+
+    let cancelled = false;
+    void (async () => {
+      const snap = await loadMoneyListSnapshot(moneyCache, warehouseId, chip);
+      const pending = await loadMoneyPendingRows(moneyCache, warehouseId);
+      if (cancelled) return;
+      const merged = mergeUniqueMoneyRows(snap, pending);
+      setLocalData(merged);
+      setTotalCount(merged.length);
+      setInitialLoading(false);
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [warehouseId, chip, offline, canManageMoney, moneyCache]);
+
+  useEffect(() => {
+    if (!warehouseId || !canManageMoney || offline || !wide) return;
 
     let cancelled = false;
     const tt = chipToTransactionType(chip);
-    setDesktopLoading(true);
+    const search = debouncedSearch;
+    const searchChanged = prevDesktopSearchRef.current !== null && prevDesktopSearchRef.current !== search;
+    const chipChanged = prevDesktopChipRef.current !== null && prevDesktopChipRef.current !== chip;
+    prevDesktopSearchRef.current = search;
+    prevDesktopChipRef.current = chip;
+    if (searchChanged || chipChanged) {
+      setDesktopPage(1);
+      setMobilePage(1);
+    }
+    const desktopPageToFetch = searchChanged || chipChanged ? 1 : desktopPage;
+
+    if (localDataRef.current.length === 0) {
+      setDesktopLoading(true);
+    }
+    if (search !== "") setRemoteSearchPending(true);
 
     void (async () => {
       try {
         const [count, rows] = await Promise.all([
           countMoneyMovements(supabase, {
             warehouseId,
-            search: debouncedSearch,
+            search,
             transactionType: tt,
           }),
           listMoneyMovements(supabase, {
             warehouseId,
-            search: debouncedSearch,
+            search,
             transactionType: tt,
             sortColumn,
             sortDirection,
-            page: desktopPage,
+            page: desktopPageToFetch,
             pageSize: desktopPageSize,
           }),
         ]);
         if (cancelled) return;
         setTotalCount(count);
-        setDesktopRows(rows);
+        setLocalData(rows);
+        if (desktopPageToFetch === 1 && search === "") {
+          void saveMoneyListSnapshot(moneyCache, warehouseId, chip, rows);
+        }
       } finally {
         if (!cancelled) {
           setDesktopLoading(false);
+          setRemoteSearchPending(false);
           setInitialLoading(false);
         }
       }
@@ -174,6 +226,8 @@ export function MoneyTab() {
   }, [
     warehouseId,
     canManageMoney,
+    offline,
+    wide,
     chip,
     debouncedSearch,
     desktopPage,
@@ -181,23 +235,38 @@ export function MoneyTab() {
     sortColumn,
     sortDirection,
     supabase,
+    moneyCache,
   ]);
 
   useEffect(() => {
-    if (!warehouseId || !canManageMoney) return;
+    if (!warehouseId || !canManageMoney || offline || wide) return;
 
     let cancelled = false;
     const tt = chipToTransactionType(chip);
-    const loadingMore = mobilePage > 1;
+    const search = debouncedSearch;
+    const searchChanged = prevMobileSearchRef.current !== null && prevMobileSearchRef.current !== search;
+    const chipChanged = prevMobileChipRef.current !== null && prevMobileChipRef.current !== chip;
+    prevMobileSearchRef.current = search;
+    prevMobileChipRef.current = chip;
+    if (searchChanged || chipChanged) {
+      setMobilePage(1);
+    }
+    const mobilePageToFetch = searchChanged || chipChanged ? 1 : mobilePage;
+
+    const loadingMore = mobilePageToFetch > 1;
 
     if (loadingMore) setMobileLoadingMore(true);
+    if (search !== "") setRemoteSearchPending(true);
+    if (mobilePageToFetch === 1 && localDataRef.current.length === 0) {
+      setInitialLoading(true);
+    }
 
     void (async () => {
       try {
-        if (mobilePage === 1) {
+        if (mobilePageToFetch === 1) {
           const c = await countMoneyMovements(supabase, {
             warehouseId,
-            search: debouncedSearch,
+            search,
             transactionType: tt,
           });
           if (cancelled) return;
@@ -206,32 +275,29 @@ export function MoneyTab() {
 
         const rows = await listMoneyMovements(supabase, {
           warehouseId,
-          search: debouncedSearch,
+          search,
           transactionType: tt,
           sortColumn: "occurred_at",
           sortDirection: "desc",
-          page: mobilePage,
+          page: mobilePageToFetch,
           pageSize: mobilePageSize,
         });
 
         if (cancelled) return;
 
-        setMobileRows((prev) => {
-          if (mobilePage === 1) return rows;
-          const seen = new Set(prev.map((r) => `${r.transaction_type}:${r.event_id}`));
-          const merged = [...prev];
-          for (const r of rows) {
-            const k = `${r.transaction_type}:${r.event_id}`;
-            if (!seen.has(k)) {
-              seen.add(k);
-              merged.push(r);
-            }
+        setLocalData((prev) => {
+          const next = mobilePageToFetch === 1 ? rows : mergeUniqueMoneyRows(prev, rows);
+          if (mobilePageToFetch === 1 && search === "") {
+            void saveMoneyListSnapshot(moneyCache, warehouseId, chip, next);
+          } else if (mobilePageToFetch > 1 && search === "") {
+            void saveMoneyListSnapshot(moneyCache, warehouseId, chip, next);
           }
-          return merged;
+          return next;
         });
       } finally {
         if (!cancelled) {
           setMobileLoadingMore(false);
+          setRemoteSearchPending(false);
           setInitialLoading(false);
         }
       }
@@ -246,14 +312,16 @@ export function MoneyTab() {
     chip,
     mobilePage,
     mobilePageSize,
-    mobileListRevision,
     canManageMoney,
+    offline,
+    wide,
     supabase,
+    moneyCache,
   ]);
 
   mobileNearEndRef.current = () => {
-    if (!warehouseId || mobileLoadingMore) return;
-    const loaded = mobileRows.length;
+    if (!warehouseId || offline || mobileLoadingMore) return;
+    const loaded = localData.length;
     if (loaded === 0 || totalCount === 0 || loaded >= totalCount) return;
     if (loaded < mobilePage * mobilePageSize - 4) return;
     setMobilePage((p) => p + 1);
@@ -319,6 +387,14 @@ export function MoneyTab() {
       </>
     ) : null;
 
+  const searchAccessory =
+    searchInput.trim() !== "" && (remoteSearchPending || searchInput.trim() !== debouncedSearch) ? (
+      <Loader2 className="size-[18px] shrink-0 animate-spin text-[var(--text-tertiary)]" aria-hidden />
+    ) : null;
+
+  const showListEmpty =
+    Boolean(warehouseId) && !offline && !initialLoading && !desktopLoading && searchResults.length === 0;
+
   if (!accessLoaded || !canManageMoney) {
     return <div className="min-h-[200px] animate-pulse rounded-[var(--radius-md)] bg-[var(--bg-subtle)]" />;
   }
@@ -334,15 +410,20 @@ export function MoneyTab() {
       moneyFabEnabled={canManageMoney}
       searchValue={searchInput}
       onSearchChange={setSearchInput}
+      searchAccessory={searchAccessory}
     >
       {!warehouseId ? (
         <p className="text-[15px] text-[var(--text-secondary)]">Select a warehouse to see money activity.</p>
       ) : (
         <div className="flex flex-col gap-4 px-0 pt-4">
+          {offline ? (
+            <p className="text-[13px] text-[var(--text-secondary)]">You’re offline. Showing saved activity from this device.</p>
+          ) : null}
+
           <div className="grid grid-cols-2 gap-2.5">
             <div className="rounded-[var(--radius-md)] border border-[var(--border-default)] bg-[var(--bg-surface)] p-3">
               <p className="text-[10px] font-medium uppercase tracking-[0.06em] text-[var(--text-tertiary)]">This month received</p>
-              <p className="font-[family-name:var(--font-display)] text-[17px] font-semibold tabular-nums text-[var(--inward)]">
+              <p className="font-[family-name:var(--font-display)] text-[22px] font-semibold tabular-nums text-[var(--inward)]">
                 {kpis ? formatIndianCurrency(kpis.received) : "—"}
               </p>
               <p className="text-[11px] text-[var(--text-secondary)]">
@@ -351,7 +432,7 @@ export function MoneyTab() {
             </div>
             <div className="rounded-[var(--radius-md)] border border-[var(--border-default)] bg-[var(--bg-surface)] p-3">
               <p className="text-[10px] font-medium uppercase tracking-[0.06em] text-[var(--text-tertiary)]">This month paid</p>
-              <p className="font-[family-name:var(--font-display)] text-[17px] font-semibold tabular-nums text-[var(--outward)]">
+              <p className="font-[family-name:var(--font-display)] text-[22px] font-semibold tabular-nums text-[var(--outward)]">
                 {kpis ? formatIndianCurrency(kpis.paid) : "—"}
               </p>
               <p className="text-[11px] text-[var(--text-secondary)]">{kpis ? `${kpis.pCount} payments recorded` : "Loading totals…"}</p>
@@ -361,11 +442,18 @@ export function MoneyTab() {
           <p className="text-[11px] font-medium uppercase tracking-[0.08em] text-[var(--text-tertiary)]">Recent activity</p>
 
           <div className="hidden sm:block">
-            {desktopLoading || initialLoading ? (
+            {offline && localData.length === 0 ? (
+              <p className="text-[15px] text-[var(--text-secondary)]">Connect once to load money activity on this device.</p>
+            ) : desktopLoading || (initialLoading && localData.length === 0) ? (
               <MoneyListSkeleton />
+            ) : showListEmpty ? (
+              <div className="flex flex-col items-center gap-3 rounded-[var(--radius-md)] border border-[var(--border-default)] bg-[var(--bg-surface)] px-6 py-12 text-center">
+                <SearchX className="size-10 text-[var(--text-tertiary)]" strokeWidth={2} aria-hidden />
+                <p className="text-[15px] text-[var(--text-secondary)]">No matches. Try a different search or filter.</p>
+              </div>
             ) : (
               <MoneyActivityTable
-                rows={desktopRows}
+                rows={searchResults}
                 totalCount={totalCount}
                 page={desktopPage}
                 pageSize={desktopPageSize}
@@ -377,8 +465,7 @@ export function MoneyTab() {
                   setDesktopPageSize(size);
                   setDesktopPage(1);
                 }}
-                formatOccurredAt={(iso) => formatDate(iso)}
-                formatAmount={formatRowAmount}
+                formatOccurredAt={(iso) => formatMoneyListDate(iso)}
                 paymentMethodLabel={paymentMethodLabel}
                 referenceLabel={displayMoneyReference}
               />
@@ -386,15 +473,23 @@ export function MoneyTab() {
           </div>
 
           <div className="sm:hidden">
-            {initialLoading && mobileRows.length === 0 ? (
+            {offline && localData.length === 0 ? (
+              <p className="px-1 text-[15px] text-[var(--text-secondary)]">Connect once to load money activity on this device.</p>
+            ) : initialLoading && localData.length === 0 ? (
               <MoneyListSkeleton />
+            ) : showListEmpty ? (
+              <div className="flex flex-col items-center gap-3 rounded-[var(--radius-md)] border border-[var(--border-default)] bg-[var(--bg-surface)] px-6 py-10 text-center">
+                <SearchX className="size-10 text-[var(--text-tertiary)]" strokeWidth={2} aria-hidden />
+                <p className="text-[15px] text-[var(--text-secondary)]">No matches. Try a different search or filter.</p>
+              </div>
             ) : (
               <ul className="flex flex-col gap-2">
-                {mobileRows.map((t) => {
+                {searchResults.map((t) => {
                   const isReceipt = t.transaction_type === "receipt";
+                  const secondary = displayMoneyPartySecondary(t);
                   return (
                     <li key={`${t.transaction_type}-${t.event_id}`}>
-                      <div className="flex w-full items-center gap-3 rounded-[var(--radius-md)] border border-[var(--border-default)] bg-[var(--bg-surface)] px-3.5 py-3 text-left">
+                      <div className="flex min-h-[48px] w-full items-center gap-3 rounded-[var(--radius-md)] border border-[var(--border-default)] bg-[var(--bg-surface)] px-3.5 py-3 text-left">
                         <span
                           className={
                             isReceipt
@@ -409,15 +504,20 @@ export function MoneyTab() {
                           )}
                         </span>
                         <span className="min-w-0 flex-1">
-                          <span className="block font-[family-name:var(--font-mono)] text-[11px] tracking-[0.04em] text-[var(--text-tertiary)]">
-                            {displayMoneyReference(t)} · {formatDate(t.occurred_at)}
+                          <span className="block font-[family-name:var(--font-body)] text-[11px] text-[var(--text-tertiary)]">
+                            {formatMoneyListDate(t.occurred_at)}
                           </span>
                           <span className="mt-0.5 block truncate font-[family-name:var(--font-display)] text-[15px] font-semibold text-[var(--text-primary)]">
-                            {t.counterparty_name}
+                            {displayMoneyPartyPrimary(t)}
                           </span>
+                          {secondary ? (
+                            <span className="mt-0.5 block truncate text-left font-[family-name:var(--font-body)] text-[13px] text-[var(--text-secondary)]">
+                              {secondary}
+                            </span>
+                          ) : null}
                           {isReceipt && t.receipt_allocated === false ? (
                             <span className="mt-1 inline-block rounded-[var(--radius-pill)] border border-[var(--pending-border)] bg-[var(--pending-bg)] px-2 py-0.5 font-[family-name:var(--font-mono)] text-[10px] uppercase tracking-[0.06em] text-[var(--pending)]">
-                              Allocate amount
+                              Needs allocation
                             </span>
                           ) : null}
                         </span>
@@ -425,20 +525,15 @@ export function MoneyTab() {
                           <span
                             className={
                               isReceipt
-                                ? "block font-[family-name:var(--font-display)] text-[17px] font-bold tabular-nums text-[var(--inward)]"
-                                : "block font-[family-name:var(--font-display)] text-[17px] font-bold tabular-nums text-[var(--outward)]"
+                                ? "block font-[family-name:var(--font-display)] text-[28px] font-bold tabular-nums leading-none text-[var(--inward)]"
+                                : "block font-[family-name:var(--font-display)] text-[28px] font-bold tabular-nums leading-none text-[var(--outward)]"
                             }
                           >
-                            {formatRowAmount(t)}
+                            {formatIndianCurrency(t.amount)}
                           </span>
-                          <span className="mt-0.5 block font-[family-name:var(--font-mono)] text-[11px] capitalize text-[var(--text-tertiary)]">
+                          <span className="mt-1 block font-[family-name:var(--font-body)] text-[13px] capitalize text-[var(--text-secondary)]">
                             {paymentMethodLabel(t.payment_method)}
                           </span>
-                          {!isReceipt && t.payment_type_name ? (
-                            <span className="mt-0.5 block font-[family-name:var(--font-mono)] text-[10px] uppercase tracking-[0.06em] text-[var(--text-tertiary)]">
-                              {t.payment_type_name}
-                            </span>
-                          ) : null}
                         </span>
                       </div>
                     </li>

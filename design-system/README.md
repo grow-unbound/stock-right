@@ -64,8 +64,8 @@ Root files:
 Register-style **tables are desktop-only** (`sm` breakpoint and above). Narrow viewports use **card lists** with server-backed infinite scroll and prefetch near the end of the list — no table chrome, no footer spinner rows.
 
 - **Sort:** Server sort only, on allowlisted columns; header click toggles direction.
-- **Pagination:** Offset paging with rows-per-page control, page indicator, and “Showing X–Y of Z” where **Z** is the filtered total from the server (same filters as the current query).
-- **Loading:** Skeleton on first load for the activity region; do not use spinner rows or a loading stripe at the list footer when loading more.
+- **Pagination:** Offset paging with rows-per-page control, page indicator, and “Showing X–Y of Z” where **Z** is the filtered total from the server (same filters as the current query). **Money:** while the search box has text, subtle **Loader2** (or equivalent) may appear in the search row during fetches; **SearchX** for no rows.
+- **Loading:** Skeleton on first load for the activity region; when loading more on mobile lists, use a **skeleton stub** in the list footer (not a spinner row in the register).
 - **Styling:** All colors via CSS tokens from `colors_and_type.css` — no hardcoded hex in table or list code.
 
 Mobile lists repeat the same row facts (title line, reference · date, amount, method, optional type) using shared tokens from `@stockright/shared/tokens`.
@@ -107,8 +107,26 @@ The voice is the **experienced mandi accountant** — calm, honest, brief, never
 
 ### Numbers & dates
 - **Indian number system** always: `₹2,47,500`, `2.5 Lakh`, `1 Crore`. Never `₹247,500`, `250K`, `10M`.
-- **Date format** always: `DD/MM/YYYY`.
+- **Date format** for forms and formal display: `DD/MM/YYYY`.
+- **Money activity lists** use compact **`d MMM`** (e.g. `12 Jan`) via `formatMoneyListDate` in `@stockright/shared/utils` — scannable, matches card-list preview density in `preview/components-cards.html`.
 - **Bags, lots, parties** — operator vocabulary, never SKU / units / clients / inventory.
+
+### Money KPI (compact, two-up)
+
+Used on the Money tab beside filters: same **KPI** scale as `preview/type-numbers.html` — mono label **11px** uppercase **`letter-spacing: 0.1em`**, value **38px / 700** Noto Serif tabular, subline **13px** body. Teal/rust semantic fills for received/paid totals. Narrow viewports may use one step smaller numerals if two columns clip.
+
+### Searchable transaction list (Money + future feeds)
+
+Shared implementation paths:
+
+| Concern | Package / API |
+|--------|-----------------|
+| Local filter (0ms) | `filterMoneyRowsLocal` in `@stockright/shared/money` |
+| Deduped merge | `mergeUniqueMoneyRows` / `moneyRowKey` |
+| Debounced value | `useDebouncedValue` in `@stockright/shared/hooks` (400ms for Money) |
+| Offline / last list | `loadMoneyListSnapshot`, `saveMoneyListSnapshot`, optional pending rows in `@stockright/shared/offline/app-cache` |
+
+**UI:** optional **`searchAccessory`** beside the search field (web `DashboardPageShell`, mobile `TabScreenHeader`) — **Loader2** (or platform spinner) **only** during the background search request; **SearchX** for empty combined results. Clearing the query resets **page 1** and the server window.
 
 ### Vibe
 Warm. Honest. Quiet competence. The visual register is **paper-shop confidence**: cream paper, dark soil ink, a single warm amber accent for action. The copy mirrors that — short sentences, soft warmth, specific facts, no marketing words.
@@ -144,7 +162,7 @@ StockRight looks like a **smarter paper register**. Warm near-white backgrounds 
 ### Typography
 - **One family system: Noto.** Noto Serif for display/headings/numbers, Noto Sans for body, Noto Sans Mono for codes/timestamps/labels. They share metrics so mixing is seamless.
 - **Why Noto:** native Telugu, Devanagari, Tamil, Kannada, Bengali rendering. Latin-only serifs (Lora, Playfair, Merriweather) are forbidden because they break Indian script rendering.
-- **Numbers are Noto Serif Bold** — KPIs and currency values use the display serif at 38px / 700 to feel ledger-like.
+- **Numbers are Noto Serif Bold** — KPIs and currency values use the display serif at 38px / 700 to feel ledger-like. **Compact list amounts** (Money activity cards / register list) use **28px / 700** for the primary figure — see `preview/components-cards.html`.
 - **Labels are Noto Sans Mono UPPERCASE 11px ls 0.1em** — column headers and tags.
 
 ### Spacing

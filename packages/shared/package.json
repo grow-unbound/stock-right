@@ -9,7 +9,9 @@
     "./utils": "./src/utils/index.ts",
     "./i18n": "./src/i18n/index.ts",
     "./tokens": "./src/tokens/index.ts",
-    "./demo": "./src/demo/index.ts"
+    "./demo": "./src/demo/index.ts",
+    "./money": "./src/money/index.ts",
+    "./offline/app-cache": "./src/offline/app-cache/index.ts"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.49.4",

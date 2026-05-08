@@ -117,12 +117,14 @@ One type family system across three roles. Chosen for **full Indian script cover
 | Small | 13px | 400 | Noto Sans | Captions, helper text |
 | Label | 11px | 500 | Noto Sans Mono | Column headers, tags — UPPERCASE, ls 0.1em |
 | Number | 38px | 700 | Noto Serif | KPI values, currency |
+| Number (activity row) | 28px | 700 | Noto Serif | Money / register list amounts — see `design-system/preview/components-cards.html` |
 
 ### 2.3 i18n Rules
 
 - Default language on first open: detect device locale → Telugu (AP/TG), Hindi (North), Tamil (TN), Kannada (KA). English is the fallback, not the default.
 - No hardcoded English strings in UI components. All labels go through i18n keys.
-- Date format: `DD/MM/YYYY` always
+- Date format: `DD/MM/YYYY` for forms, confirmations, and formal display.
+- **Money activity** rows may use a compact calendar form **`d MMM`** (e.g. `12 Jan`) for scannable lists — implement via `formatMoneyListDate` in `@stockright/shared/utils`; keep `DD/MM/YYYY` everywhere else unless a screen spec says otherwise.
 - Currency format: `₹2,47,500` (Indian system) — never `₹247500` or `₹247.5K`
 - Number words: "2.5 Lakh" not "250K", "1 Crore" not "10M"
 
@@ -211,6 +213,16 @@ Offline → badge-offline: "⚡ N queued" — always show count when shown
 ```
 
 Do **not** use `badge-online` / “● Online” on desktop web.
+
+### 3.8 Money tab — KPI cards and activity list
+
+- **KPI cards (two-column, dashboard):** Match `design-system/preview/type-numbers.html`: mono **Label** row (11px, uppercase, `letter-spacing: 0.1em`), **Number** value at **38px / 700** Noto Serif tabular, caption line **13px** Noto Sans in secondary text color. On very narrow grids, values may step down one size (e.g. 32px) if clipping occurs.
+- **Searchable activity list:** Use `@stockright/shared/money` (`filterMoneyRowsLocal`, `mergeUniqueMoneyRows`, party display helpers) and `@stockright/shared/offline/app-cache` for persisted snapshots:
+  - **`localData`** holds rows in memory; **`searchResults`** = immediate `filterMoneyRowsLocal(localData, …)` on each keystroke.
+  - **Debounce 400ms** before Supabase `list_money_movements` / count; **merge** pages with a **Map** keyed by `transaction_type` + `event_id` so duplicates never render.
+  - **Search field:** subtle **spinner** (e.g. Lucide `Loader2`) only while the **search** network call is in flight; **empty** state: **SearchX** + short copy.
+  - **Clearing search** resets **page 1** offset paging and refetches the default window.
+  - **Offline:** hydrate from device storage (last list per warehouse + chip + optional pending rows); same local filter applies; no live Supabase reads until online.
 
 ---
 

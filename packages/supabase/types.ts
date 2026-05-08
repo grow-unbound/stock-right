@@ -1665,6 +1665,8 @@ export type Database = {
           created_at: string | null
           customer_code: string | null
           event_id: string | null
+          expenditure_head: string | null
+          notes: string | null
           occurred_at: string | null
           payment_method: string | null
           payment_type_name: string | null
@@ -1849,6 +1851,8 @@ export type Database = {
           created_at: string
           customer_code: string | null
           event_id: string
+          expenditure_head: string | null
+          notes: string | null
           occurred_at: string
           payment_method: string | null
           payment_type_name: string | null

@@ -3,7 +3,7 @@
 import type { ReactNode } from "react";
 import { useState } from "react";
 import { usePathname } from "next/navigation";
-import { Plus, Search } from "lucide-react";
+import { Plus, Search, X } from "lucide-react";
 import type { LandingFilterChip } from "@stockright/shared/demo";
 import { getLandingFabConfig } from "@stockright/shared/demo";
 import { DEMO_PROFILE_USER } from "@stockright/shared/demo";
@@ -27,6 +27,8 @@ interface DashboardPageShellProps {
   /** Controlled search — when set with `onSearchChange`, renders a real input (16px). */
   searchValue?: string;
   onSearchChange?: (value: string) => void;
+  /** Shown at the end of the search field row (e.g. search-in-flight spinner). */
+  searchAccessory?: ReactNode;
   children: ReactNode;
 }
 
@@ -41,6 +43,7 @@ export function DashboardPageShell({
   moneyFabEnabled = true,
   searchValue,
   onSearchChange,
+  searchAccessory,
   children,
 }: DashboardPageShellProps) {
   const offline = useIsOffline();
@@ -88,6 +91,17 @@ export function DashboardPageShell({
             ) : (
               <span className="text-[16px] text-[var(--text-placeholder)]">{searchPlaceholder}</span>
             )}
+            {searchControlled && (searchValue ?? "").trim() !== "" ? (
+              <button
+                type="button"
+                onClick={() => onSearchChange?.("")}
+                className="flex size-9 shrink-0 items-center justify-center rounded-[var(--radius-sm)] text-[var(--text-tertiary)] hover:bg-[var(--bg-inset)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)]"
+                aria-label="Clear search"
+              >
+                <X className="size-[18px]" strokeWidth={2} aria-hidden />
+              </button>
+            ) : null}
+            {searchAccessory}
           </label>
         </div>
         <div className="px-0">

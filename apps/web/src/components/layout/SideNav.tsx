@@ -88,6 +88,18 @@ export function SideNav() {
       </div>
 
       <div className="mt-auto flex shrink-0 flex-col px-2 py-3">
+        <div className="flex min-h-[var(--touch-target)] items-center gap-2 rounded-[10px] px-3 py-2">
+          <div className="flex size-9 shrink-0 items-center justify-center rounded-full border border-[var(--border-default)] bg-[var(--brand-subtle)] font-[family-name:var(--font-display)] text-[14px] font-semibold text-[var(--brand-text)]">
+            {context?.initials ?? "?"}
+          </div>
+          <div className="min-w-0 flex-1 text-left">
+            <p className="truncate text-[14px] font-semibold leading-snug text-[var(--text-primary)]">{displayName}</p>
+            <p className="truncate text-[12px] leading-snug text-[var(--text-secondary)]">{subtitleLine}</p>
+          </div>
+        </div>
+
+        <div className="my-2 border-t border-[var(--border-default)]" aria-hidden />
+
         <form action={logoutAction}>
           <button
             type="submit"
@@ -98,18 +110,6 @@ export function SideNav() {
             Log out
           </button>
         </form>
-
-        <div className="my-2 border-t border-[var(--border-default)]" aria-hidden />
-
-        <div className="flex min-h-[var(--touch-target)] items-center gap-2 rounded-[10px] px-3 py-2">
-          <div className="flex size-9 shrink-0 items-center justify-center rounded-full border border-[var(--border-default)] bg-[var(--brand-subtle)] font-[family-name:var(--font-display)] text-[14px] font-semibold text-[var(--brand-text)]">
-            {context?.initials ?? "?"}
-          </div>
-          <div className="min-w-0 flex-1 text-left">
-            <p className="truncate text-[14px] font-semibold leading-snug text-[var(--text-primary)]">{displayName}</p>
-            <p className="truncate text-[12px] leading-snug text-[var(--text-secondary)]">{subtitleLine}</p>
-          </div>
-        </div>
       </div>
     </nav>
   );

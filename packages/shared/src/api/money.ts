@@ -25,13 +25,21 @@ export const MoneyMovementRowSchema = z.object({
   event_id: z.string().uuid(),
   occurred_at: z.string(),
   created_at: z.string(),
-  amount: z.number(),
+  amount: z.coerce.number(),
   payment_method: z.string().nullable(),
-  counterparty_name: z.string(),
+  counterparty_name: z.preprocess((v) => (v == null ? "" : String(v)), z.string()),
   customer_code: z.string().nullable(),
   reference_number: z.string().nullable(),
   payment_type_name: z.string().nullable(),
   receipt_allocated: z.boolean().nullable(),
+  expenditure_head: z
+    .union([z.string(), z.null()])
+    .optional()
+    .transform((v) => (v === undefined ? null : v)),
+  notes: z
+    .union([z.string(), z.null()])
+    .optional()
+    .transform((v) => (v === undefined ? null : v)),
 });
 
 export type MoneyMovementRow = z.infer<typeof MoneyMovementRowSchema>;
