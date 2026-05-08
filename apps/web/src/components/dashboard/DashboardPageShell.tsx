@@ -22,6 +22,11 @@ interface DashboardPageShellProps {
   trailing?: ReactNode;
   /** Shown on desktop only, right-aligned next to the page title */
   desktopActions?: ReactNode;
+  /** When false, mobile FAB for `/money` is hidden (Staff). */
+  moneyFabEnabled?: boolean;
+  /** Controlled search — when set with `onSearchChange`, renders a real input (16px). */
+  searchValue?: string;
+  onSearchChange?: (value: string) => void;
   children: ReactNode;
 }
 
@@ -33,12 +38,17 @@ export function DashboardPageShell({
   onChipChange,
   trailing,
   desktopActions,
+  moneyFabEnabled = true,
+  searchValue,
+  onSearchChange,
   children,
 }: DashboardPageShellProps) {
   const offline = useIsOffline();
   const pathname = usePathname();
-  const fabConfig = getLandingFabConfig(pathname ?? "");
+  const fabConfig = getLandingFabConfig(pathname ?? "", { enableMoneyFab: moneyFabEnabled });
   const [fabOpen, setFabOpen] = useState(false);
+
+  const searchControlled = typeof onSearchChange === "function";
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
@@ -57,13 +67,28 @@ export function DashboardPageShell({
           </div>
         </div>
         <div className="px-0 pb-2.5">
-          <div
+          <label
             className="flex h-10 items-center gap-2 rounded-[var(--radius-md)] border border-[var(--border-default)] bg-[var(--bg-surface)] px-3"
-            role="search"
+            htmlFor={searchControlled ? "dashboard-page-search" : undefined}
           >
             <Search className="size-[18px] shrink-0 text-[var(--text-tertiary)]" strokeWidth={2} aria-hidden />
-            <span className="text-[16px] text-[var(--text-placeholder)]">{searchPlaceholder}</span>
-          </div>
+            {searchControlled ? (
+              <input
+                id="dashboard-page-search"
+                type="search"
+                enterKeyHint="search"
+                autoCorrect="off"
+                autoCapitalize="none"
+                spellCheck={false}
+                value={searchValue ?? ""}
+                onChange={(e) => onSearchChange(e.target.value)}
+                placeholder={searchPlaceholder}
+                className="min-w-0 flex-1 bg-transparent text-[16px] text-[var(--text-primary)] outline-none placeholder:text-[var(--text-placeholder)]"
+              />
+            ) : (
+              <span className="text-[16px] text-[var(--text-placeholder)]">{searchPlaceholder}</span>
+            )}
+          </label>
         </div>
         <div className="px-0">
           <FilterChipRow chips={chips} activeId={chipActiveId} onChange={onChipChange} />

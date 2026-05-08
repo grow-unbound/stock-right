@@ -3,32 +3,44 @@
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
+import type { LucideIcon } from "lucide-react";
 import { LayoutDashboard, Package, Users, Banknote, UserCircle, LogOut } from "lucide-react";
 import { DEMO_PROFILE_USER } from "@stockright/shared/demo";
 import { Badge } from "@/components/ui/Badge";
 import { useIsOffline } from "@/hooks/useIsOffline";
+import { useMoneyAccess } from "@/contexts/MoneyAccessContext";
 import { cn } from "@/lib/utils";
 import { logoutAction } from "@/app/actions/session";
 import { useSessionUser } from "@/components/session/session-user-provider";
 
-const navItems = [
+interface SideNavItem {
+  href: string;
+  label: string;
+  icon: LucideIcon;
+  requiresMoney?: boolean;
+}
+
+const navItems: SideNavItem[] = [
   { href: "/", label: "Home", icon: LayoutDashboard },
   { href: "/stock", label: "Stock", icon: Package },
   { href: "/parties", label: "Parties", icon: Users },
-  { href: "/money", label: "Money", icon: Banknote },
+  { href: "/money", label: "Money", icon: Banknote, requiresMoney: true },
   { href: "/settings", label: "Preferences", icon: UserCircle },
-] as const;
+];
 
 export function SideNav() {
   const pathname = usePathname() ?? "";
   const offline = useIsOffline();
   const { context } = useSessionUser();
+  const { canManageMoney, loaded } = useMoneyAccess();
 
   const displayName = context?.fullName?.trim() || context?.phone || "Account";
   const subtitleLine =
     context?.warehouseName != null
       ? `${context.roleLabel} · ${context.warehouseName}`
       : `${context?.roleLabel ?? "—"}`;
+
+  const visibleItems = navItems.filter((item) => !item.requiresMoney || !loaded || canManageMoney);
 
   return (
     <nav
@@ -49,7 +61,7 @@ export function SideNav() {
 
       <div className="min-h-0 flex-1 overflow-y-auto">
         <div className="flex flex-col gap-0.5 px-2 py-4">
-          {navItems.map(({ href, label, icon: Icon }) => {
+          {visibleItems.map(({ href, label, icon: Icon }) => {
             const base = pathname.replace(/\/$/, "") || "/";
             const hrefNorm = href.replace(/\/$/, "") || "/";
             const isActive =

@@ -24,10 +24,10 @@ export function useOtpFlow(supabaseUrl: string, supabaseAnonKey: string) {
 
   const requestOtp = useCallback(
     async (payload: Parameters<typeof sendOtp>[2]): Promise<SendOtpResult | null> => {
-      setState((s) => ({ ...s, isLoading: true, error: null, errorCode: null }));
+      setState((s: UseOtpState) => ({ ...s, isLoading: true, error: null, errorCode: null }));
       try {
         const result = await sendOtp(supabaseUrl, supabaseAnonKey, payload);
-        setState((s) => ({
+        setState((s: UseOtpState) => ({
           ...s,
           isLoading: false,
           challengeId: result.challengeId,
@@ -37,7 +37,7 @@ export function useOtpFlow(supabaseUrl: string, supabaseAnonKey: string) {
       } catch (err) {
         const msg = err instanceof OtpError ? err.message : "Something went wrong. Try again.";
         const code = err instanceof OtpError ? err.code : "UNKNOWN";
-        setState((s) => ({ ...s, isLoading: false, error: msg, errorCode: code }));
+        setState((s: UseOtpState) => ({ ...s, isLoading: false, error: msg, errorCode: code }));
         return null;
       }
     },
@@ -47,15 +47,18 @@ export function useOtpFlow(supabaseUrl: string, supabaseAnonKey: string) {
   const confirmOtp = useCallback(
     async (code: string): Promise<VerifyOtpResult | null> => {
       if (!state.challengeId) return null;
-      setState((s) => ({ ...s, isLoading: true, error: null, errorCode: null }));
+      setState((s: UseOtpState) => ({ ...s, isLoading: true, error: null, errorCode: null }));
       try {
-        const result = await verifyOtp(supabaseUrl, supabaseAnonKey, state.challengeId, code);
-        setState((s) => ({ ...s, isLoading: false }));
+        const result = await verifyOtp(supabaseUrl, supabaseAnonKey, {
+          challengeId: state.challengeId,
+          code,
+        });
+        setState((s: UseOtpState) => ({ ...s, isLoading: false }));
         return result;
       } catch (err) {
         const msg = err instanceof OtpError ? err.message : "Something went wrong. Try again.";
         const code2 = err instanceof OtpError ? err.code : "UNKNOWN";
-        setState((s) => ({ ...s, isLoading: false, error: msg, errorCode: code2 }));
+        setState((s: UseOtpState) => ({ ...s, isLoading: false, error: msg, errorCode: code2 }));
         return null;
       }
     },
@@ -63,7 +66,7 @@ export function useOtpFlow(supabaseUrl: string, supabaseAnonKey: string) {
   );
 
   const clearError = useCallback(() => {
-    setState((s) => ({ ...s, error: null, errorCode: null }));
+    setState((s: UseOtpState) => ({ ...s, error: null, errorCode: null }));
   }, []);
 
   return { ...state, requestOtp, confirmOtp, clearError };

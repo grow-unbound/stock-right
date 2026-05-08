@@ -50,6 +50,15 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(new URL("/", request.url));
   }
 
+  async function redirectIfStaffOnMoney(): Promise<NextResponse | null> {
+    if (!pathname.startsWith("/money")) return null;
+    const { data: allowed } = await supabase.rpc("user_can_manage_money");
+    if (!allowed) {
+      return NextResponse.redirect(new URL("/", request.url));
+    }
+    return null;
+  }
+
   if (user && !isPublicPath) {
     const { data: rows } = await supabase
       .from("user_warehouse_assignments")
@@ -62,6 +71,8 @@ export async function middleware(request: NextRequest) {
       if (!pathname.startsWith("/create-warehouse")) {
         return NextResponse.redirect(new URL("/create-warehouse", request.url));
       }
+      const blocked = await redirectIfStaffOnMoney();
+      if (blocked) return blocked;
       return response;
     }
 
@@ -70,6 +81,8 @@ export async function middleware(request: NextRequest) {
       if (!existing || existing !== ids[0]) {
         response.cookies.set(ACTIVE_WAREHOUSE_COOKIE_NAME, ids[0]!, warehouseCookieOptions());
       }
+      const blocked = await redirectIfStaffOnMoney();
+      if (blocked) return blocked;
       return response;
     }
 
@@ -78,6 +91,11 @@ export async function middleware(request: NextRequest) {
     if (!valid && !pathname.startsWith("/warehouse-select")) {
       return NextResponse.redirect(new URL("/warehouse-select", request.url));
     }
+  }
+
+  if (user) {
+    const blocked = await redirectIfStaffOnMoney();
+    if (blocked) return blocked;
   }
 
   return response;

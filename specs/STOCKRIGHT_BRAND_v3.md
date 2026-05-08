@@ -414,3 +414,7 @@ Before shipping any screen, verify:
 
 *StockRight Brand Language v3 — Foundation for design system implementation*  
 *Review this document before making any color, typography, or component decisions.*
+
+### Related
+
+- **Desktop-only data tables** (sortable columns, offset pagination with totals, skeleton-first loading): see `design-system/README.md` → *Desktop data tables (web, sm and up)*.

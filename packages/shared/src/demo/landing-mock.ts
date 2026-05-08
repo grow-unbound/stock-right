@@ -280,14 +280,20 @@ export function filterMoneyTxns(txns: DemoMoneyTxn[], chipId: string): DemoMoney
   return txns;
 }
 
-export function getLandingFabConfig(pathname: string): {
+export function getLandingFabConfig(
+  pathname: string,
+  options?: { enableMoneyFab?: boolean }
+): {
   title: string;
   actions: LandingFabAction[];
 } | null {
   const base = pathname.replace(/\/$/, "") || "/";
   if (base === "/stock") return { title: "Add to stock", actions: DEMO_FAB_STOCK_ACTIONS };
   if (base === "/parties") return { title: "Add party", actions: DEMO_FAB_PARTIES_ACTIONS };
-  if (base === "/money") return { title: "Record money", actions: DEMO_FAB_MONEY_ACTIONS };
+  if (base === "/money") {
+    if (options?.enableMoneyFab === false) return null;
+    return { title: "Record money", actions: DEMO_FAB_MONEY_ACTIONS };
+  }
   return null;
 }
 

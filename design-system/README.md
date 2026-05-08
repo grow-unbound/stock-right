@@ -59,6 +59,17 @@ Root files:
 - `ui_kits/stockright-app/` — high-fidelity mobile UI kit (`index.html` + JSX components)
 - `screenshots/` — verification screenshots from the build process
 
+### Desktop data tables (web, `sm` and up)
+
+Register-style **tables are desktop-only** (`sm` breakpoint and above). Narrow viewports use **card lists** with server-backed infinite scroll and prefetch near the end of the list — no table chrome, no footer spinner rows.
+
+- **Sort:** Server sort only, on allowlisted columns; header click toggles direction.
+- **Pagination:** Offset paging with rows-per-page control, page indicator, and “Showing X–Y of Z” where **Z** is the filtered total from the server (same filters as the current query).
+- **Loading:** Skeleton on first load for the activity region; do not use spinner rows or a loading stripe at the list footer when loading more.
+- **Styling:** All colors via CSS tokens from `colors_and_type.css` — no hardcoded hex in table or list code.
+
+Mobile lists repeat the same row facts (title line, reference · date, amount, method, optional type) using shared tokens from `@stockright/shared/tokens`.
+
 ### UI kits
 | Kit | Surface | Status |
 |---|---|---|
