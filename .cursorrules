@@ -1,0 +1,59 @@
+# StockRight — Cursor Rules
+
+## TypeScript
+- Strict mode always. No `any`, no `as any`, no `@ts-ignore` without a comment explaining why.
+- Prefer `unknown` over `any` for error handling; narrow with type guards before use.
+- Use `satisfies` for type-safe object literals where applicable.
+
+## Colors & Design Tokens
+- NEVER hardcode hex colors, rgb values, or named colors in source code.
+- Web: always use `var(--token-name)` or Tailwind classes mapped to tokens.
+- Mobile: always use `tokens.*` imported from `@stockright/shared/tokens`.
+- Brand amber text must be `--brand-text` (#8C4A12). NEVER use `--brand-ui` (#C8712A) for text.
+- Violation example (BAD): `color: "#C8712A"` or `style={{ backgroundColor: "orange" }}`
+
+## Input Font Size
+- Input `font-size` MUST be 16px (web: `text-[16px]`, mobile: `fontSize: 16`).
+- This is LOCKED. Smaller font causes iOS to auto-zoom the viewport on focus. Never change it.
+
+## Touch Targets
+- All interactive elements MUST have a minimum touch target of 48px height.
+- Visual height can be smaller (e.g., 36px) but the touchable area must pad to 48px.
+
+## Layout / Responsive (web only)
+- BottomTabBar appears ONLY on `<640px`. SideNav appears ONLY on `≥640px`. Never both simultaneously.
+- Mobile-web (`<640px` web): no separate top header; wordmark lives in SideNav on desktop only. Account/offline strip is desktop-only (`≥640px`) above page content.
+- Desktop web: primary tab CTAs sit in the page title row (right-aligned), not in a global top bar.
+- Use Tailwind responsive prefixes (`sm:`, `md:`, `lg:`) — no custom CSS media queries.
+
+## Loading States
+- Use skeleton screens (shimmer animation) for all loading states.
+- NEVER use bare spinners as the primary loading indicator for page-level content.
+- **Buttons:** show a **loading label** (e.g. Sending…, Verifying…) via `loadingLabel` / label swap — never a spinner **inside** the button (brand spec §3.5).
+
+## UI Copy Rules (from brand spec §7)
+- NEVER use: "sync", "transaction", "SKU", "inventory", "ERP", "module", "portal"
+- PREFER: "receive" over "inward", "dispatch" over "outward" in user-facing copy
+  (Note: use inward/outward as code/token names, but human-readable labels say receive/dispatch)
+- No jargon. Write as if explaining to a first-time warehouse owner.
+
+## Font Family
+- Web: Noto Sans (UI text), Noto Serif (display headings), Noto Sans Mono (numbers/quantities)
+- Mobile: `NotoSans-Regular`, `NotoSans-Medium`, `NotoSans-SemiBold`, `NotoSerif-Regular`, `NotoSerif-SemiBold`
+- NEVER substitute Latin-only fonts (Lora, Playfair Display, Inter) — they break Telugu script.
+- Always include subsets: `["latin", "telugu", "devanagari"]` in next/font configs.
+
+## Golden Rule
+- Any feature added to web MUST be simultaneously added to mobile, or deferred with a tracked issue.
+- Any feature added to mobile MUST be simultaneously added to web, or deferred with a tracked issue.
+- Shared logic (validation, API calls, types) MUST live in `packages/shared`, not duplicated.
+
+## Security
+- Never log OTP codes, session tokens, or user PII.
+- Always validate user input with Zod at system boundaries.
+- Edge Functions must verify JWT before any privileged operation (`verify_jwt = true` in config.toml).
+
+## Comments
+- Write comments only when the WHY is non-obvious.
+- No docblock comments (JSDoc/TSDoc) unless generating a public library API.
+- No "added for X feature" or "used by Y component" comments — they rot.

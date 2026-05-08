@@ -36,6 +36,7 @@ If working on production code: copy assets and read the rules here to become an 
 10. **Date format `DD/MM/YYYY` always.**
 11. **No emoji as decoration.** Functional unicode glyphs (`✓`, `●`, `⚡`, `↑`) are allowed inline in copy where they carry meaning.
 12. **Copy is plain, past-tense, specific.** "240 bags recorded ✓" — never "Operation successful." See `README.md` § Content Fundamentals for the full vocabulary list.
+13. **Button loading labels, not spinners in buttons.** While an action is in progress, the button shows a short label (Sending…, Verifying…, Saving…) instead of children; never put a spinner inside a primary CTA. Page-level loading still uses skeletons. Authoritative patterns: `specs/STOCKRIGHT_BRAND_v3.md` §3.5 (web `Button` uses `loadingLabel`); mobile matches.
 
 ## If invoked without guidance
 

@@ -3,169 +3,114 @@
 
 ---
 
-## Proposed Structure
+## Confirmed Structure (as of May 2026)
+
+> **Status: IMPLEMENTED** — This is the final confirmed structure, not a proposal.
 
 ```
 stock-right/
 ├── apps/
-│   ├── web/                          # Next.js web app (deployed to Vercel)
+│   ├── web/                          # Next.js 15 App Router (deployed to Vercel)
 │   │   ├── src/
-│   │   │   ├── app/                  # Next.js app router
-│   │   │   │   ├── (dashboard)/
-│   │   │   │   │   ├── layout.tsx
-│   │   │   │   │   ├── page.tsx
-│   │   │   │   │   ├── stock/
-│   │   │   │   │   ├── money/
-│   │   │   │   │   └── settings/
+│   │   │   ├── app/
 │   │   │   │   ├── (auth)/
-│   │   │   │   │   ├── login/
-│   │   │   │   │   └── layout.tsx
-│   │   │   │   └── layout.tsx
-│   │   │   ├── components/            # Web-only components (tables, complex modals)
-│   │   │   │   ├── DashboardLayout.tsx
-│   │   │   │   ├── DataTable.tsx
-│   │   │   │   └── ...
-│   │   │   ├── hooks/                 # Web-specific hooks (if any)
-│   │   │   ├── lib/                   # Web utilities
-│   │   │   └── styles/
+│   │   │   │   │   ├── login/page.tsx        # Phone input → send OTP
+│   │   │   │   │   ├── signup/page.tsx       # Full signup form
+│   │   │   │   │   └── verify/page.tsx       # 6-digit OTP entry + countdown
+│   │   │   │   ├── (onboarding)/
+│   │   │   │   │   └── create-warehouse/page.tsx
+│   │   │   │   ├── (dashboard)/
+│   │   │   │   │   ├── layout.tsx            # Responsive nav (sidebar / bottom tabs)
+│   │   │   │   │   ├── page.tsx              # Home / KPI dashboard
+│   │   │   │   │   ├── stock/page.tsx
+│   │   │   │   │   ├── parties/page.tsx
+│   │   │   │   │   └── settings/page.tsx
+│   │   │   │   ├── warehouse-select/page.tsx # Shown when user has >1 warehouse
+│   │   │   │   ├── layout.tsx                # Root: fonts, CSS vars, QueryProvider
+│   │   │   │   └── globals.css
+│   │   │   ├── components/
+│   │   │   │   ├── layout/                   # TopBar, SideNav, BottomTabBar, AppShell
+│   │   │   │   ├── auth/                     # PhoneInput, OtpInput, SignupForm, WarehouseForm
+│   │   │   │   └── ui/                       # Badge, Button, Input, Skeleton
+│   │   │   ├── lib/
+│   │   │   │   ├── supabase/                 # client.ts (browser), server.ts (SSR)
+│   │   │   │   └── query-client.ts
+│   │   │   └── hooks/
 │   │   ├── public/
-│   │   ├── next.config.js
+│   │   │   └── wordmark.svg
+│   │   ├── next.config.ts
+│   │   ├── tailwind.config.ts                # StockRight tokens mapped to Tailwind
 │   │   ├── tsconfig.json
 │   │   ├── package.json
 │   │   └── .env.local
 │   │
-│   └── mobile/                        # Expo React Native app (future)
-│       ├── src/
-│       │   ├── app/                   # Expo router (when time comes)
-│       │   ├── components/            # Mobile-specific components
-│       │   ├── screens/               # Mobile screens
-│       │   ├── hooks/
-│       │   └── lib/
-│       ├── app.json                   # Expo config
+│   └── mobile/                       # Expo SDK 52 + Expo Router v4
+│       ├── app/
+│       │   ├── (auth)/               # login.tsx, signup.tsx, verify.tsx
+│       │   ├── (onboarding)/         # create-warehouse.tsx
+│       │   ├── (dashboard)/          # _layout.tsx (bottom tabs), index/stock/parties/settings
+│       │   ├── warehouse-select.tsx
+│       │   └── _layout.tsx           # Root: AuthProvider, QueryProvider, GlueStack
+│       ├── components/
+│       │   ├── auth/                 # PhoneInput, OtpInput (native)
+│       │   └── ui/                   # Badge, Button (+ haptics), Skeleton
+│       ├── theme/
+│       │   └── index.ts              # GlueStack config with @stockright/shared/tokens
+│       ├── assets/
+│       │   └── wordmark.svg
+│       ├── app.json
 │       ├── package.json
 │       └── tsconfig.json
 │
 ├── packages/
-│   ├── shared/                        # Shared code (both apps use this)
+│   ├── shared/                       # @stockright/shared — platform-agnostic
 │   │   ├── src/
-│   │   │   ├── api/                   # API client (universal)
-│   │   │   │   ├── supabase.ts        # Supabase client setup
-│   │   │   │   ├── client.ts          # Fetch-based API client
-│   │   │   │   ├── endpoints/
-│   │   │   │   │   ├── lots.ts
-│   │   │   │   │   ├── customers.ts
-│   │   │   │   │   ├── auth.ts
-│   │   │   │   │   └── ...
-│   │   │   │   └── types.ts           # Response/Request types
-│   │   │   │
-│   │   │   ├── components/            # Shared UI components (simple, mobile-safe)
-│   │   │   │   ├── LotCard.tsx
-│   │   │   │   ├── StatusBadge.tsx
-│   │   │   │   ├── forms/
-│   │   │   │   │   ├── DeliveryForm.tsx
-│   │   │   │   │   └── PaymentForm.tsx
-│   │   │   │   └── ui/                # Low-level UI (Button, Input, etc.)
-│   │   │   │
-│   │   │   ├── hooks/                 # Shared hooks (state, API calls)
-│   │   │   │   ├── useLotsQuery.ts
-│   │   │   │   ├── useOutstanding.ts
-│   │   │   │   ├── useOfflineSync.ts
-│   │   │   │   └── ...
-│   │   │   │
-│   │   │   ├── store/                 # Zustand state (shared)
-│   │   │   │   ├── authStore.ts
-│   │   │   │   ├── lotsStore.ts
-│   │   │   │   └── ...
-│   │   │   │
-│   │   │   ├── types/                 # Shared TypeScript types
-│   │   │   │   ├── models.ts          # Lot, Customer, Warehouse, etc.
-│   │   │   │   ├── api.ts
-│   │   │   │   └── ...
-│   │   │   │
-│   │   │   ├── utils/                 # Shared utilities
-│   │   │   │   ├── calculations.ts    # daysOld, outstanding, etc.
-│   │   │   │   ├── formatting.ts
-│   │   │   │   ├── validation.ts
-│   │   │   │   └── ...
-│   │   │   │
-│   │   │   ├── locales/               # i18n (shared between apps)
-│   │   │   │   ├── en/
-│   │   │   │   │   └── common.json
-│   │   │   │   ├── te/
-│   │   │   │   │   └── common.json
-│   │   │   │   └── i18n.ts
-│   │   │   │
-│   │   │   ├── offline/               # Offline-first logic (web + mobile)
-│   │   │   │   ├── indexedDB.ts       # IndexedDB for web
-│   │   │   │   ├── asyncStorage.ts    # AsyncStorage for mobile (future)
-│   │   │   │   ├── queue.ts           # Universal queue abstraction
-│   │   │   │   └── sync.ts            # Sync logic
-│   │   │   │
-│   │   │   └── index.ts               # Barrel export
-│   │   │
+│   │   │   ├── types/                # db.ts (Supabase types re-export), models.ts, auth.ts
+│   │   │   ├── api/                  # supabase.ts (client factory), auth.ts, warehouse.ts
+│   │   │   ├── hooks/                # useAuth.ts, useWarehouses.ts
+│   │   │   ├── utils/                # formatting.ts, validation.ts (Zod schemas)
+│   │   │   ├── i18n/                 # en/common.json, te/common.json
+│   │   │   └── tokens/               # index.ts — JS export of CSS tokens for mobile
 │   │   ├── package.json
-│   │   ├── tsconfig.json
-│   │   └── README.md
+│   │   └── tsconfig.json
 │   │
-│   └── supabase/                      # Supabase backend (Edge Functions, migrations)
-│       ├── migrations/                # SQL migrations
-│       │   ├── 001_create_tables.sql
-│       │   ├── 002_add_rls.sql
-│       │   └── ...
-│       │
-│       ├── functions/                 # Edge Functions (Cron jobs, webhooks)
-│       │   ├── stale-check/
-│       │   │   ├── index.ts
-│       │   │   └── deno.json
-│       │   ├── rent-accrual/
-│       │   │   ├── index.ts
-│       │   │   └── deno.json
-│       │   └── ...
-│       │
-│       ├── seed.sql                   # Development seed data
-│       └── README.md
+│   └── supabase/                     # @growcold/supabase — backend infrastructure
+│       ├── supabase/
+│       │   ├── migrations/           # 21 SQL migrations (do not edit)
+│       │   └── functions/
+│       │       ├── send-otp/         # Resend email OTP + auth_otp_challenges insert
+│       │       ├── verify-otp/       # Hash comparison + createSession + nextStep
+│       │       └── monthly-rent-accrual/
+│       ├── types.ts                  # Auto-generated — run db:types to refresh
+│       └── package.json
 │
-├── tests/                             # Shared tests (unit, integration, E2E)
-│   ├── unit/
-│   │   ├── shared/
-│   │   │   ├── calculations.test.ts
-│   │   │   ├── formatting.test.ts
-│   │   │   └── ...
-│   │   ├── api/
-│   │   │   ├── endpoints.test.ts
-│   │   │   └── ...
-│   │   └── jest.config.js
-│   │
-│   ├── integration/
-│   │   ├── delivery-flow.test.ts
-│   │   ├── payment-flow.test.ts
-│   │   ├── offline-sync.test.ts
-│   │   └── ...
-│   │
-│   └── e2e/
-│       ├── auth.e2e.ts
-│       ├── stock.e2e.ts
-│       └── cypress.config.js          # Web E2E (Cypress)
-│
-├── docs/
-│   ├── ARCHITECTURE.md
-│   ├── API.md
-│   ├── DEVELOPMENT.md
-│   └── DEPLOYMENT.md
-│
-├── .github/
-│   └── workflows/
-│       ├── test.yml                   # Run tests on PR
-│       ├── deploy-web.yml             # Deploy web to Vercel
-│       └── lint.yml
-│
-├── .gitignore
-├── .npmrc                             # pnpm config
-├── pnpm-workspace.yaml               # pnpm monorepo config
-├── tsconfig.base.json                # Base TS config (extended by apps)
-├── package.json                       # Root package.json
-└── README.md
+├── CLAUDE.md                         # Root project instructions (Golden Rule lives here)
+├── .cursorrules                      # Strict adherence rules for all IDEs
+├── pnpm-workspace.yaml
+├── package.json                      # Root scripts only (no deps)
+├── tsconfig.base.json
+└── turbo.json
 ```
+
+---
+
+---
+
+## ⚡ Golden Rule: Web ↔ Mobile Sync
+
+> **Web and mobile MUST stay in sync at all times.**
+>
+> Any feature shipped on one platform must be simultaneously shipped (or explicitly deferred with a tracked issue) on the other. This is non-negotiable.
+
+**What "in sync" means:**
+- Same Zod validation schemas (live in `packages/shared/src/utils/validation.ts`)
+- Same API calls via `packages/shared/src/api/`
+- Same navigation paths and auth flow logic
+- Same i18n keys — no hardcoded strings on either platform
+- Same design tokens — Tailwind CSS vars on web, GlueStack token config on mobile
+- Visual differences are limited to platform-native patterns only (Pressable vs div, SafeAreaView, haptics)
+
+**OTP delivery:** Resend email for testing. Switch to WhatsApp by changing `OTP_PROVIDER` env var — no code changes required.
 
 ---
 

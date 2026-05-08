@@ -14,9 +14,14 @@
 3. **Invite Flow** — Existing owner invites staff to warehouse
 
 **OTP Delivery Strategy:**
-- **Testing (MVP):** Email OTP (easier to implement, easier to test)
-- **Go-Live:** WhatsApp Business OTP (production-ready)
-- **Implementation:** Abstract OTP delivery so switching is a config change, not a code change
+- **Testing (MVP):** Email OTP via **Resend** (`RESEND_API_KEY` + `RESEND_FROM_EMAIL` Supabase secrets)
+- **Go-Live:** WhatsApp Business OTP (switch by changing `OTP_PROVIDER=WHATSAPP` env var — no code changes)
+- **Implementation:** `send-otp` Edge Function abstracts delivery. OTP hash stored in `auth_otp_challenges` table (already exists in migration `20260418120000_auth_otp_signup.sql`)
+
+**Post-login warehouse routing:**
+- User has **1 warehouse** → auto-load it → redirect to `/` (Home)
+- User has **multiple warehouses** → redirect to `/warehouse-select`
+- User has **0 warehouses** (new signup) → redirect to `/create-warehouse`
 
 ---
 
@@ -334,10 +339,47 @@ if (process.env.OTP_PROVIDER === 'EMAIL') {
 2. Login page shown
 3. User enters phone number
 4. Submit → Check phone exists in system
-5. Send OTP to EMAIL (testing) or WHATSAPP (go-live)
+5a. Phone NOT found → Show "Number Not Registered" screen (see §2.1 below)
+5b. Phone found → Send OTP to EMAIL (testing) or WHATSAPP (go-live)
 6. User enters OTP
-7. OTP verified → Create Supabase session → Redirect to Home
+7. OTP verified → Create Supabase session
+8. Check warehouse count:
+   - 1 warehouse → auto-load → Redirect to Home
+   - Multiple warehouses → Redirect to Warehouse Selection screen
 ```
+
+### 2.1 Number Not Registered Screen
+
+When a user attempts login with a phone number not in the system:
+
+```
+┌────────────────────────────────────────┐
+│         Log in to StockRight           │
+├────────────────────────────────────────┤
+│                                        │
+│           🔒 (icon, red tint bg)       │
+│                                        │
+│     Number Not Registered              │
+│ +91 98342 93243 is not registered      │
+│ with StockRight.                       │
+│                                        │
+│ Contact your warehouse owner to        │
+│ get access and be added as staff.     │
+│                                        │
+│ [Create New Account]  (primary btn)   │
+│                                        │
+│ ─────── or ───────                     │
+│                                        │
+│     [Try a different number]           │
+│                                        │
+└────────────────────────────────────────┘
+```
+
+**Behavior:**
+- Error code: `PHONE_NOT_FOUND` from `send-otp` Edge Function
+- Never expose whether other numbers are registered
+- "Create New Account" → navigates to `/signup` with phone pre-filled
+- "Try a different number" → clears input, returns to login form
 
 ### Login Form
 
@@ -734,8 +776,10 @@ Body:
 
 ```sql
 
--- OTP tokens (for testing, can be removed later)
-CREATE TABLE auht_tokens (
+-- OTP tokens — already created in migration 20260418120000_auth_otp_signup.sql
+-- Table name: auth_otp_challenges (NOT auth_tokens)
+-- DO NOT re-run this migration; it's already applied.
+CREATE TABLE auth_otp_challenges (
   id UUID PRIMARY KEY,
   user_id UUID,
   phone TEXT,

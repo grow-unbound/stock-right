@@ -134,9 +134,12 @@ One type family system across three roles. Chosen for **full Indian script cover
 
 | Dimension | Value | Implementation |
 |---|---|---|
-| Visual height | 36px | `height: 36px` in CSS |
-| Tap zone | 48px | `hitSlop={{ top: 6, bottom: 6 }}` in React Native |
+| Visual height (controls, buttons) | **36px** | CSS: `min-height: var(--touch-target)` with centered content; primary box **36px** tall where spec calls for “visual” height |
+| Tap / pointer target | **48px** | `min-height: var(--touch-target)` (48px) on interactive controls — never smaller |
+| Spacing between adjacent targets | **≥ 8px** | WCAG 2.2 — use `gap: 8px` / `--adjacent-target-gap` between stacked or horizontal controls |
 | Input font | **16px always** | Prevents iOS auto-zoom on focus — never change |
+
+**Mobile (React Native):** mirror with `minHeight: 48` on `Pressable` / rows; keep **≥8px** `gap` between adjacent tabs and footer actions (`DashboardTabBar`, `BottomTabBar`).
 
 ### 3.2 Buttons
 
@@ -147,7 +150,7 @@ btn-ghost     → background: transparent, border: border-default
 btn-danger    → background: outward-bg, color: outward
 ```
 
-Sizes: `sm (28px visual)`, `default (36px)`, `lg (42px)`  
+Sizes: all use **48px minimum hit height** (`--touch-target`); visual content centers inside (**36px**-tall text row typical).  
 Modifiers: `btn-pill` (border-radius: 9999px), `btn-full` (width: 100%)
 
 ### 3.3 Badges / Status Pills
@@ -160,18 +163,34 @@ badge-outward  → outward-bg / outward text
 badge-pending  → pending-bg / pending text
 badge-brand    → brand-subtle / brand-text
 badge-neutral  → bg-subtle / text-tertiary
-badge-online   → inward-bg / inward text
+badge-online   → inward-bg / inward text (optional; **not** shown on desktop web when connected)
 badge-offline  → pending-bg / pending text (with queued count)
 ```
 
 ### 3.4 Form Inputs
 
-- Height: 36px visual, 48px tap zone
+- **Hit height:** follow **§3.1** — minimum **48px** tap row where the control is the primary target; **36px** visual field height for the bordered input box is acceptable when the outer `Pressable`/`minHeight` meets 48px.
 - Border: 1.5px `border-default`, 1.5px `brand-ui` on focus + 3px focus ring `rgba(200,113,42,0.12)`
 - Font size: **16px — this must never be changed.** Any smaller triggers iOS auto-zoom.
 - Placeholder: `text-placeholder` color, 15px font
 
-### 3.5 Skeleton Loading
+### 3.5 Button Loading State
+
+**Never use a spinner inside a button.** Instead, change the button label to convey progress.
+
+```tsx
+// ✅ Correct — label communicates state
+<Button loading={isLoading} loadingLabel="Sending…">Send Code</Button>
+<Button loading={isLoading} loadingLabel="Verifying…">Verify Code</Button>
+<Button loading={isLoading} loadingLabel="Saving…">Save</Button>
+
+// ❌ Wrong — spinner adds visual noise and doesn't communicate what's happening
+<Button loading={isLoading}><Spinner /> Send Code</Button>
+```
+
+The `loadingLabel` prop on `Button` replaces children text during the loading state and disables the button automatically. When `loading` is true, the button stays disabled until either the operation fails (caller resets `loading`) or the component unmounts on success. **Mobile (Expo):** use the same `loadingLabel` pattern — no `ActivityIndicator` inside buttons.
+
+### 3.6 Skeleton Loading
 
 Use skeleton screens during all loading states. Never use bare spinners.
 
@@ -181,15 +200,17 @@ background-size: 200% 100%;
 animation: shimmer 1.5s ease-in-out infinite;
 ```
 
-### 3.6 Offline Queue Indicator
+### 3.7 Offline queue & connectivity (UI)
 
-Always visible in the top bar when entries are queued. Never hide network state.
+- **Mobile app & mobile-web:** full-width offline banner when offline (queued count), matching copy tone. No separate “online” pill when connected.
+- **Desktop web:** do **not** show an “online” badge when connected. When offline, show queued state **in the side nav** (compact badge under the wordmark) — same semantics as the mobile offline banner.
+- **Syncing:** optional “↑ Syncing…” with progress when applicable.
 
 ```
-Online  → badge-online: "● Online"
-Offline → badge-offline: "⚡ 3 queued" — always show count
-Syncing → "↑ Syncing..." with progress if possible
+Offline → badge-offline: "⚡ N queued" — always show count when shown
 ```
+
+Do **not** use `badge-online` / “● Online” on desktop web.
 
 ---
 
@@ -201,35 +222,56 @@ Syncing → "↑ Syncing..." with progress if possible
 
 | Breakpoint | Nav Pattern | Notes |
 |---|---|---|
-| Mobile `<640px` | Bottom tab bar | 4 items + FAB in center |
+| Mobile `<640px` | Bottom tab bar | No separate top header on mobile-web; per-tab FAB/sheets as designed |
 | Tablet `640–1024px` | Collapsible side nav | Icon-only collapsed, expand on tap |
 | Desktop `>1024px` | Persistent side nav | 200px wide, always visible |
 
-### 4.2 Bottom Tab Bar (Mobile)
+### 4.2 Bottom Tab Bar (Mobile app & mobile-web)
 
-- 4 tabs: Stock, Parties, Home, Settings
-- FAB (floating action button) in center: primary action = "+ Inward"
-- FAB: 48px diameter, brand-ui background, white "+" icon
-- Active tab: `brand-ui` color, bold label
-- Inactive: `text-tertiary` color
-- `padding-bottom: calc(8px + env(safe-area-inset-bottom))` for iPhone notch
+- Four primary destinations (e.g. Home, Stock, Parties, Money); platform-specific overflow (e.g. profile) as needed.
+- **Icons ~20px**, **labels ~11px** (semibold when selected) — compact bar; FAB / sheets for tab actions.
+- FAB / primary actions: follow per-tab pattern; not duplicated in a global header on mobile-web.
 
-### 4.3 Side Nav (Desktop)
+### 4.3 Side Nav (Desktop web, ≥640px)
 
-- Width: 200px
+- Width: `var(--sidenav-width)` (typically 200px)
 - Background: `bg-subtle`
 - Border-right: 1px `border-default`
-- Active item: `brand-ui` background, white text
-- Section labels: Noto Sans Mono, 9px, uppercase, `text-tertiary`
-- Groups: Operations, Finance, Reports
+- **Wordmark** at top of the column with comfortable vertical padding — this is the only persistent wordmark on desktop web (no duplicate header bar).
+- **Flat list** — no section group headings for a small set of routes (Home, Stock, Parties, Money, Preferences).
+- **Selected item:** match **mobile tab bar** — `bg-brand-subtle`, `text-brand-text`, **semibold** (not filled `brand-ui`; that is for primary buttons only).
+- **Hover (inactive):** `bg-inset`, `text-primary`
+- **Typography:** **14px** nav labels (same weight scale as before density tweaks), **18px** icons, **2px** stroke, compact vertical rhythm (`gap` between items ≈ 2px).
+- **Icon stroke:** same weight as bottom tabs (e.g. 2px).
+- **Footer (below routes):** **User block** (avatar + full name + warehouse line, no role), then a **1px separator**, then **Log out** as a full-width row with the same **hover** treatment as nav links (`cursor-pointer`, `hover:bg-inset`, `hover:text-primary` on label tone). No avatar popover.
 
-### 4.4 Top Bar
+### 4.3a Filter chip rows (Web + mobile app)
 
-- Background: `bg-surface`
-- Border-bottom: 1px `border-default`
-- Height: 52px
-- Contains: wordmark (left), network status badge + primary CTA (right)
-- No navigation tabs — the top bar is purely chrome, not navigation
+- Chips sit **without** a bottom border rule — list/search content scrolls flush so the filter row does not feel “chopped” from the body.
+
+### 4.4 Web page chrome (no legacy TopBar)
+
+**Desktop (≥640px):**
+
+- **`<main>` padding:** `px-6 pb-6 pt-6` (24px gutters + top breathing room).
+- Main column uses **page background** (`bg-page`) continuously — no 1px rule separating a “header app bar” from content.
+- **Account:** **Home** tab shows initials avatar in the **page title row (top-right)** on all breakpoints; tap opens **Preferences**. **Log out** lives at the **bottom of Preferences** (last action), not in the bottom tab bar. **Side nav footer (desktop):** user summary, separator, Log out — as above.
+- **Tab CTAs** belong in the **page title row** (right-aligned), split per tab, each with **`min-width: var(--cta-tab-min-width)`** (equal width, `justify-center`) so pairs align cleanly:
+  - Home: none
+  - Stock: Add Lot (secondary), Add Delivery (primary)
+  - Money: Add Receipt (secondary), Add Payment (primary)
+  - Parties: Add Party (primary)
+
+**Mobile-web (`<640px`):**
+
+- **No** separate top header row (no wordmark strip, no duplicate chrome). Bottom tab bar + in-page patterns only.
+- **`<main>` padding:** same horizontal gutter as desktop — **`px-6`**. Vertical rhythm: **`pt-4` / `pb-4`** on small viewports, **`sm:pt-6` / `sm:pb-6`** on `≥640px` so content is not flush to the viewport after removing the old app header.
+
+### 4.5 Preferences (`/settings`)
+
+- **Label:** “Preferences” (not “Profile & settings”) in nav and page title.
+- **Back control:** show **only** on mobile app and mobile-web (`<640px`). **Desktop web:** no back affordance — users navigate via SideNav.
+- **Log out:** last primary action on the page (dedicated row / section), not in the global tab bar.
 
 ---
 
@@ -244,7 +286,7 @@ Every action must produce immediate, visible feedback. Our users come from a pap
 | Response time | ≤150ms for visual acknowledgment |
 | Acknowledge-first | Show success state optimistically, roll back on error |
 | Haptics | `Haptics.impactAsync(ImpactFeedbackStyle.Medium)` on every primary CTA |
-| Offline queue | Show count in header, update in real-time as entries queue/sync |
+| Offline queue | Show count when offline (banner or badge); update as entries queue |
 | Skeleton screens | All content areas show skeleton during loading — no spinners |
 | Optimistic UI | Inward/outward entries appear immediately, sync in background |
 

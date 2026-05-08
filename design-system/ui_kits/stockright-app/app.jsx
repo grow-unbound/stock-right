@@ -84,7 +84,6 @@ function App() {
         <TabBar
           active={tab}
           onChange={setTab}
-          onSearch={() => setShowSearch(true)}
         />
       )}
     </div>

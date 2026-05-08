@@ -7,17 +7,17 @@
   body { padding: 24px; background: var(--bg-page); display: flex; gap: 24px; align-items: center; justify-content: center; }
   .phone { width: 280px; background: var(--bg-surface); border: 1px solid var(--border-default); border-radius: 16px; padding: 14px 14px 0; position: relative; }
   .label { font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-tertiary); margin-bottom: 12px; text-align: center; }
-  .tabbar { display: flex; justify-content: space-around; background: var(--bg-surface); border-top: 1px solid var(--border-default); padding: 8px 0 12px; position: relative; margin: 0 -14px; }
-  .tab { display: flex; flex-direction: column; align-items: center; gap: 2px; flex: 1; font-family: var(--font-body); font-size: 11px; color: var(--text-tertiary); }
-  .tab.active { color: var(--brand-ui); font-weight: 600; }
+  .tabbar { display: flex; justify-content: space-around; background: var(--bg-surface); border-top: 1px solid var(--border-default); padding: 8px 6px 12px; position: relative; margin: 0 -14px; gap: 4px; }
+  .tab { display: flex; flex-direction: column; align-items: center; gap: 3px; flex: 1; font-family: var(--font-body); font-size: 11px; color: var(--text-tertiary); font-weight: 500; padding: 6px 4px; border-radius: 10px; }
+  .tab.active { background: var(--brand-subtle); color: var(--brand-text); font-weight: 600; }
   .tab svg { width: 22px; height: 22px; stroke: currentColor; fill: none; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
   .fab-slot { flex: 0 0 60px; display: flex; justify-content: center; align-items: flex-start; }
   .fab { width: 48px; height: 48px; border-radius: 9999px; background: var(--brand-ui); display: flex; align-items: center; justify-content: center; color: white; font-size: 24px; font-weight: 300; box-shadow: 0 4px 12px rgba(28, 26, 22, 0.18); margin-top: -16px; }
-  .sidenav { width: 200px; background: var(--bg-subtle); border: 1px solid var(--border-default); border-radius: var(--radius-md); padding: 12px 0; }
-  .group { font-family: var(--font-mono); font-size: 9px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--text-tertiary); padding: 10px 16px 4px; }
-  .item { display: flex; align-items: center; gap: 10px; padding: 8px 16px; font-family: var(--font-body); font-size: 13px; color: var(--text-primary); }
-  .item.active { background: var(--brand-ui); color: white; margin: 0 8px; border-radius: var(--radius-sm); padding: 8px; }
-  .item svg { width: 16px; height: 16px; stroke: currentColor; fill: none; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+  .sidenav { width: 200px; background: var(--bg-subtle); border: 1px solid var(--border-default); border-radius: var(--radius-md); padding: 12px 8px; }
+  .item { display: flex; align-items: center; gap: 10px; padding: 8px 12px; font-family: var(--font-body); font-size: 13px; font-weight: 500; color: var(--text-secondary); border-radius: 10px; margin-bottom: 2px; }
+  .item:hover { background: var(--bg-inset); color: var(--text-primary); }
+  .item.active { background: var(--brand-subtle); color: var(--brand-text); font-weight: 600; }
+  .item svg { width: 18px; height: 18px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
 </style>
 </head>
 <body>
@@ -33,15 +33,12 @@
     </div>
   </div>
   <div class="sidenav">
-    <div class="label" style="margin-bottom: 0; padding: 0 16px 10px; text-align:left;">Desktop · 200px side nav</div>
-    <div class="group">Operations</div>
-    <div class="item"><svg viewBox="0 0 24 24"><path d="M3 7l9-4 9 4M5 9v11h14V9"/></svg>Stock</div>
-    <div class="item active"><svg viewBox="0 0 24 24"><path d="M12 3v18M3 12h18"/></svg>Inward</div>
-    <div class="item"><svg viewBox="0 0 24 24"><path d="M21 12H3M14 5l7 7-7 7"/></svg>Outward</div>
-    <div class="group">Finance</div>
-    <div class="item"><svg viewBox="0 0 24 24"><path d="M12 1v22M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>Collection</div>
-    <div class="group">Reports</div>
-    <div class="item"><svg viewBox="0 0 24 24"><path d="M3 3v18h18M7 14l4-4 4 4 5-5"/></svg>Daily register</div>
+    <div class="label" style="margin-bottom: 0; padding: 0 12px 10px; text-align:left;">Desktop · side nav (flat)</div>
+    <div class="item"><svg viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11H3z"/></svg>Home</div>
+    <div class="item active"><svg viewBox="0 0 24 24"><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/></svg>Stock</div>
+    <div class="item"><svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg>Parties</div>
+    <div class="item"><svg viewBox="0 0 24 24"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/></svg>Money</div>
+    <div class="item"><svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>Preferences</div>
   </div>
 </body>
 </html>

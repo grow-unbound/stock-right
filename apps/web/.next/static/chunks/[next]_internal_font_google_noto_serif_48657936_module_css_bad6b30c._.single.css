@@ -1,0 +1,20 @@
+/* [next]/internal/font/google/noto_serif_48657936.module.css [app-client] (css) */
+@font-face {
+  font-family: Noto Serif Fallback;
+  src: local(Times New Roman);
+  ascent-override: 90.29%;
+  descent-override: 24.75%;
+  line-gap-override: 0.0%;
+  size-adjust: 118.4%;
+}
+
+.noto_serif_48657936-module__7lW3GG__className {
+  font-family: Noto Serif, Noto Serif Fallback;
+  font-style: normal;
+}
+
+.noto_serif_48657936-module__7lW3GG__variable {
+  --font-display: "Noto Serif", "Noto Serif Fallback";
+}
+
+/*# sourceMappingURL=%5Bnext%5D_internal_font_google_noto_serif_48657936_module_css_bad6b30c._.single.css.map*/

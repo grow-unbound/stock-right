@@ -1,0 +1,6 @@
+{
+  "version": 3,
+  "sources": [],
+  "sections": [
+    {"offset": {"line": 4, "column": 0}, "map": {"version":3,"sources":["file:///Users/phanikrovvidi/projects/stock-right/apps/web/src/app/providers.tsx"],"sourcesContent":["\"use client\";\n\nimport { QueryClient, QueryClientProvider } from \"@tanstack/react-query\";\nimport { useState } from \"react\";\n\nexport function Providers({ children }: { children: React.ReactNode }) {\n  const [queryClient] = useState(\n    () =>\n      new QueryClient({\n        defaultOptions: {\n          queries: { staleTime: 60 * 1000, retry: 1 },\n        },\n      })\n  );\n\n  return (\n    <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>\n  );\n}\n"],"names":[],"mappings":";;;;;AAEA;AAAA;AACA;;;AAHA;;;AAKO,SAAS,UAAU,KAA2C;QAA3C,EAAE,QAAQ,EAAiC,GAA3C;;IACxB,MAAM,CAAC,YAAY,GAAG,IAAA,6VAAQ;8BAC5B,IACE,IAAI,yQAAW,CAAC;gBACd,gBAAgB;oBACd,SAAS;wBAAE,WAAW,KAAK;wBAAM,OAAO;oBAAE;gBAC5C;YACF;;IAGJ,qBACE,iXAAC,iTAAmB;QAAC,QAAQ;kBAAc;;;;;;AAE/C;GAbgB;KAAA","debugId":null}}]
+}

@@ -142,12 +142,11 @@ function IconButton({ children, onClick, badge }) {
   );
 }
 
-// ----- Bottom tab bar with center SEARCH (4 tabs + center) -----
-function TabBar({ active, onChange, onSearch }) {
+// ----- Bottom tab bar (4 tabs, no center control) -----
+function TabBar({ active, onChange }) {
   const tabs = [
     { id: "home", label: "Home", Icon: IconHome },
     { id: "stock", label: "Stock", Icon: IconStock },
-    { id: "search", search: true },
     { id: "parties", label: "Parties", Icon: IconParties },
     { id: "money", label: "Money", Icon: IconMoney },
   ];
@@ -157,17 +156,8 @@ function TabBar({ active, onChange, onSearch }) {
       display: "flex", paddingBottom: "calc(8px + env(safe-area-inset-bottom))",
       paddingTop: 8, flexShrink: 0, gap: 4, paddingLeft: 8, paddingRight: 8,
     }}>
-      {tabs.map(t => t.search ? (
-        <div key="search" style={{ flex: 1, display: "flex", justifyContent: "center", alignItems: "flex-start" }}>
-          <button onClick={onSearch} style={{
-            width: 52, height: 52, borderRadius: 999, background: SR_BRAND.amber,
-            color: "white", border: `3px solid ${SR_BRAND.bgSurface}`, marginTop: -22, cursor: "pointer",
-            boxShadow: "0 4px 14px rgba(200,113,42,0.30)",
-            display: "flex", alignItems: "center", justifyContent: "center"
-          }}><IconSearch size={22}/></button>
-        </div>
-      ) : (
-        <button key={t.id} onClick={() => onChange(t.id)} style={{
+      {tabs.map((t) => (
+        <button key={t.id} type="button" onClick={() => onChange(t.id)} style={{
           flex: 1, background: active === t.id ? SR_BRAND.amberSubtle : "transparent",
           border: "none", borderRadius: 10,
           display: "flex", flexDirection: "column", alignItems: "center", gap: 3, padding: "6px 0 4px",

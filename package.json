@@ -1,0 +1,25 @@
+{
+  "name": "@stockright/root",
+  "private": true,
+  "scripts": {
+    "dev:web": "pnpm --filter=@stockright/web dev",
+    "dev:mobile": "pnpm --filter=@stockright/mobile start",
+    "build:web": "pnpm --filter=@stockright/web build",
+    "typecheck": "pnpm -r typecheck",
+    "lint": "pnpm -r lint",
+    "db:start": "pnpm --filter=@growcold/supabase db:start",
+    "db:stop": "pnpm --filter=@growcold/supabase db:stop",
+    "db:reset": "pnpm --filter=@growcold/supabase db:reset",
+    "db:types": "pnpm --filter=@growcold/supabase db:types"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.3",
+    "turbo": "^2.3.3"
+  },
+  "pnpm": {
+    "overrides": {
+      "@types/react": "^19",
+      "@types/react-dom": "^19"
+    }
+  }
+}

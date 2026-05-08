@@ -1,0 +1,26 @@
+{
+  "pages": {
+    "/(dashboard)/money/page": [
+      "static/chunks/[root-of-the-server]__c3795eab._.css",
+      "static/chunks/node_modules__pnpm_e7e2b02d._.js",
+      "static/chunks/apps_web_src_app_providers_tsx_a1932fcc._.js",
+      "static/chunks/apps_web_src_app_layout_tsx_774cb9cd._.js",
+      "static/chunks/a9780_next_dist_client_components_builtin_global-error_1c919a09.js",
+      "static/chunks/node_modules__pnpm_6c485057._.js",
+      "static/chunks/_59dffa74._.js",
+      "static/chunks/apps_web_src_app_(dashboard)_layout_tsx_1c919a09._.js",
+      "static/chunks/node_modules__pnpm_39c22ff0._.js",
+      "static/chunks/_9349ab11._.js",
+      "static/chunks/apps_web_src_app_(dashboard)_money_page_tsx_dde44e0d._.js",
+      "static/chunks/[turbopack]_browser_dev_hmr-client_hmr-client_ts_b1a5a274._.js",
+      "static/chunks/a9780_next_dist_compiled_react-dom_1b2270d9._.js",
+      "static/chunks/a9780_next_dist_compiled_next-devtools_index_4add8285.js",
+      "static/chunks/a9780_next_dist_compiled_9d07027c._.js",
+      "static/chunks/a9780_next_dist_client_76a13788._.js",
+      "static/chunks/a9780_next_dist_5f6f42c2._.js",
+      "static/chunks/69652_@swc_helpers_cjs_77b72907._.js",
+      "static/chunks/apps_web_a0ff3932._.js",
+      "static/chunks/turbopack-apps_web_ac05a9cd._.js"
+    ]
+  }
+}
