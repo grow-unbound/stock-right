@@ -12,7 +12,8 @@
     "./demo": "./src/demo/index.ts",
     "./money": "./src/money/index.ts",
     "./offline/app-cache": "./src/offline/app-cache/index.ts",
-    "./stock-tab": "./src/stock-tab/index.ts"
+    "./stock-tab": "./src/stock-tab/index.ts",
+    "./receipt": "./src/receipt/index.ts"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.49.4",

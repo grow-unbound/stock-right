@@ -11,6 +11,7 @@ import { FilterChipRow } from "./FilterChipRow";
 import { LandingFabActionSheet } from "./LandingFabActionSheet";
 import { OfflineBanner } from "./OfflineBanner";
 import { useIsOffline } from "@/hooks/useIsOffline";
+import { shouldHideMobileDashboardChrome } from "@/lib/form-chrome";
 import { cn } from "@/lib/utils";
 
 interface DashboardPageShellProps {
@@ -29,6 +30,8 @@ interface DashboardPageShellProps {
   onSearchChange?: (value: string) => void;
   /** Shown at the end of the search field row (e.g. search-in-flight spinner). */
   searchAccessory?: ReactNode;
+  /** Mobile FAB on `/money`: receipt/new navigation etc. */
+  moneyFabOnSelect?: (actionId: string) => void;
   children: ReactNode;
 }
 
@@ -41,6 +44,7 @@ export function DashboardPageShell({
   trailing,
   desktopActions,
   moneyFabEnabled = true,
+  moneyFabOnSelect,
   searchValue,
   onSearchChange,
   searchAccessory,
@@ -48,7 +52,10 @@ export function DashboardPageShell({
 }: DashboardPageShellProps) {
   const offline = useIsOffline();
   const pathname = usePathname();
-  const fabConfig = getLandingFabConfig(pathname ?? "", { enableMoneyFab: moneyFabEnabled });
+  const fabConfig =
+    shouldHideMobileDashboardChrome(pathname ?? "") ?
+      null
+    : getLandingFabConfig(pathname ?? "", { enableMoneyFab: moneyFabEnabled });
   const [fabOpen, setFabOpen] = useState(false);
 
   const searchControlled = typeof onSearchChange === "function";
@@ -132,6 +139,7 @@ export function DashboardPageShell({
             title={fabConfig.title}
             actions={fabConfig.actions}
             onClose={() => setFabOpen(false)}
+            onSelect={(id) => moneyFabOnSelect?.(id)}
           />
         </>
       )}

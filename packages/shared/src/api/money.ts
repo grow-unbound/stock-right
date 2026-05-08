@@ -105,30 +105,60 @@ export async function listMoneyMovements(
   return parseMoneyMovementRows(data ?? []);
 }
 
+function localCalendarIsoDateFromTimestamp(isoTimestamptz: string): string {
+  const d = new Date(isoTimestamptz);
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+}
+
+/** Calendar day for KPI bucketing; aligns with money_activity (payment_date wins, else created_at local day). */
+function operationalPaymentCalendarDay(row: {
+  payment_date: string | null;
+  created_at: string;
+}): string {
+  if (row.payment_date != null && String(row.payment_date).trim() !== "") {
+    const s = String(row.payment_date);
+    return s.length >= 10 ? s.slice(0, 10) : s;
+  }
+  return localCalendarIsoDateFromTimestamp(row.created_at);
+}
+
 export async function fetchMoneyMonthTotals(
   client: SupabaseClient,
   warehouseId: string,
   range: { startIsoDate: string; endIsoDate: string }
 ): Promise<MoneyMonthTotals> {
-  const { data, error } = await client
-    .from("daily_money_summary")
-    .select("receipts_amount, receipts_count, payments_amount, payments_count")
-    .eq("warehouse_id", warehouseId)
-    .gte("summary_date", range.startIsoDate)
-    .lte("summary_date", range.endIsoDate);
+  const [receiptRes, paymentRes] = await Promise.all([
+    client
+      .from("customer_receipts")
+      .select("total_amount")
+      .eq("warehouse_id", warehouseId)
+      .gte("receipt_date", range.startIsoDate)
+      .lte("receipt_date", range.endIsoDate),
+    client
+      .from("operational_payments")
+      .select("amount, payment_date, created_at")
+      .eq("warehouse_id", warehouseId)
+      .eq("status", "PAID"),
+  ]);
 
-  if (error) throw error;
+  if (receiptRes.error) throw receiptRes.error;
+  if (paymentRes.error) throw paymentRes.error;
 
   let receivedRupees = 0;
-  let paidRupees = 0;
-  let receiptCount = 0;
-  let paymentCount = 0;
+  for (const row of receiptRes.data ?? []) {
+    receivedRupees += Number(row.total_amount ?? 0);
+  }
+  const receiptCount = receiptRes.data?.length ?? 0;
 
-  for (const row of data ?? []) {
-    receivedRupees += Number(row.receipts_amount ?? 0);
-    paidRupees += Number(row.payments_amount ?? 0);
-    receiptCount += Number(row.receipts_count ?? 0);
-    paymentCount += Number(row.payments_count ?? 0);
+  let paidRupees = 0;
+  let paymentCount = 0;
+  for (const row of paymentRes.data ?? []) {
+    const day = operationalPaymentCalendarDay(row);
+    if (day >= range.startIsoDate && day <= range.endIsoDate) {
+      paidRupees += Number(row.amount ?? 0);
+      paymentCount += 1;
+    }
   }
 
   return { receivedRupees, paidRupees, receiptCount, paymentCount };

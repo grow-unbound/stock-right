@@ -421,7 +421,6 @@ export type Database = {
         Insert: {
           id?: string
           last_updated_at?: string
-          net_amount?: number | null
           payments_amount?: number
           payments_count?: number
           receipt_parties?: number
@@ -434,7 +433,6 @@ export type Database = {
         Update: {
           id?: string
           last_updated_at?: string
-          net_amount?: number | null
           payments_amount?: number
           payments_count?: number
           receipt_parties?: number
@@ -1759,6 +1757,7 @@ export type Database = {
           p_warehouse_id: string
         }
         Returns: {
+          balance_bags: number
           charge_type_code: string | null
           display_period: string | null
           due_amount: number
@@ -1767,6 +1766,8 @@ export type Database = {
           line_label: string
           lot_id: string
           lot_number: string
+          original_bags: number
+          product_name: string
           remaining_amount: number
           rental_mode: string | null
           sort_date: string
