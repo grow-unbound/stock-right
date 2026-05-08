@@ -272,6 +272,10 @@ Do **not** use `badge-online` / “● Online” on desktop web.
 - **Label:** “Preferences” (not “Profile & settings”) in nav and page title.
 - **Back control:** show **only** on mobile app and mobile-web (`<640px`). **Desktop web:** no back affordance — users navigate via SideNav.
 - **Log out:** last primary action on the page (dedicated row / section), not in the global tab bar.
+- **Desktop web cursor:** On viewports `≥640px` with a fine pointer, **buttons and submit controls** use **`cursor: pointer`** (hand) — global rule in `globals.css` / design-system; nav links already use pointer. Applies to **Log out** and all list CTAs.
+- **Section rhythm:** Same as Home **Recent entries** / Money **Recent transactions**: uppercase section label and card are **siblings in a column with `gap-4` (`sp-4`, 16px)** — see spacing table (`sp-4` row) and `design-system/colors_and_type.css` spacing notes. **No** extra margin on the label (`mb-*`, `marginBottom`, or `marginTop` on the label alone). Web: wrap each block in `flex flex-col gap-4`. Mobile: same **`gap: sp-4`** between scroll children as Home/Money tab bodies.
+- **Account rows:** **Organization** and **Your role** are read-only rows **without** trailing chevrons. **Warehouse** shows a **Switch warehouse** row (with chevron) **only** when the user has **more than one** warehouse for the tenant. **Language** shows the current choice in **native script** (e.g. English, తెలుగు, हिंदी); tapping opens a picker with the same native labels (optional small English subtitle). Preference is stored under `sr_ui_locale` (`en` | `te` | `hi`). **Number format** is not configurable — **Indian grouping** for everyone (no row in Preferences).
+- **Data block:** When **online**, copy reassures that data is **synced / saved on the server** (inward-toned badge, e.g. “Up to date”). When **offline**, show **offline queue** messaging and counts as before.
 
 ---
 
@@ -311,7 +315,7 @@ Every action must produce immediate, visible feedback. Our users come from a pap
 | `sp-1` | 4px | Icon gap, small nudge |
 | `sp-2` | 8px | Input padding, badge padding |
 | `sp-3` | 12px | Component gap |
-| `sp-4` | 16px | Card padding, list item padding |
+| `sp-4` | 16px | Card padding, list item padding; **section label → content** (stack with `gap-4` / `gap: sp-4`, same as Home recent / Money recent) |
 | `sp-5` | 20px | Section inner padding |
 | `sp-6` | 24px | Card padding (large) |
 | `sp-8` | 32px | Section gap |

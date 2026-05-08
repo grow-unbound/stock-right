@@ -4,10 +4,12 @@ import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { LayoutDashboard, Package, Users, Banknote, UserCircle, LogOut } from "lucide-react";
-import { DEMO_PROFILE_USER, getDemoProfileWarehouseLine } from "@stockright/shared/demo";
+import { DEMO_PROFILE_USER } from "@stockright/shared/demo";
 import { Badge } from "@/components/ui/Badge";
 import { useIsOffline } from "@/hooks/useIsOffline";
 import { cn } from "@/lib/utils";
+import { logoutAction } from "@/app/actions/session";
+import { useSessionUser } from "@/components/session/session-user-provider";
 
 const navItems = [
   { href: "/", label: "Home", icon: LayoutDashboard },
@@ -20,6 +22,13 @@ const navItems = [
 export function SideNav() {
   const pathname = usePathname() ?? "";
   const offline = useIsOffline();
+  const { context } = useSessionUser();
+
+  const displayName = context?.fullName?.trim() || context?.phone || "Account";
+  const subtitleLine =
+    context?.warehouseName != null
+      ? `${context.roleLabel} · ${context.warehouseName}`
+      : `${context?.roleLabel ?? "—"}`;
 
   return (
     <nav
@@ -67,27 +76,28 @@ export function SideNav() {
       </div>
 
       <div className="mt-auto flex shrink-0 flex-col px-2 py-3">
-        <div className="flex min-h-[var(--touch-target)] items-center gap-2 rounded-[10px] px-3 py-2">
-          <div className="flex size-9 shrink-0 items-center justify-center rounded-full border border-[var(--border-default)] bg-[var(--brand-subtle)] font-[family-name:var(--font-display)] text-[14px] font-semibold text-[var(--brand-text)]">
-            {DEMO_PROFILE_USER.initials}
-          </div>
-          <div className="min-w-0 flex-1 text-left">
-            <p className="truncate text-[14px] font-semibold leading-snug text-[var(--text-primary)]">{DEMO_PROFILE_USER.name}</p>
-            <p className="truncate text-[12px] leading-snug text-[var(--text-secondary)]">{getDemoProfileWarehouseLine() || "—"}</p>
-          </div>
-        </div>
+        <form action={logoutAction}>
+          <button
+            type="submit"
+            className="flex min-h-[var(--touch-target)] w-full cursor-pointer items-center gap-2.5 rounded-[10px] px-3 text-[14px] font-medium text-[var(--outward)] transition-colors duration-[var(--duration-fast)] hover:bg-[var(--bg-inset)] hover:text-[var(--text-primary)] focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-[var(--focus-ring)]"
+            aria-label="Log out"
+          >
+            <LogOut className="size-4 shrink-0" strokeWidth={2} aria-hidden />
+            Log out
+          </button>
+        </form>
 
         <div className="my-2 border-t border-[var(--border-default)]" aria-hidden />
 
-        <button
-          type="button"
-          className="flex min-h-[var(--touch-target)] w-full cursor-pointer items-center gap-2.5 rounded-[10px] px-3 text-[14px] font-medium text-[var(--outward)] transition-colors duration-[var(--duration-fast)] hover:bg-[var(--bg-inset)] hover:text-[var(--text-primary)] focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-[var(--focus-ring)]"
-          aria-label="Log out"
-          onClick={() => {}}
-        >
-          <LogOut className="size-4 shrink-0" strokeWidth={2} aria-hidden />
-          Log out
-        </button>
+        <div className="flex min-h-[var(--touch-target)] items-center gap-2 rounded-[10px] px-3 py-2">
+          <div className="flex size-9 shrink-0 items-center justify-center rounded-full border border-[var(--border-default)] bg-[var(--brand-subtle)] font-[family-name:var(--font-display)] text-[14px] font-semibold text-[var(--brand-text)]">
+            {context?.initials ?? "?"}
+          </div>
+          <div className="min-w-0 flex-1 text-left">
+            <p className="truncate text-[14px] font-semibold leading-snug text-[var(--text-primary)]">{displayName}</p>
+            <p className="truncate text-[12px] leading-snug text-[var(--text-secondary)]">{subtitleLine}</p>
+          </div>
+        </div>
       </div>
     </nav>
   );

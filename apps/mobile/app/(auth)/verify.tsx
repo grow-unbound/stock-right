@@ -3,9 +3,11 @@ import { View, Text, ScrollView, TouchableOpacity, KeyboardAvoidingView, Platfor
 import { useRouter, useLocalSearchParams } from "expo-router";
 import { OtpInput } from "@/components/auth/OtpInput";
 import { Button } from "@/components/ui/Button";
-import { sendOtp, verifyOtp } from "@stockright/shared/api";
+import { sendOtp, verifyOtp, warehouseFromVerifyOtpRow } from "@stockright/shared/api";
+import { ACTIVE_WAREHOUSE_ID_KEY } from "@stockright/shared/utils";
 import { storage } from "@/lib/storage";
 import { tokens } from "@stockright/shared/tokens";
+import { getSupabaseClient } from "@/lib/supabase";
 
 const OTP_EXPIRY_SECONDS = 600;
 const RESEND_COOLDOWN_SECONDS = 30;
@@ -61,6 +63,13 @@ export default function VerifyScreen() {
         process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY!,
         { challengeId, code }
       );
+
+      const supabase = getSupabaseClient();
+      await supabase.auth.setSession({
+        access_token: result.session.accessToken,
+        refresh_token: result.session.refreshToken,
+      });
+
       await storage.remove("otp_challenge_id");
       await storage.remove("otp_sent_to");
 
@@ -69,11 +78,16 @@ export default function VerifyScreen() {
       } else if (result.nextStep === "select_warehouse") {
         router.replace("/warehouse-select");
       } else {
+        const w = warehouseFromVerifyOtpRow(result.warehouses?.[0]);
+        if (w) {
+          await storage.set(ACTIVE_WAREHOUSE_ID_KEY, w.id);
+        }
         router.replace("/");
       }
     } catch (err: unknown) {
       const code2 = (err as { code?: string }).code;
-      if (code2 === "INVALID_OTP") setError("Incorrect code. Check your email and try again.");
+      if (code2 === "INVALID_OTP" || code2 === "INVALID_CODE")
+        setError("Incorrect code. Check your email and try again.");
       else if (code2 === "TOO_MANY_ATTEMPTS") setError("Too many attempts. Request a new code.");
       else if (code2 === "OTP_EXPIRED") { setIsExpired(true); setError("Code expired. Request a new one."); }
       else setError((err as Error).message ?? "Something went wrong.");

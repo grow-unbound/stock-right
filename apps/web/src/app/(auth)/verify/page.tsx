@@ -5,7 +5,8 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { OtpInput } from "@/components/auth/OtpInput";
 import { Button } from "@/components/ui/Button";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
-import { sendOtp, verifyOtp } from "@stockright/shared/api";
+import { sendOtp, verifyOtp, warehouseFromVerifyOtpRow } from "@stockright/shared/api";
+import { setActiveWarehouseIdAction } from "@/app/actions/session";
 
 const OTP_EXPIRY_SECONDS = 600; // 10 min
 const RESEND_COOLDOWN_SECONDS = 30;
@@ -86,6 +87,10 @@ function VerifyPageInner() {
       } else if (result.nextStep === "select_warehouse") {
         router.push("/warehouse-select");
       } else {
+        const w = warehouseFromVerifyOtpRow(result.warehouses?.[0]);
+        if (w) {
+          await setActiveWarehouseIdAction(w.id);
+        }
         router.push("/");
       }
       // intentionally NOT resetting isVerifyingRef — page unmounts on navigation
