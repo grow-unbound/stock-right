@@ -1744,6 +1744,14 @@ export type Database = {
         }
         Returns: number
       }
+      count_stock_movements: {
+        Args: {
+          p_filter?: string | null
+          p_search?: string | null
+          p_warehouse_id: string
+        }
+        Returns: number
+      }
       current_tenant_id: { Args: never; Returns: string }
       customer_outstanding_allocatable: {
         Args: {
@@ -1886,24 +1894,28 @@ export type Database = {
       }
       list_stock_movements: {
         Args: {
-          p_cursor_created_at?: string
-          p_cursor_event_id?: string
-          p_cursor_kind?: string
-          p_cursor_tx_date?: string
-          p_limit?: number
+          p_filter?: string | null
+          p_page?: number
+          p_page_size?: number
+          p_search?: string | null
+          p_sort_column?: string | null
+          p_sort_direction?: string | null
           p_warehouse_id: string
         }
         Returns: {
+          balance_bags: number
+          charges_pending: number
           created_at: string
           customer_code: string
           customer_name: string
           event_id: string
-          kind: string
           lot_id: string
           lot_number: string
+          lot_status: string
           num_bags: number
-          product_group_name: string
           product_name: string
+          rent_pending: number
+          transaction_type: string
           tx_date: string
         }[]
       }
@@ -1919,6 +1931,13 @@ export type Database = {
           rent_receivable: number
           total_receivable: number
           updated_at: string
+        }[]
+      }
+      stock_tab_stale_kpis: {
+        Args: { p_warehouse_id: string }
+        Returns: {
+          stale_bags: number
+          stale_lots: number
         }[]
       }
       user_can_manage_money: { Args: never; Returns: boolean }

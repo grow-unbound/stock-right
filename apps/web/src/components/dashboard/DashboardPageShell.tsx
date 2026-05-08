@@ -71,7 +71,10 @@ export function DashboardPageShell({
         </div>
         <div className="px-0 pb-2.5">
           <label
-            className="flex h-10 items-center gap-2 rounded-[var(--radius-md)] border border-[var(--border-default)] bg-[var(--bg-surface)] px-3"
+            className={cn(
+              "flex min-h-12 items-center gap-2 rounded-[var(--radius-md)] border border-[var(--border-default)] bg-[var(--bg-surface)] px-3 py-2 sm:min-h-10 sm:py-0",
+              searchControlled ? "cursor-text" : null
+            )}
             htmlFor={searchControlled ? "dashboard-page-search" : undefined}
           >
             <Search className="size-[18px] shrink-0 text-[var(--text-tertiary)]" strokeWidth={2} aria-hidden />
@@ -84,9 +87,9 @@ export function DashboardPageShell({
                 autoCapitalize="none"
                 spellCheck={false}
                 value={searchValue ?? ""}
-                onChange={(e) => onSearchChange(e.target.value)}
+                onChange={(e) => onSearchChange?.(e.target.value)}
                 placeholder={searchPlaceholder}
-                className="min-w-0 flex-1 bg-transparent text-[16px] text-[var(--text-primary)] outline-none placeholder:text-[var(--text-placeholder)]"
+                className="min-h-[40px] min-w-0 flex-1 bg-transparent text-[16px] text-[var(--text-primary)] outline-none placeholder:text-[var(--text-placeholder)] sm:min-h-0"
               />
             ) : (
               <span className="text-[16px] text-[var(--text-placeholder)]">{searchPlaceholder}</span>
