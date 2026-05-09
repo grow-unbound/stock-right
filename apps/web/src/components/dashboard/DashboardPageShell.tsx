@@ -30,8 +30,8 @@ interface DashboardPageShellProps {
   onSearchChange?: (value: string) => void;
   /** Shown at the end of the search field row (e.g. search-in-flight spinner). */
   searchAccessory?: ReactNode;
-  /** Mobile FAB on `/money`: receipt/new navigation etc. */
-  moneyFabOnSelect?: (actionId: string) => void;
+  /** Mobile FAB: handle action id for current tab (money, parties, stock). */
+  fabActionOnSelect?: (actionId: string) => void;
   children: ReactNode;
 }
 
@@ -44,7 +44,7 @@ export function DashboardPageShell({
   trailing,
   desktopActions,
   moneyFabEnabled = true,
-  moneyFabOnSelect,
+  fabActionOnSelect,
   searchValue,
   onSearchChange,
   searchAccessory,
@@ -139,7 +139,7 @@ export function DashboardPageShell({
             title={fabConfig.title}
             actions={fabConfig.actions}
             onClose={() => setFabOpen(false)}
-            onSelect={(id) => moneyFabOnSelect?.(id)}
+            onSelect={(id) => fabActionOnSelect?.(id)}
           />
         </>
       )}

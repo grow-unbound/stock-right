@@ -48,6 +48,7 @@ export interface UserSessionContext {
   initials: string;
   role: UserRole | null;
   roleLabel: string;
+  tenantId: string | null;
   tenantName: string | null;
   warehouseId: string | null;
   warehouseName: string | null;

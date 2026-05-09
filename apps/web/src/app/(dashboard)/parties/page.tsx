@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import { Loader2, SearchX, User } from "lucide-react";
 import {
   applyPartiesTabClientFilters,
@@ -22,10 +23,15 @@ import {
 } from "@stockright/shared/parties-tab";
 import { DEMO_FAB_PARTIES_ACTIONS } from "@stockright/shared/demo";
 import { useDebouncedValue } from "@stockright/shared/hooks";
+import { PARTIES_REFRESH_EVENT } from "@stockright/shared/api";
 import { formatIndianCurrency } from "@stockright/shared/utils";
+import { DashboardKpiCard } from "@/components/dashboard/DashboardKpiCard";
 import { DashboardPageShell } from "@/components/dashboard/DashboardPageShell";
-import { LandingFabActionSheet } from "@/components/dashboard/LandingFabActionSheet";
+import { DashboardSectionHeader } from "@/components/dashboard/DashboardSectionHeader";
+import { RegisterListRow } from "@/components/dashboard/RegisterListRow";
+import { AddPartyForm } from "@/components/parties/add-party/AddPartyForm";
 import { PartiesActivityTable } from "@/components/parties/PartiesActivityTable";
+import { FormSidebar } from "@/components/money/add-receipt/FormSidebar";
 import { Button } from "@/components/ui/Button";
 import { useSessionUser } from "@/components/session/session-user-provider";
 import { useIsOffline } from "@/hooks/useIsOffline";
@@ -39,13 +45,11 @@ function formatBags(n: number): string {
   return n.toLocaleString("en-IN");
 }
 
-type DesktopPartiesSheet = "party" | null;
-
 function PartyListSkeleton() {
   return (
     <ul className="flex flex-col gap-2">
       {Array.from({ length: 6 }).map((_, i) => (
-        <li key={i} className="h-[72px] animate-pulse rounded-[var(--radius-md)] bg-[var(--bg-subtle)]" />
+        <li key={i} className="h-[72px] skeleton rounded-[var(--radius-md)]" />
       ))}
     </ul>
   );
@@ -58,6 +62,7 @@ function partyLotSummaryLine(row: PartiesTabListRow): string {
 }
 
 export default function PartiesPage() {
+  const router = useRouter();
   const { context } = useSessionUser();
   const warehouseId = context?.warehouseId ?? null;
   const offline = useIsOffline();
@@ -87,6 +92,7 @@ export default function PartiesPage() {
   const [remoteSearchPending, setRemoteSearchPending] = useState(false);
   const [dataSource, setDataSource] = useState<"network" | "cache">("network");
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [addPartyOpen, setAddPartyOpen] = useState(false);
 
   const localDataRef = useRef<PartiesTabListRow[]>([]);
   localDataRef.current = localData;
@@ -98,12 +104,22 @@ export default function PartiesPage() {
   const mobileNearEndRef = useRef<() => void>(() => {});
   const sentinelRef = useRef<HTMLDivElement>(null);
 
-  const [desktopSheet, setDesktopSheet] = useState<DesktopPartiesSheet>(null);
-
   const cacheKey = useMemo(
     () => (warehouseId ? partiesTabCacheKey(warehouseId) : null),
     [warehouseId]
   );
+
+  useEffect(() => {
+    function onPartiesRefresh(e: Event) {
+      const ce = e as CustomEvent<PartiesTabListRow | undefined>;
+      const row = ce.detail;
+      if (!row) return;
+      setLocalData((prev) => mergeUniquePartyRows([row], prev));
+      setBaselineRows((prev) => mergeUniquePartyRows([row], prev));
+    }
+    window.addEventListener(PARTIES_REFRESH_EVENT, onPartiesRefresh);
+    return () => window.removeEventListener(PARTIES_REFRESH_EVENT, onPartiesRefresh);
+  }, []);
 
   const desktopTableRows = useMemo(
     () => applyPartiesTabClientFilters(localData, filterId, searchInput),
@@ -403,7 +419,13 @@ export default function PartiesPage() {
       size="sm"
       type="button"
       className="min-w-[var(--cta-tab-min-width)] justify-center"
-      onClick={() => setDesktopSheet("party")}
+      onClick={() => {
+        if (wide) {
+          setAddPartyOpen(true);
+        } else {
+          router.push("/parties/new");
+        }
+      }}
     >
       {addParty.label}
     </Button>
@@ -440,6 +462,14 @@ export default function PartiesPage() {
       }}
       desktopActions={desktopActions}
       searchAccessory={searchAccessory}
+      fabActionOnSelect={(id) => {
+        if (id !== "add_party") return;
+        if (wide) {
+          setAddPartyOpen(true);
+        } else {
+          router.push("/parties/new");
+        }
+      }}
     >
       <div className="flex flex-col gap-4 px-0 pt-4">
         {!warehouseId ? (
@@ -465,33 +495,23 @@ export default function PartiesPage() {
           <div className="grid grid-cols-2 gap-2.5">
             {showDesktopSkeleton || showMobileSkeleton ? (
               <>
-                <div className="h-[88px] animate-pulse rounded-[var(--radius-md)] bg-[var(--bg-subtle)]" />
-                <div className="h-[88px] animate-pulse rounded-[var(--radius-md)] bg-[var(--bg-subtle)]" />
+                <div className="h-[88px] skeleton rounded-[var(--radius-md)]" />
+                <div className="h-[88px] skeleton rounded-[var(--radius-md)]" />
               </>
             ) : (
               <>
-                <div className="rounded-[var(--radius-md)] border border-[var(--border-default)] bg-[var(--bg-surface)] p-3">
-                  <p className="text-[10px] font-medium uppercase tracking-[0.06em] text-[var(--text-tertiary)]">
-                    Total Outstanding
-                  </p>
-                  <p className="font-[family-name:var(--font-display)] text-[22px] font-semibold tabular-nums text-[var(--pending)]">
-                    {kpis ? formatIndianCurrency(kpis.totalOutstanding) : "—"}
-                  </p>
-                  <p className="text-[11px] text-[var(--text-secondary)]">
-                    {kpis ? `${formatBags(kpis.customersWithOutstanding)} customers` : "Loading…"}
-                  </p>
-                </div>
-                <div className="rounded-[var(--radius-md)] border border-[var(--border-default)] bg-[var(--bg-surface)] p-3">
-                  <p className="text-[10px] font-medium uppercase tracking-[0.06em] text-[var(--text-tertiary)]">
-                    Stale Stock
-                  </p>
-                  <p className="font-[family-name:var(--font-display)] text-[22px] font-semibold tabular-nums text-[var(--text-primary)]">
-                    {kpis ? `${formatBags(kpis.staleStockBags)} bags` : "—"}
-                  </p>
-                  <p className="text-[11px] text-[var(--text-secondary)]">
-                    {kpis ? `${formatBags(kpis.partiesWithStale)} customers` : "Loading…"}
-                  </p>
-                </div>
+                <DashboardKpiCard
+                  label="Total outstanding"
+                  value={kpis ? formatIndianCurrency(kpis.totalOutstanding) : "—"}
+                  sub={kpis ? `${formatBags(kpis.customersWithOutstanding)} customers` : "Loading…"}
+                  accentClass="text-[var(--pending)]"
+                />
+                <DashboardKpiCard
+                  label="Stale stock"
+                  value={kpis ? `${formatBags(kpis.staleStockBags)} bags` : "—"}
+                  sub={kpis ? `${formatBags(kpis.partiesWithStale)} customers` : "Loading…"}
+                  accentClass="text-[var(--text-primary)]"
+                />
               </>
             )}
           </div>
@@ -499,9 +519,7 @@ export default function PartiesPage() {
 
         {warehouseId ? (
           <>
-            <p className="text-[11px] font-medium uppercase tracking-[0.08em] text-[var(--text-tertiary)]">
-              MAXIMUM OUTSTANDING
-            </p>
+            <DashboardSectionHeader label="Maximum outstanding" />
 
             <div className="hidden sm:block">
               {offline && localData.length === 0 ? (
@@ -550,33 +568,28 @@ export default function PartiesPage() {
                 <ul className="flex flex-col gap-2">
                   {mobileSearchResults.map((row) => (
                     <li key={partyRowKey(row)}>
-                      <div className="flex min-h-[48px] w-full items-center gap-3 rounded-[var(--radius-md)] border border-[var(--border-default)] bg-[var(--bg-surface)] px-3.5 py-3 text-left">
-                        <span className="flex size-9 shrink-0 items-center justify-center rounded-[var(--radius-md)] border border-[var(--border-default)] bg-[var(--bg-subtle)] text-[var(--brand-text)]">
-                          <User className="size-[18px]" strokeWidth={STROKE} aria-hidden />
-                        </span>
-                        <span className="min-w-0 flex-1">
-                          <span className="block font-[family-name:var(--font-mono)] text-[11px] tracking-[0.04em] text-[var(--text-tertiary)]">
-                            {row.customer_code}
-                          </span>
-                          <span className="mt-0.5 block truncate font-[family-name:var(--font-display)] text-[15px] font-semibold text-[var(--text-primary)]">
-                            {row.customer_name}
-                          </span>
-                          <span className="mt-0.5 block truncate text-left font-[family-name:var(--font-body)] text-[13px] text-[var(--text-secondary)]">
+                      <RegisterListRow
+                        icon={<User className="size-[18px]" strokeWidth={STROKE} aria-hidden />}
+                        iconShellClassName="bg-[var(--brand-subtle)] text-[var(--brand-text)]"
+                        meta={row.customer_code}
+                        title={row.customer_name}
+                        detail={
+                          <span className="block truncate text-[12px] text-[var(--text-secondary)]">
                             {partyLotSummaryLine(row)}
                           </span>
-                        </span>
-                        <span className="shrink-0 text-right">
-                          <span className="block font-[family-name:var(--font-display)] text-[28px] font-bold tabular-nums leading-none text-[var(--pending)]">
+                        }
+                        trailing={
+                          <span className="text-[14px] font-semibold tabular-nums text-[var(--pending)]">
                             {formatIndianCurrency(row.outstanding_total)}
                           </span>
-                        </span>
-                      </div>
+                        }
+                      />
                     </li>
                   ))}
                 </ul>
               )}
               {mobileLoadingMore ? (
-                <div className="mt-2 h-[72px] animate-pulse rounded-[var(--radius-md)] bg-[var(--bg-subtle)]" />
+                <div className="mt-2 h-[72px] skeleton rounded-[var(--radius-md)]" />
               ) : null}
               <div ref={sentinelRef} className="h-1 w-full shrink-0" aria-hidden />
             </div>
@@ -584,14 +597,20 @@ export default function PartiesPage() {
         ) : null}
       </div>
 
-      {desktopSheet && addParty ? (
-        <LandingFabActionSheet
-          open
-          title="Add party"
-          actions={[addParty]}
-          onClose={() => setDesktopSheet(null)}
-        />
-      ) : null}
+      <FormSidebar
+        open={addPartyOpen && Boolean(warehouseId) && !offline}
+        title="Add Party"
+        onClose={() => setAddPartyOpen(false)}
+      >
+        {warehouseId ? (
+          <AddPartyForm
+            warehouseId={warehouseId}
+            supabase={supabase}
+            onClose={() => setAddPartyOpen(false)}
+            onSuccess={() => {}}
+          />
+        ) : null}
+      </FormSidebar>
     </DashboardPageShell>
   );
 }

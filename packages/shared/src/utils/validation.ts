@@ -39,7 +39,51 @@ export const createWarehouseSchema = z.object({
   capacityTonnes: z.number().int().min(1).max(1_000_000).optional(),
 });
 
+export const tenantStaffRoleSchema = z.enum(["MANAGER", "STAFF"]);
+
+export const createTenantUserInputSchema = z.object({
+  tenantId: z.string().uuid(),
+  fullName: z
+    .string()
+    .min(2, "Name must be at least 2 characters")
+    .max(100, "Name too long")
+    .regex(/^[\w\s\-'.]+$/u, "Name contains invalid characters"),
+  phone: indianPhoneSchema,
+  email: z.string().email("Enter a valid email address"),
+  warehouseIds: z.array(z.string().uuid()).min(1, "Select at least one warehouse"),
+  role: tenantStaffRoleSchema.default("STAFF"),
+});
+
+export const updateTenantUserInputSchema = z
+  .object({
+    tenantId: z.string().uuid(),
+    userId: z.string().uuid(),
+    fullName: z
+      .string()
+      .min(2, "Name must be at least 2 characters")
+      .max(100, "Name too long")
+      .regex(/^[\w\s\-'.]+$/u, "Name contains invalid characters")
+      .optional(),
+    phone: indianPhoneSchema.optional(),
+    email: z.string().email("Enter a valid email address").optional(),
+    isActive: z.boolean().optional(),
+    role: tenantStaffRoleSchema.optional(),
+    warehouseIds: z.array(z.string().uuid()).min(1).optional(),
+  })
+  .refine(
+    (v) =>
+      v.fullName !== undefined ||
+      v.phone !== undefined ||
+      v.email !== undefined ||
+      v.isActive !== undefined ||
+      v.role !== undefined ||
+      v.warehouseIds !== undefined,
+    { message: "Nothing to update", path: ["tenantId"] }
+  );
+
 export type SignupInput = z.infer<typeof signupSchema>;
 export type LoginInput = z.infer<typeof loginSchema>;
 export type OtpInput = z.infer<typeof otpSchema>;
 export type CreateWarehouseInput = z.infer<typeof createWarehouseSchema>;
+export type CreateTenantUserInput = z.infer<typeof createTenantUserInputSchema>;
+export type UpdateTenantUserInput = z.infer<typeof updateTenantUserInputSchema>;

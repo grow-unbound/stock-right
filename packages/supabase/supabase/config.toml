@@ -351,3 +351,9 @@ s3_secret_key = "env(S3_SECRET_KEY)"
 [functions.monthly-rent-accrual]
 verify_jwt = false
 
+[functions.create-tenant-user]
+verify_jwt = true
+
+[functions.update-tenant-user]
+verify_jwt = true
+

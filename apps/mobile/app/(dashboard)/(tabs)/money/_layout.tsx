@@ -9,6 +9,7 @@ export default function MoneyStackLayout() {
     >
       <Stack.Screen name="index" />
       <Stack.Screen name="receipt/new" options={{ animation: "slide_from_right" }} />
+      <Stack.Screen name="payment/new" options={{ animation: "slide_from_right" }} />
     </Stack>
   );
 }

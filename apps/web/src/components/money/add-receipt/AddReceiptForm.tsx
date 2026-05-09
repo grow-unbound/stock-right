@@ -24,7 +24,19 @@ import {
 } from "@stockright/shared/receipt";
 import { formatIndianCurrency } from "@stockright/shared/utils";
 import { cn } from "@/lib/utils";
+import {
+  AlertDialog,
+  AlertDialogCancelButton,
+  AlertDialogActionButton,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { AmountField } from "@/components/ui/AmountField";
 import { Button } from "@/components/ui/Button";
+import { DatePickerField } from "@/components/ui/date-picker-field";
 import { CustomerSearchOverlay } from "./CustomerSearchOverlay";
 
 export interface AllocationDraftRow {
@@ -97,6 +109,7 @@ export function AddReceiptForm({
   const [totals, setTotals] = useState<{ charges: number; rents: number } | null>(null);
   const [draft, setDraft] = useState<AllocationDraftRow[]>([]);
   const [submitting, setSubmitting] = useState(false);
+  const [discardDialogOpen, setDiscardDialogOpen] = useState(false);
   const initialRef = useRef({
     customerId: null as string | null,
     amountStr: "",
@@ -188,11 +201,16 @@ export function AddReceiptForm({
 
   const requestClose = useCallback(() => {
     if (dirty) {
-      const ok = window.confirm("Discard unsaved changes?");
-      if (!ok) return;
+      setDiscardDialogOpen(true);
+      return;
     }
     onClose();
   }, [dirty, onClose]);
+
+  const confirmDiscard = useCallback(() => {
+    setDiscardDialogOpen(false);
+    onClose();
+  }, [onClose]);
 
   async function handleSubmit() {
     if (!customer) {
@@ -279,40 +297,13 @@ export function AddReceiptForm({
               </button>
             </div>
 
-            <div>
-              <label className="mb-1 block text-[12px] font-medium uppercase tracking-[0.06em] text-[var(--text-tertiary)]">
-                Amount
-              </label>
-              <div className="relative">
-                <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 font-[family-name:var(--font-mono)] text-[16px] text-[var(--text-secondary)]">
-                  ₹
-                </span>
-                <input
-                  type="text"
-                  inputMode="decimal"
-                  autoComplete="off"
-                  value={amountStr}
-                  onChange={(e) => setAmountStr(formatRupeeInputLive(e.target.value))}
-                  onBlur={() => {
-                    const n = parseIndianRupeeInput(amountStr);
-                    if (n !== null) setAmountStr(formatRupeeDigitsForInput(n));
-                  }}
-                  className="min-h-[48px] w-full rounded-[var(--radius-md)] border border-[var(--border-default)] bg-[var(--bg-subtle)] py-2 pl-8 pr-3 font-[family-name:var(--font-mono)] text-[16px] text-[var(--text-primary)] outline-none focus-visible:border-[var(--brand-ui)] focus-visible:ring-[3px] focus-visible:ring-[rgba(200,113,42,0.12)]"
-                  placeholder="0"
-                />
-              </div>
-            </div>
+            <AmountField label="Amount" value={amountStr} onChange={setAmountStr} />
 
             <div>
               <label className="mb-1 block text-[12px] font-medium uppercase tracking-[0.06em] text-[var(--text-tertiary)]">
                 Date received
               </label>
-              <input
-                type="date"
-                value={receiptDate}
-                onChange={(e) => setReceiptDate(e.target.value)}
-                className="min-h-[48px] w-full rounded-[var(--radius-md)] border border-[var(--border-default)] bg-[var(--bg-subtle)] px-3 font-[family-name:var(--font-body)] text-[16px] text-[var(--text-primary)] outline-none focus-visible:border-[var(--brand-ui)] focus-visible:ring-[3px] focus-visible:ring-[rgba(200,113,42,0.12)]"
-              />
+              <DatePickerField value={receiptDate} onChange={setReceiptDate} />
             </div>
 
             <div>
@@ -395,8 +386,8 @@ export function AddReceiptForm({
                     <p className="text-[14px] text-[var(--outward)]">{outstandingError}</p>
                   : loadingLines ?
                     <div className="flex flex-col gap-2">
-                      <div className="h-16 animate-pulse rounded-[var(--radius-md)] bg-[var(--bg-subtle)]" />
-                      <div className="h-16 animate-pulse rounded-[var(--radius-md)] bg-[var(--bg-subtle)]" />
+                      <div className="h-16 skeleton" />
+                      <div className="h-16 skeleton" />
                     </div>
                   : outstanding.length === 0 ?
                     <p className="text-[14px] text-[var(--text-secondary)]">
@@ -540,6 +531,21 @@ export function AddReceiptForm({
           </Button>
         </div>
       </div>
+
+      <AlertDialog open={discardDialogOpen} onOpenChange={setDiscardDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Discard changes?</AlertDialogTitle>
+            <AlertDialogDescription>You have unsaved changes on this receipt.</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancelButton type="button">Keep editing</AlertDialogCancelButton>
+            <AlertDialogActionButton type="button" onClick={confirmDiscard}>
+              Discard
+            </AlertDialogActionButton>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

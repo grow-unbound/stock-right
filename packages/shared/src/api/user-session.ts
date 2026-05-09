@@ -95,6 +95,7 @@ export async function fetchUserSessionContext(
     initials,
     role,
     roleLabel: formatRoleLabel(role),
+    tenantId,
     tenantName,
     warehouseId,
     warehouseName,

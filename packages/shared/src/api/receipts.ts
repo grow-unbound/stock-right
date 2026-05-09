@@ -67,7 +67,7 @@ export interface ConfirmAllocationInputLine {
   amount: number;
 }
 
-async function requireProfileIdForRecording(client: SupabaseClient): Promise<string> {
+export async function requireProfileIdForRecording(client: SupabaseClient): Promise<string> {
   const {
     data: { user },
     error,

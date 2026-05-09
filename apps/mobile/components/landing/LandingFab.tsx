@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { Alert, Pressable, StyleSheet } from "react-native";
+import { Pressable, StyleSheet } from "react-native";
 import { Plus } from "lucide-react-native";
 import { usePathname, useRouter } from "expo-router";
 import * as Haptics from "expo-haptics";
@@ -13,6 +13,7 @@ import {
 import { tokens } from "@stockright/shared/tokens";
 import { FabActionSheet } from "./FabActionSheet";
 import { useMoneyAccessContext } from "@/contexts/MoneyAccessContext";
+import { BrandedAlertModal } from "@/components/ui/BrandedAlertModal";
 
 /** Keep in sync with `DashboardTabBar` height + `globals.css` `--tabbar-height` */
 const TABBAR_BASE = 64;
@@ -33,11 +34,19 @@ export function LandingFab() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const [open, setOpen] = useState(false);
+  const [comingSoonOpen, setComingSoonOpen] = useState(false);
   const { canManageMoney, loaded: moneyAccessLoaded } = useMoneyAccessContext();
 
   const segmentTab = useMemo(() => {
     if (!pathname) return undefined;
-    if (pathname.includes("/receipt/new")) return undefined;
+    if (
+      pathname.includes("/receipt/new") ||
+      pathname.includes("/payment/new") ||
+      pathname.includes("/parties/new") ||
+      pathname.includes("/stock/lot/new")
+    ) {
+      return undefined;
+    }
     if (pathname.startsWith("/stock")) return "stock";
     if (pathname.startsWith("/parties")) return "parties";
     if (pathname.startsWith("/money")) return "money";
@@ -57,13 +66,18 @@ export function LandingFab() {
   }
 
   function handleFabActionSelect(id: string) {
-    if (segmentTab !== "money") return;
-    if (id === "add_receipt") {
-      router.push("/money/receipt/new");
+    if (segmentTab === "money") {
+      if (id === "add_receipt") router.push("/money/receipt/new");
+      if (id === "add_payment") router.push("/money/payment/new");
       return;
     }
-    if (id === "add_payment") {
-      Alert.alert("Coming soon", "Record payment will be available in a later update.");
+    if (segmentTab === "parties" && id === "add_party") {
+      router.push("/parties/new");
+      return;
+    }
+    if (segmentTab === "stock") {
+      if (id === "add_lot") router.push("/stock/lot/new");
+      if (id === "add_delivery") setComingSoonOpen(true);
     }
   }
 
@@ -82,7 +96,13 @@ export function LandingFab() {
         title={config.title}
         actions={config.actions}
         onClose={() => setOpen(false)}
-        onSelect={segmentTab === "money" ? handleFabActionSelect : undefined}
+        onSelect={handleFabActionSelect}
+      />
+      <BrandedAlertModal
+        visible={comingSoonOpen}
+        title="Coming soon"
+        message="Record dispatch will be available in a later update."
+        onConfirm={() => setComingSoonOpen(false)}
       />
     </>
   );

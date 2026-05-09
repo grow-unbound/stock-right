@@ -59,7 +59,19 @@ export async function middleware(request: NextRequest) {
     return null;
   }
 
+  async function redirectIfNotOwnerOnUsers(): Promise<NextResponse | null> {
+    if (!pathname.startsWith("/users")) return null;
+    const { data: allowed } = await supabase.rpc("user_can_manage_tenant_users");
+    if (!allowed) {
+      return NextResponse.redirect(new URL("/", request.url));
+    }
+    return null;
+  }
+
   if (user && !isPublicPath) {
+    const blockedUsersEarly = await redirectIfNotOwnerOnUsers();
+    if (blockedUsersEarly) return blockedUsersEarly;
+
     const { data: rows } = await supabase
       .from("user_warehouse_assignments")
       .select("warehouse_id")
@@ -96,6 +108,8 @@ export async function middleware(request: NextRequest) {
   if (user) {
     const blocked = await redirectIfStaffOnMoney();
     if (blocked) return blocked;
+    const blockedUsers = await redirectIfNotOwnerOnUsers();
+    if (blockedUsers) return blockedUsers;
   }
 
   return response;

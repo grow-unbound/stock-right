@@ -5,3 +5,4 @@ export * from "./client-filter";
 export * from "./fetch";
 export * from "./cache";
 export * from "./merge";
+export * from "./synthetic-lodgement-row";

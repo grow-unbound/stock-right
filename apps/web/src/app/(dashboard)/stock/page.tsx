@@ -1,7 +1,9 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import { Loader2, PackageMinus, PackagePlus, SearchX } from "lucide-react";
+import { toast } from "sonner";
 import {
   applyStockTabClientFilters,
   countStockMovements,
@@ -24,10 +26,15 @@ import {
   type StockTabKpis,
 } from "@stockright/shared/stock-tab";
 import { DEMO_FAB_STOCK_ACTIONS } from "@stockright/shared/demo";
+import { STOCK_REFRESH_EVENT } from "@stockright/shared/api";
 import { useDebouncedValue } from "@stockright/shared/hooks";
+import { DashboardKpiCard } from "@/components/dashboard/DashboardKpiCard";
 import { DashboardPageShell } from "@/components/dashboard/DashboardPageShell";
-import { LandingFabActionSheet } from "@/components/dashboard/LandingFabActionSheet";
+import { DashboardSectionHeader } from "@/components/dashboard/DashboardSectionHeader";
+import { RegisterListRow } from "@/components/dashboard/RegisterListRow";
 import { StockActivityTable } from "@/components/stock/StockActivityTable";
+import { AddLotForm } from "@/components/stock/add-lot/AddLotForm";
+import { FormSidebar } from "@/components/money/add-receipt/FormSidebar";
 import { Button } from "@/components/ui/Button";
 import { useSessionUser } from "@/components/session/session-user-provider";
 import { useIsOffline } from "@/hooks/useIsOffline";
@@ -39,20 +46,18 @@ const STROKE = 2;
 const MOBILE_PAGE_SIZE = 15;
 
 function movementLabel(row: StockMovementRow): string {
-  return row.transaction_type === "lodgement" ? "Inward" : "Outward";
+  return row.transaction_type === "lodgement" ? "Receive" : "Dispatch";
 }
 
 function formatBags(n: number): string {
   return n.toLocaleString("en-IN");
 }
 
-type DesktopStockSheet = "lot" | "delivery" | null;
-
 function StockListSkeleton() {
   return (
     <div className="flex flex-col gap-2">
       {Array.from({ length: 6 }).map((_, i) => (
-        <div key={i} className="h-[76px] animate-pulse rounded-[var(--radius-md)] bg-[var(--bg-subtle)]" />
+        <div key={i} className="h-[76px] skeleton rounded-[var(--radius-md)]" />
       ))}
     </div>
   );
@@ -67,6 +72,7 @@ const webStockCacheAdapter = {
 };
 
 export default function StockPage() {
+  const router = useRouter();
   const { context } = useSessionUser();
   const warehouseId = context?.warehouseId ?? null;
   const offline = useIsOffline();
@@ -96,6 +102,7 @@ export default function StockPage() {
   const [remoteSearchPending, setRemoteSearchPending] = useState(false);
   const [dataSource, setDataSource] = useState<"network" | "cache">("network");
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [addLotOpen, setAddLotOpen] = useState(false);
 
   const prevDesktopSearchRef = useRef<string | null>(null);
   const prevMobileSearchRef = useRef<string | null>(null);
@@ -108,12 +115,21 @@ export default function StockPage() {
   const mobileNearEndRef = useRef<() => void>(() => {});
   const sentinelRef = useRef<HTMLDivElement>(null);
 
-  const [desktopSheet, setDesktopSheet] = useState<DesktopStockSheet>(null);
-
   const cacheKey = useMemo(
     () => (warehouseId ? stockTabCacheKey(warehouseId) : null),
     [warehouseId]
   );
+
+  useEffect(() => {
+    function onStockRefresh(e: Event) {
+      const ce = e as CustomEvent<StockMovementRow | undefined>;
+      const row = ce.detail;
+      if (!row) return;
+      setLocalData((prev) => mergeUniqueStockRows([row], prev));
+    }
+    window.addEventListener(STOCK_REFRESH_EVENT, onStockRefresh);
+    return () => window.removeEventListener(STOCK_REFRESH_EVENT, onStockRefresh);
+  }, []);
 
   const searchResults = useMemo(
     () => applyStockTabClientFilters(localData, filterId, searchInput),
@@ -425,14 +441,20 @@ export default function StockPage() {
   const addDelivery = DEMO_FAB_STOCK_ACTIONS[1];
 
   const desktopActions =
-    addLot && addDelivery ? (
+    addLot && addDelivery ?
       <>
         <Button
           variant="secondary"
           size="sm"
           type="button"
           className="min-w-[var(--cta-tab-min-width)] justify-center"
-          onClick={() => setDesktopSheet("lot")}
+          onClick={() => {
+            if (wide) {
+              setAddLotOpen(true);
+            } else {
+              router.push("/stock/lot/new");
+            }
+          }}
         >
           {addLot.label}
         </Button>
@@ -441,12 +463,12 @@ export default function StockPage() {
           size="sm"
           type="button"
           className="min-w-[var(--cta-tab-min-width)] justify-center"
-          onClick={() => setDesktopSheet("delivery")}
+          onClick={() => toast.message("Coming soon", { description: "Record dispatch will be available in a later update." })}
         >
           {addDelivery.label}
         </Button>
       </>
-    ) : null;
+    : null;
 
   const searchAccessory =
     searchInput.trim() !== "" && (remoteSearchPending || searchInput.trim() !== debouncedSearch) ? (
@@ -482,6 +504,18 @@ export default function StockPage() {
       }}
       desktopActions={desktopActions}
       searchAccessory={searchAccessory}
+      fabActionOnSelect={(id) => {
+        if (id === "add_lot") {
+          if (wide) {
+            setAddLotOpen(true);
+          } else {
+            router.push("/stock/lot/new");
+          }
+        }
+        if (id === "add_delivery") {
+          toast.message("Coming soon", { description: "Record dispatch will be available in a later update." });
+        }
+      }}
     >
       <div className="flex flex-col gap-4 px-0 pt-4">
         {!warehouseId ? (
@@ -503,33 +537,23 @@ export default function StockPage() {
           <div className="grid grid-cols-2 gap-2.5">
             {(showDesktopSkeleton || showMobileSkeleton) ? (
               <>
-                <div className="h-[88px] animate-pulse rounded-[var(--radius-md)] bg-[var(--bg-subtle)]" />
-                <div className="h-[88px] animate-pulse rounded-[var(--radius-md)] bg-[var(--bg-subtle)]" />
+                <div className="h-[88px] skeleton rounded-[var(--radius-md)]" />
+                <div className="h-[88px] skeleton rounded-[var(--radius-md)]" />
               </>
             ) : (
               <>
-                <div className="rounded-[var(--radius-md)] border border-[var(--border-default)] bg-[var(--bg-surface)] p-3">
-                  <p className="text-[10px] font-medium uppercase tracking-[0.06em] text-[var(--text-tertiary)]">
-                    Active stock
-                  </p>
-                  <p className="font-[family-name:var(--font-display)] text-[22px] font-semibold tabular-nums text-[var(--text-primary)]">
-                    {kpis ? `${formatBags(kpis.activeStockBags)} bags` : "—"}
-                  </p>
-                  <p className="text-[11px] text-[var(--text-secondary)]">
-                    {kpis ? `${formatBags(kpis.activeStockLots)} lots` : ""}
-                  </p>
-                </div>
-                <div className="rounded-[var(--radius-md)] border border-[var(--border-default)] bg-[var(--bg-surface)] p-3">
-                  <p className="text-[10px] font-medium uppercase tracking-[0.06em] text-[var(--text-tertiary)]">
-                    Stale stock
-                  </p>
-                  <p className="font-[family-name:var(--font-display)] text-[22px] font-semibold tabular-nums text-[var(--pending)]">
-                    {kpis ? `${formatBags(kpis.staleStockBags)} bags` : "—"}
-                  </p>
-                  <p className="text-[11px] text-[var(--text-secondary)]">
-                    {kpis ? `${formatBags(kpis.staleStockLots)} lots` : ""}
-                  </p>
-                </div>
+                <DashboardKpiCard
+                  label="Active stock"
+                  value={kpis ? `${formatBags(kpis.activeStockBags)} bags` : "—"}
+                  sub={kpis ? `${formatBags(kpis.activeStockLots)} lots` : ""}
+                  accentClass="text-[var(--text-primary)]"
+                />
+                <DashboardKpiCard
+                  label="Stale stock"
+                  value={kpis ? `${formatBags(kpis.staleStockBags)} bags` : "—"}
+                  sub={kpis ? `${formatBags(kpis.staleStockLots)} lots` : ""}
+                  accentClass="text-[var(--pending)]"
+                />
               </>
             )}
           </div>
@@ -537,9 +561,7 @@ export default function StockPage() {
 
         {warehouseId ? (
           <>
-            <p className="text-[11px] font-medium uppercase tracking-[0.08em] text-[var(--text-tertiary)]">
-              Recent activity
-            </p>
+            <DashboardSectionHeader label="Recent activity" />
 
             <div className="hidden sm:block">
               {offline && localData.length === 0 ? (
@@ -597,50 +619,46 @@ export default function StockPage() {
                     const isLodgement = row.transaction_type === "lodgement";
                     return (
                       <li key={stockMovementRowKey(row)}>
-                        <button
-                          type="button"
-                          className="flex min-h-12 w-full items-center gap-3 rounded-[var(--radius-md)] border border-[var(--border-default)] bg-[var(--bg-surface)] px-3.5 py-3 text-left transition-opacity hover:opacity-95 focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-[var(--focus-ring)]"
-                        >
-                          <span
-                            className={cn(
-                              isLodgement
-                                ? "flex size-9 shrink-0 items-center justify-center rounded-[var(--radius-md)] border border-[var(--inward-border)] bg-[var(--inward-bg)] text-[var(--inward)]"
-                                : "flex size-9 shrink-0 items-center justify-center rounded-[var(--radius-md)] border border-[var(--outward-border)] bg-[var(--outward-bg)] text-[var(--outward)]"
-                            )}
-                          >
-                            {isLodgement ? (
+                        <RegisterListRow
+                          as="button"
+                          icon={
+                            isLodgement ? (
                               <PackagePlus className="size-[18px]" strokeWidth={STROKE} aria-hidden />
                             ) : (
                               <PackageMinus className="size-[18px]" strokeWidth={STROKE} aria-hidden />
-                            )}
-                          </span>
-                          <span className="min-w-0 flex-1">
-                            <span className="block font-[family-name:var(--font-mono)] text-[11px] tracking-[0.04em] text-[var(--text-tertiary)]">
+                            )
+                          }
+                          iconShellClassName={
+                            isLodgement
+                              ? "bg-[var(--inward-bg)] text-[var(--inward)]"
+                              : "bg-[var(--outward-bg)] text-[var(--outward)]"
+                          }
+                          meta={
+                            <>
                               {row.lot_number} · {formatStockActivityDate(row.tx_date)}
+                            </>
+                          }
+                          title={row.customer_name}
+                          detail={row.product_name}
+                          trailing={
+                            <span
+                              className={cn(
+                                "text-[14px] font-semibold tabular-nums",
+                                isLodgement ? "text-[var(--inward)]" : "text-[var(--outward)]"
+                              )}
+                            >
+                              {isLodgement ? "+" : "−"}
+                              {formatBags(row.num_bags)} bags
                             </span>
-                            <span className="mt-0.5 block truncate font-[family-name:var(--font-display)] text-[15px] font-semibold text-[var(--text-primary)]">
-                              {row.customer_name}
-                            </span>
-                            <span className="mt-0.5 block truncate text-[12px] text-[var(--text-secondary)]">
-                              {row.product_name}
-                            </span>
-                          </span>
-                          <span className="shrink-0 text-right">
-                            <span className="block font-[family-name:var(--font-display)] text-[22px] font-bold tabular-nums text-[var(--text-primary)]">
-                              {formatBags(row.num_bags)}
-                            </span>
-                            <span className="mt-0.5 block font-[family-name:var(--font-mono)] text-[10px] uppercase tracking-[0.06em] text-[var(--text-tertiary)]">
-                              Bags
-                            </span>
-                          </span>
-                        </button>
+                          }
+                        />
                       </li>
                     );
                   })}
                 </ul>
               )}
               {mobileLoadingMore ? (
-                <div className="mt-2 h-[76px] animate-pulse rounded-[var(--radius-md)] bg-[var(--bg-subtle)]" />
+                <div className="mt-2 h-[76px] skeleton rounded-[var(--radius-md)]" />
               ) : null}
               <div ref={sentinelRef} className="h-1 w-full shrink-0" aria-hidden />
             </div>
@@ -648,14 +666,20 @@ export default function StockPage() {
         ) : null}
       </div>
 
-      {desktopSheet && addLot && addDelivery ? (
-        <LandingFabActionSheet
-          open
-          title={desktopSheet === "lot" ? addLot.label : addDelivery.label}
-          actions={desktopSheet === "lot" ? [addLot] : [addDelivery]}
-          onClose={() => setDesktopSheet(null)}
-        />
-      ) : null}
+      <FormSidebar
+        open={addLotOpen && Boolean(warehouseId) && !offline}
+        title="Add Lot"
+        onClose={() => setAddLotOpen(false)}
+      >
+        {warehouseId ? (
+          <AddLotForm
+            warehouseId={warehouseId}
+            supabase={supabase}
+            onClose={() => setAddLotOpen(false)}
+            onSuccess={() => {}}
+          />
+        ) : null}
+      </FormSidebar>
     </DashboardPageShell>
   );
 }

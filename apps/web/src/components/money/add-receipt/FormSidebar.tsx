@@ -33,7 +33,7 @@ export function FormSidebar({ open, title, onClose, children }: FormSidebarProps
       />
       <aside
         className={[
-          "absolute inset-y-0 right-0 flex flex-col border-l border-[var(--border-default)] bg-[var(--bg-surface)] shadow-[var(--shadow-3)]",
+          "absolute inset-y-0 right-0 flex max-h-[100dvh] min-h-0 flex-col border-l border-[var(--border-default)] bg-[var(--bg-surface)] shadow-[var(--shadow-3)]",
           FORM_DRAWER_PANEL_WIDTH_CLASS,
         ].join(" ")}
         role="dialog"

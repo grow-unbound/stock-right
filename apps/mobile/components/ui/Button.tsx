@@ -81,15 +81,15 @@ const styles = StyleSheet.create({
   ghost: { backgroundColor: "transparent" },
   danger: { backgroundColor: tokens.outward },
 
-  size_sm: { minHeight: 36, paddingHorizontal: 14 },
+  size_sm: { minHeight: 48, paddingHorizontal: 14, paddingVertical: 10 },
   size_default: { minHeight: 48 },
   size_lg: { minHeight: 56, paddingHorizontal: 24 },
 
   text: { fontFamily: "NotoSans-SemiBold" },
-  text_primary: { color: "#FFFFFF" },
+  text_primary: { color: tokens.textOnBrand },
   text_secondary: { color: tokens.brandText },
   text_ghost: { color: tokens.brandText },
-  text_danger: { color: "#FFFFFF" },
+  text_danger: { color: tokens.textOnBrand },
 
   textSize_sm: { fontSize: 13 },
   textSize_default: { fontSize: 15 },

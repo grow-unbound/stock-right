@@ -6,38 +6,39 @@ import {
   Pressable,
   StyleSheet,
   ActivityIndicator,
+  DeviceEventEmitter,
   type NativeSyntheticEvent,
   type NativeScrollEvent,
 } from "react-native";
-import { PackageMinus, PackagePlus, SearchX } from "lucide-react-native";
+import { SearchX, User } from "lucide-react-native";
 import { useFocusEffect } from "expo-router";
 import {
-  applyStockTabClientFilters,
-  countStockMovements,
-  fetchStockTabKpis,
-  formatLotStatusLabel,
-  formatStockActivityDate,
-  isStockTabFilterId,
-  listStockMovements,
-  mergeUniqueStockRows,
-  readStockTabCache,
-  stockMovementRowKey,
-  stockTabCacheKey,
-  STOCK_TAB_FILTER_CHIPS,
-  STOCK_TAB_SEARCH_PLACEHOLDER,
-  writeStockTabCache,
-  type StockMovementRow,
-  type StockTabFilterId,
-  type StockTabKpis,
-} from "@stockright/shared/stock-tab";
+  applyPartiesTabClientFilters,
+  buildPartiesTabVisibleRows,
+  countPartiesTab,
+  fetchPartiesTabKpis,
+  isPartiesTabFilterId,
+  listPartiesTab,
+  mergeUniquePartyRows,
+  PARTIES_TAB_FILTER_CHIPS,
+  PARTIES_TAB_SEARCH_PLACEHOLDER,
+  partiesTabCacheKey,
+  partyRowKey,
+  readPartiesTabCache,
+  type PartiesTabFilterId,
+  type PartiesTabKpis,
+  type PartiesTabListRow,
+  writePartiesTabCache,
+} from "@stockright/shared/parties-tab";
+import { PARTIES_REFRESH_EVENT } from "@stockright/shared/api";
 import { useDebouncedValue } from "@stockright/shared/hooks";
-import { ACTIVE_WAREHOUSE_ID_KEY } from "@stockright/shared/utils";
+import { ACTIVE_WAREHOUSE_ID_KEY, formatIndianCurrency } from "@stockright/shared/utils";
 import { tokens } from "@stockright/shared/tokens";
 import { TabScreenHeader } from "@/components/landing/TabScreenHeader";
 import { useIsOffline } from "@/hooks/useIsOffline";
 import { getSupabaseClient } from "@/lib/supabase";
 import { storage } from "@/lib/storage";
-import { mobileStockTabCacheAdapter } from "@/lib/stockTabCacheAdapter";
+import { mobilePartiesTabCacheAdapter } from "@/lib/partiesTabCacheAdapter";
 
 const STROKE = 2;
 const MOBILE_PAGE_SIZE = 15;
@@ -46,8 +47,10 @@ function formatBags(n: number): string {
   return n.toLocaleString("en-IN");
 }
 
-function movementLabel(tx: StockMovementRow["transaction_type"]): string {
-  return tx === "lodgement" ? "Inward" : "Outward";
+function partyLotSummaryLine(row: PartiesTabListRow): string {
+  const totalLots = row.lots_active + row.lots_stale + row.lots_delivered;
+  const lotWord = totalLots === 1 ? "lot" : "lots";
+  return `${totalLots} ${lotWord} (${row.lots_active} active, ${row.lots_stale} stale, ${row.lots_delivered} delivered) · ${formatBags(row.bags_active_stale_delivered)} bags`;
 }
 
 function ListSkeleton() {
@@ -60,7 +63,7 @@ function ListSkeleton() {
   );
 }
 
-export default function StockScreen() {
+export default function PartiesScreen() {
   const [warehouseId, setWarehouseId] = useState<string | null>(null);
   const [warehouseHydrated, setWarehouseHydrated] = useState(false);
 
@@ -77,48 +80,68 @@ export default function StockScreen() {
       };
     }, [])
   );
+
   const offline = useIsOffline();
   const supabase = useMemo(() => getSupabaseClient(), []);
-  const stockCacheAdapter = mobileStockTabCacheAdapter;
+  const partiesCacheAdapter = mobilePartiesTabCacheAdapter;
 
   const cacheKey = useMemo(
-    () => (warehouseId ? stockTabCacheKey(warehouseId) : null),
+    () => (warehouseId ? partiesTabCacheKey(warehouseId) : null),
     [warehouseId]
   );
 
-  const [filterId, setFilterId] = useState<StockTabFilterId>("all");
+  const [filterId, setFilterId] = useState<PartiesTabFilterId>("all");
   const [searchInput, setSearchInput] = useState("");
   const debouncedSearch = useDebouncedValue(searchInput.trim(), 400);
+  const searchInputRef = useRef(searchInput);
+  searchInputRef.current = searchInput;
 
-  const [localData, setLocalData] = useState<StockMovementRow[]>([]);
+  const [localData, setLocalData] = useState<PartiesTabListRow[]>([]);
+  const [baselineRows, setBaselineRows] = useState<PartiesTabListRow[]>([]);
   const [mobilePage, setMobilePage] = useState(1);
   const [mobileLoadingMore, setMobileLoadingMore] = useState(false);
   const [remoteSearchPending, setRemoteSearchPending] = useState(false);
 
   const [totalCount, setTotalCount] = useState(0);
-  const [kpis, setKpis] = useState<StockTabKpis | null>(null);
-  const kpisRef = useRef<StockTabKpis | null>(null);
+  const [kpis, setKpis] = useState<PartiesTabKpis | null>(null);
+  const kpisRef = useRef<PartiesTabKpis | null>(null);
   kpisRef.current = kpis;
 
   const [initialLoading, setInitialLoading] = useState(true);
   const [dataSource, setDataSource] = useState<"network" | "cache">("network");
   const [loadError, setLoadError] = useState<string | null>(null);
 
-  const localDataRef = useRef<StockMovementRow[]>([]);
+  const localDataRef = useRef<PartiesTabListRow[]>([]);
   localDataRef.current = localData;
   const prevMobileSearchRef = useRef<string | null>(null);
-  const prevMobileFilterRef = useRef<StockTabFilterId | null>(null);
+  const prevMobileFilterRef = useRef<PartiesTabFilterId | null>(null);
 
   const endFetchRef = useRef<() => void>(() => {});
 
+  useEffect(() => {
+    const sub = DeviceEventEmitter.addListener(PARTIES_REFRESH_EVENT, (row: PartiesTabListRow) => {
+      if (!row?.customer_id) return;
+      setLocalData((prev) => mergeUniquePartyRows([row], prev));
+      setBaselineRows((prev) => mergeUniquePartyRows([row], prev));
+    });
+    return () => sub.remove();
+  }, []);
+
   const searchResults = useMemo(
-    () => applyStockTabClientFilters(localData, filterId, searchInput),
-    [localData, filterId, searchInput]
+    () =>
+      buildPartiesTabVisibleRows({
+        baselineRows,
+        serverRows: localData,
+        filterId,
+        searchInputRaw: searchInput,
+      }),
+    [baselineRows, localData, filterId, searchInput]
   );
 
   useEffect(() => {
     setMobilePage(1);
     setLocalData([]);
+    setBaselineRows([]);
     setInitialLoading(true);
     prevMobileSearchRef.current = null;
     prevMobileFilterRef.current = null;
@@ -130,7 +153,7 @@ export default function StockScreen() {
     let cancelled = false;
     void (async () => {
       try {
-        const k = await fetchStockTabKpis(supabase, warehouseId);
+        const k = await fetchPartiesTabKpis(supabase, warehouseId);
         if (!cancelled) setKpis(k);
       } catch {
         if (!cancelled) setKpis(null);
@@ -146,16 +169,18 @@ export default function StockScreen() {
 
     let cancelled = false;
     void (async () => {
-      const cached = await readStockTabCache(stockCacheAdapter, cacheKey);
+      const cached = await readPartiesTabCache(partiesCacheAdapter, cacheKey);
       if (cancelled) return;
       setDataSource(cached ? "cache" : "network");
       if (cached) {
         setKpis(cached.kpis);
-        setLocalData(cached.baselineMovements);
-        setTotalCount(cached.baselineMovements.length);
+        setLocalData(cached.baselineRows);
+        setBaselineRows(cached.baselineRows);
+        setTotalCount(cached.baselineRows.length);
       } else {
         setKpis(null);
         setLocalData([]);
+        setBaselineRows([]);
         setTotalCount(0);
       }
       setInitialLoading(false);
@@ -164,7 +189,7 @@ export default function StockScreen() {
     return () => {
       cancelled = true;
     };
-  }, [warehouseId, offline, cacheKey, stockCacheAdapter]);
+  }, [warehouseId, offline, cacheKey, partiesCacheAdapter]);
 
   useEffect(() => {
     if (!warehouseId || offline) return;
@@ -183,7 +208,7 @@ export default function StockScreen() {
     const loadingMore = mobilePageToFetch > 1;
 
     if (loadingMore) setMobileLoadingMore(true);
-    if (search !== "") setRemoteSearchPending(true);
+    if (debouncedSearch !== "") setRemoteSearchPending(true);
     if (mobilePageToFetch === 1 && localDataRef.current.length === 0) {
       setInitialLoading(true);
     }
@@ -192,7 +217,7 @@ export default function StockScreen() {
     void (async () => {
       try {
         if (mobilePageToFetch === 1) {
-          const c = await countStockMovements(supabase, {
+          const c = await countPartiesTab(supabase, {
             warehouseId,
             search,
             filterId,
@@ -201,12 +226,10 @@ export default function StockScreen() {
           setTotalCount(c);
         }
 
-        const rows = await listStockMovements(supabase, {
+        const rows = await listPartiesTab(supabase, {
           warehouseId,
           search,
           filterId,
-          sortColumn: "tx_date",
-          sortDirection: "desc",
           page: mobilePageToFetch,
           pageSize: MOBILE_PAGE_SIZE,
         });
@@ -216,30 +239,35 @@ export default function StockScreen() {
         const k = kpisRef.current;
 
         setLocalData((prev) => {
-          const next = mobilePageToFetch === 1 ? rows : mergeUniqueStockRows(prev, rows);
+          const next = mobilePageToFetch === 1 ? rows : mergeUniquePartyRows(prev, rows);
           if (cacheKey && search === "") {
-            void writeStockTabCache(stockCacheAdapter, cacheKey, {
-              baselineMovements: next,
+            void writePartiesTabCache(partiesCacheAdapter, cacheKey, {
+              baselineRows: next,
               kpis: k ?? null,
             });
           }
           return next;
         });
+
+        if (filterId === "all" && search === "") {
+          setBaselineRows((prev) =>
+            mobilePageToFetch === 1 ? mergeUniquePartyRows([], rows) : mergeUniquePartyRows(prev, rows)
+          );
+        }
+
         setDataSource("network");
       } catch (e) {
         if (!cancelled) {
-          const msg = e instanceof Error ? e.message : "Could not load stock";
+          const msg = e instanceof Error ? e.message : "Could not load parties";
           setLoadError(msg);
-          const cached = cacheKey ? await readStockTabCache(stockCacheAdapter, cacheKey) : null;
+          const cached = cacheKey ? await readPartiesTabCache(partiesCacheAdapter, cacheKey) : null;
           if (cached) {
             setDataSource("cache");
             setKpis(cached.kpis);
-            setLocalData(
-              applyStockTabClientFilters(cached.baselineMovements, filterId, searchInput)
-            );
-            setTotalCount(
-              applyStockTabClientFilters(cached.baselineMovements, filterId, debouncedSearch).length
-            );
+            const needle = searchInputRef.current;
+            setLocalData(applyPartiesTabClientFilters(cached.baselineRows, filterId, needle));
+            setBaselineRows(cached.baselineRows);
+            setTotalCount(applyPartiesTabClientFilters(cached.baselineRows, filterId, debouncedSearch).length);
           }
         }
       } finally {
@@ -254,17 +282,7 @@ export default function StockScreen() {
     return () => {
       cancelled = true;
     };
-  }, [
-    warehouseId,
-    debouncedSearch,
-    filterId,
-    mobilePage,
-    offline,
-    supabase,
-    cacheKey,
-    stockCacheAdapter,
-    searchInput,
-  ]);
+  }, [warehouseId, debouncedSearch, filterId, mobilePage, offline, supabase, cacheKey, partiesCacheAdapter]);
 
   endFetchRef.current = () => {
     if (!warehouseId || offline || mobileLoadingMore) return;
@@ -307,15 +325,15 @@ export default function StockScreen() {
     return (
       <View style={styles.noWarehouseRoot}>
         <TabScreenHeader
-          title="Stock"
-          searchPlaceholder={STOCK_TAB_SEARCH_PLACEHOLDER}
-          chips={STOCK_TAB_FILTER_CHIPS}
+          title="Parties"
+          searchPlaceholder={PARTIES_TAB_SEARCH_PLACEHOLDER}
+          chips={PARTIES_TAB_FILTER_CHIPS}
           chipActiveId={filterId}
           onChipChange={(id) => {
-            if (isStockTabFilterId(id)) setFilterId(id);
+            if (isPartiesTabFilterId(id)) setFilterId(id);
           }}
         />
-        <Text style={styles.emptyWarehouse}>Select a warehouse to see stock activity.</Text>
+        <Text style={styles.emptyWarehouse}>Select a warehouse to see parties.</Text>
       </View>
     );
   }
@@ -330,19 +348,25 @@ export default function StockScreen() {
       scrollEventThrottle={32}
     >
       <TabScreenHeader
-        title="Stock"
-        searchPlaceholder={STOCK_TAB_SEARCH_PLACEHOLDER}
+        title="Parties"
+        searchPlaceholder={PARTIES_TAB_SEARCH_PLACEHOLDER}
         searchValue={searchInput}
         onSearchChange={setSearchInput}
-        chips={STOCK_TAB_FILTER_CHIPS}
+        chips={PARTIES_TAB_FILTER_CHIPS}
         chipActiveId={filterId}
         searchAccessory={searchAccessory}
         onChipChange={(id) => {
-          if (isStockTabFilterId(id)) setFilterId(id);
+          if (isPartiesTabFilterId(id)) setFilterId(id);
         }}
       />
 
       <View style={styles.body}>
+        {offline ? (
+          <Text style={styles.offlineHint}>
+            You are offline. Showing saved parties from this device.
+          </Text>
+        ) : null}
+
         {loadError ? (
           <Text style={styles.errorText} accessibilityRole="alert">
             {loadError}
@@ -359,31 +383,31 @@ export default function StockScreen() {
           ) : (
             <>
               <View style={styles.kpi}>
-                <Text style={styles.kpiLabel}>ACTIVE STOCK</Text>
-                <Text style={[styles.kpiValue, { color: tokens.textPrimary }]}>
-                  {kpis ? `${formatBags(kpis.activeStockBags)} bags` : "—"}
+                <Text style={styles.kpiLabel}>Total Outstanding</Text>
+                <Text style={[styles.kpiValue, { color: tokens.pending }]}>
+                  {kpis ? formatIndianCurrency(kpis.totalOutstanding) : "—"}
                 </Text>
                 <Text style={styles.kpiSub}>
-                  {kpis ? `${formatBags(kpis.activeStockLots)} lots` : ""}
+                  {kpis ? `${formatBags(kpis.customersWithOutstanding)} customers` : "Loading…"}
                 </Text>
               </View>
               <View style={styles.kpi}>
-                <Text style={styles.kpiLabel}>STALE STOCK</Text>
-                <Text style={[styles.kpiValue, { color: tokens.pending }]}>
+                <Text style={styles.kpiLabel}>Stale Stock</Text>
+                <Text style={[styles.kpiValue, { color: tokens.textPrimary }]}>
                   {kpis ? `${formatBags(kpis.staleStockBags)} bags` : "—"}
                 </Text>
                 <Text style={styles.kpiSub}>
-                  {kpis ? `${formatBags(kpis.staleStockLots)} lots` : ""}
+                  {kpis ? `${formatBags(kpis.partiesWithStale)} parties` : "Loading…"}
                 </Text>
               </View>
             </>
           )}
         </View>
 
-        <Text style={styles.sectionLabel}>Recent activity</Text>
+        <Text style={styles.sectionLabel}>Maximum outstanding</Text>
 
         {offline && localData.length === 0 ? (
-          <Text style={styles.empty}>Connect once to load stock activity on this device.</Text>
+          <Text style={styles.empty}>Connect once to load parties on this device.</Text>
         ) : showSkeleton ? (
           <ListSkeleton />
         ) : showListEmpty ? (
@@ -393,47 +417,30 @@ export default function StockScreen() {
           </View>
         ) : (
           <View style={styles.list}>
-            {searchResults.map((row: StockMovementRow) => {
-              const isLodgement = row.transaction_type === "lodgement";
-              return (
-                <Pressable
-                  key={stockMovementRowKey(row)}
-                  style={({ pressed }) => [styles.txn, pressed && styles.txnPressed]}
-                >
-                  <View
-                    style={[
-                      styles.txnIcon,
-                      {
-                        backgroundColor: isLodgement ? tokens.inwardBg : tokens.outwardBg,
-                        borderColor: isLodgement ? tokens.inwardBorder : tokens.outwardBorder,
-                      },
-                    ]}
-                  >
-                    {isLodgement ? (
-                      <PackagePlus size={18} color={tokens.inward} strokeWidth={STROKE} />
-                    ) : (
-                      <PackageMinus size={18} color={tokens.outward} strokeWidth={STROKE} />
-                    )}
-                  </View>
-                  <View style={styles.txnMid}>
-                    <Text style={styles.txnMeta}>
-                      {movementLabel(row.transaction_type)} · {row.lot_number} ·{" "}
-                      {formatStockActivityDate(row.tx_date)}
-                    </Text>
-                    <Text style={styles.txnParty} numberOfLines={1}>
-                      {row.customer_name}
-                    </Text>
-                    <Text style={styles.txnProduct} numberOfLines={1}>
-                      {row.product_name} · {formatLotStatusLabel(row.lot_status)}
-                    </Text>
-                  </View>
-                  <View style={styles.txnRight}>
-                    <Text style={styles.txnAmt}>{formatBags(row.num_bags)}</Text>
-                    <Text style={styles.txnType}>Bags</Text>
-                  </View>
-                </Pressable>
-              );
-            })}
+            {searchResults.map((row) => (
+              <Pressable
+                key={partyRowKey(row)}
+                style={({ pressed }) => [styles.row, pressed && styles.rowPressed]}
+              >
+                <View style={styles.rowIcon}>
+                  <User size={18} color={tokens.brandText} strokeWidth={STROKE} />
+                </View>
+                <View style={styles.rowMid}>
+                  <Text style={styles.rowCode} numberOfLines={1}>
+                    {row.customer_code}
+                  </Text>
+                  <Text style={styles.rowName} numberOfLines={1}>
+                    {row.customer_name}
+                  </Text>
+                  <Text style={styles.rowMeta} numberOfLines={2}>
+                    {partyLotSummaryLine(row)}
+                  </Text>
+                </View>
+                <View style={styles.rowRight}>
+                  <Text style={styles.rowAmt}>{formatIndianCurrency(row.outstanding_total)}</Text>
+                </View>
+              </Pressable>
+            ))}
           </View>
         )}
         {mobileLoadingMore ? <View style={styles.loadingMoreSkeleton} /> : null}
@@ -450,6 +457,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: tokens.sp4,
     gap: tokens.sp4,
     paddingTop: tokens.sp4,
+  },
+  offlineHint: {
+    fontFamily: "NotoSans-Regular",
+    fontSize: 13,
+    color: tokens.textSecondary,
   },
   hydrateWrap: {
     paddingHorizontal: tokens.sp4,
@@ -524,56 +536,50 @@ const styles = StyleSheet.create({
     paddingVertical: tokens.sp4,
     paddingHorizontal: tokens.sp6,
   },
-  txn: {
+  row: {
     flexDirection: "row",
     alignItems: "center",
     gap: tokens.sp3,
     minHeight: 48,
     paddingVertical: tokens.sp3,
-    paddingHorizontal: 14,
+    paddingHorizontal: tokens.sp3,
     borderWidth: 1,
     borderColor: tokens.borderDefault,
     borderRadius: tokens.radiusMd,
     backgroundColor: tokens.bgSurface,
   },
-  txnPressed: { opacity: 0.96 },
-  txnIcon: {
-    width: 36,
-    height: 36,
+  rowPressed: { opacity: 0.96 },
+  rowIcon: {
+    width: 40,
+    height: 40,
     borderRadius: tokens.radiusMd,
     alignItems: "center",
     justifyContent: "center",
-    borderWidth: 1,
+    backgroundColor: tokens.brandSubtle,
   },
-  txnMid: { flex: 1, minWidth: 0, gap: 2 },
-  txnMeta: {
+  rowMid: { flex: 1, minWidth: 0, gap: 2 },
+  rowCode: {
     fontFamily: "NotoSans-Regular",
     fontSize: 11,
     color: tokens.textTertiary,
   },
-  txnParty: {
-    fontFamily: "NotoSans-SemiBold",
+  rowName: {
+    fontFamily: "NotoSerif-SemiBold",
     fontSize: 15,
     color: tokens.textPrimary,
   },
-  txnProduct: {
+  rowMeta: {
     fontFamily: "NotoSans-Regular",
     fontSize: 12,
     color: tokens.textSecondary,
   },
-  txnRight: { alignItems: "flex-end" },
-  txnAmt: {
-    fontFamily: "NotoSerif-SemiBold",
-    fontSize: 17,
+  rowRight: { alignItems: "flex-end" },
+  rowAmt: {
+    fontFamily: "NotoSans-SemiBold",
+    fontSize: 14,
     fontVariant: ["tabular-nums"],
-    color: tokens.textPrimary,
-  },
-  txnType: {
-    fontFamily: "NotoSans-Regular",
-    fontSize: 10,
-    letterSpacing: 0.06,
-    color: tokens.textTertiary,
-    textTransform: "uppercase",
+    color: tokens.pending,
+    lineHeight: 18,
   },
   skeleton: {
     minHeight: 88,

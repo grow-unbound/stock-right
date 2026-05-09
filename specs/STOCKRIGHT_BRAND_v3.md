@@ -116,8 +116,9 @@ One type family system across three roles. Chosen for **full Indian script cover
 | Body | 15px | 400 | Noto Sans | Body copy, descriptions |
 | Small | 13px | 400 | Noto Sans | Captions, helper text |
 | Label | 11px | 500 | Noto Sans Mono | Column headers, tags — UPPERCASE, ls 0.1em |
-| Number | 38px | 700 | Noto Serif | KPI values, currency |
-| Number (activity row) | 28px | 700 | Noto Serif | Money / register list amounts — see `design-system/preview/components-cards.html` |
+| Dashboard KPI value (in-app 2×2 grid) | 22px | 600 | Noto Serif | Home tab KPI cards — canonical warehouse dashboard |
+| KPI hero (optional) | 38px | 700 | Noto Serif | Marketing / landing emphasis only — not the default in-app KPI grid |
+| Register list trailing amount | 14px | 600 | Noto Sans | Money / stock / parties row totals — semantic color |
 
 ### 2.3 i18n Rules
 
@@ -206,7 +207,7 @@ animation: shimmer 1.5s ease-in-out infinite;
 
 - **Mobile app & mobile-web:** full-width offline banner when offline (queued count), matching copy tone. No separate “online” pill when connected.
 - **Desktop web:** do **not** show an “online” badge when connected. When offline, show queued state **in the side nav** (compact badge under the wordmark) — same semantics as the mobile offline banner.
-- **Syncing:** optional “↑ Syncing…” with progress when applicable.
+- **Uploading:** optional “↑ Sending…” (or similar) with progress when applicable — avoid the word “sync” in user-facing copy (see §7).
 
 ```
 Offline → badge-offline: "⚡ N queued" — always show count when shown
@@ -214,15 +215,16 @@ Offline → badge-offline: "⚡ N queued" — always show count when shown
 
 Do **not** use `badge-online` / “● Online” on desktop web.
 
-### 3.8 Money tab — KPI cards and activity list
+### 3.8 Dashboard & register patterns (reusable)
 
-- **KPI cards (two-column, dashboard):** Match `design-system/preview/type-numbers.html`: mono **Label** row (11px, uppercase, `letter-spacing: 0.1em`), **Number** value at **38px / 700** Noto Serif tabular, caption line **13px** Noto Sans in secondary text color. On very narrow grids, values may step down one size (e.g. 32px) if clipping occurs.
-- **Searchable activity list:** Use `@stockright/shared/money` (`filterMoneyRowsLocal`, `mergeUniqueMoneyRows`, party display helpers) and `@stockright/shared/offline/app-cache` for persisted snapshots:
-  - **`localData`** holds rows in memory; **`searchResults`** = immediate `filterMoneyRowsLocal(localData, …)` on each keystroke.
-  - **Debounce 400ms** before Supabase `list_money_movements` / count; **merge** pages with a **Map** keyed by `transaction_type` + `event_id` so duplicates never render.
-  - **Search field:** subtle **spinner** (e.g. Lucide `Loader2`) only while the **search** network call is in flight; **empty** state: **SearchX** + short copy.
-  - **Clearing search** resets **page 1** offset paging and refetches the default window.
-  - **Offline:** hydrate from device storage (last list per warehouse + chip + optional pending rows); same local filter applies; no live Supabase reads until online.
+- **KPI cards:** `DashboardKpiCard` — match Home tab: label **10px** uppercase (`~0.06em` tracking, tertiary); value **22px** semibold Noto Serif; optional subline **13px** body.
+- **Section headers:** `DashboardSectionHeader` — **11px** uppercase (`~0.08em` tracking).
+- **Register / activity rows:** `RegisterListRow` — **40×40** rounded icon, semantic fill **without** a border; trailing figure **14px** semibold sans with inward / outward / pending color; **8px** vertical gap between rows (`gap-2` / `sp-2`).
+- **Desktop data tables:** `data-table-classes` + `TablePageSizeSelect` — header **11px** mono uppercase; body **15px** sans; codes/dates monospace tabular; amounts **right**, **`formatIndianCurrency`**; status **`Badge`** pills (**11px** mono uppercase in component).
+- **Money amounts:** `AmountField` (web) and ₹-prefixed Indian grouping on mobile — shared `formatRupee*` / `formatIndianCurrency`; no bare number strings in UI.
+- **Dates:** `DatePickerField` (web, Popover + DayPicker) and `MobileDatePickerField` (mobile); avoid raw `input type="date"` / plain `YYYY-MM-DD` text fields as the default product control.
+- **Confirmations:** `AlertDialog` (web) and `BrandedAlertModal` (mobile) — not `alert` / `confirm` / `Alert.alert`.
+- **Deep chrome:** Hide bottom tab bar + FAB on full-screen flows (`shouldHideMobileDashboardChrome` on web; stack routes above tabs on mobile). **Back:** chevron icon only (no “Back” copy).
 
 ### 3.9 Forms & stacked overlays (normative)
 
@@ -234,7 +236,7 @@ Do **not** use `badge-online` / “● Online” on desktop web.
 - **Performance:** Load heavy reference data **lazily** — e.g. open allocations only when the section expands; open party data when the picker opens.
 - **Search lists:** **Infinite scroll** near list end; no separate “Load more” row for party pickers. Omit “X matches” hint lines.
 - **Party rows:** Show **avatar initials** for scan alignment.
-- **Money — Add receipt:** Label **Payment method**; show methods as **chips** (not `<select>`). **₹** + live Indian comma grouping on amount. **Reference** auto-suggested from recent receipts (overridable). **Notes** optional and visible. The row stored for the receipt always sets **`recorded_by`** to the signed-in operator’s profile id (`auth` user id = `user_profiles.id`) for audit. **Allocations:** section uses uppercase kicker + title (same rhythm as dashboard sections); outstanding RPC errors stay **inside** the section.
+- **Money — Add receipt:** Payment method as **chips**; amount with **₹** and Indian grouping; optional reference and notes; allocations section follows the same uppercase kicker + title rhythm as other dashboard sections.
 
 ---
 
@@ -299,7 +301,7 @@ Do **not** use `badge-online` / “● Online” on desktop web.
 - **Desktop web cursor:** On viewports `≥640px` with a fine pointer, **buttons and submit controls** use **`cursor: pointer`** (hand) — global rule in `globals.css` / design-system; nav links already use pointer. Applies to **Log out** and all list CTAs.
 - **Section rhythm:** Same as Home **Recent entries** / Money **Recent transactions**: uppercase section label and card are **siblings in a column with `gap-4` (`sp-4`, 16px)** — see spacing table (`sp-4` row) and `design-system/colors_and_type.css` spacing notes. **No** extra margin on the label (`mb-*`, `marginBottom`, or `marginTop` on the label alone). Web: wrap each block in `flex flex-col gap-4`. Mobile: same **`gap: sp-4`** between scroll children as Home/Money tab bodies.
 - **Account rows:** **Organization** and **Your role** are read-only rows **without** trailing chevrons. **Warehouse** shows a **Switch warehouse** row (with chevron) **only** when the user has **more than one** warehouse for the tenant. **Language** shows the current choice in **native script** (e.g. English, తెలుగు, हिंदी); tapping opens a picker with the same native labels (optional small English subtitle). Preference is stored under `sr_ui_locale` (`en` | `te` | `hi`). **Number format** is not configurable — **Indian grouping** for everyone (no row in Preferences).
-- **Data block:** When **online**, copy reassures that data is **synced / saved on the server** (inward-toned badge, e.g. “Up to date”). When **offline**, show **offline queue** messaging and counts as before.
+- **Data block:** When **online**, copy reassures that data is **saved on the server** (inward-toned badge, e.g. “Up to date”). When **offline**, show **offline queue** messaging and counts as before.
 
 ---
 

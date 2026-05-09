@@ -303,51 +303,51 @@ export default function MoneyScreen() {
     }
     return (
       <View style={styles.listBlock}>
-        {searchResults.map((t, idx) => {
+        {searchResults.map((t) => {
           const isReceipt = t.transaction_type === "receipt";
           const secondary = displayMoneyPartySecondary(t);
           return (
-            <View key={`${t.transaction_type}-${t.event_id}`} style={idx > 0 ? styles.rowGap : undefined}>
-              <Pressable style={({ pressed }) => [styles.txn, pressed && styles.txnPressed]}>
-                <View
-                  style={[
-                    styles.txnIcon,
-                    {
-                      backgroundColor: isReceipt ? tokens.inwardBg : tokens.outwardBg,
-                      borderColor: isReceipt ? tokens.inwardBorder : tokens.outwardBorder,
-                    },
-                  ]}
-                >
-                  {isReceipt ? (
-                    <HandCoins size={18} color={tokens.inward} strokeWidth={STROKE} />
-                  ) : (
-                    <Wallet size={18} color={tokens.outward} strokeWidth={STROKE} />
-                  )}
-                </View>
-                <View style={styles.txnMid}>
-                  <Text style={styles.txnMeta}>{formatMoneyListDate(t.occurred_at)}</Text>
-                  <Text style={styles.txnParty} numberOfLines={2}>
-                    {displayMoneyPartyPrimary(t)}
+            <Pressable
+              key={`${t.transaction_type}-${t.event_id}`}
+              style={({ pressed }) => [styles.txn, pressed && styles.txnPressed]}
+            >
+              <View
+                style={[
+                  styles.txnIcon,
+                  {
+                    backgroundColor: isReceipt ? tokens.inwardBg : tokens.outwardBg,
+                  },
+                ]}
+              >
+                {isReceipt ? (
+                  <HandCoins size={18} color={tokens.inward} strokeWidth={STROKE} />
+                ) : (
+                  <Wallet size={18} color={tokens.outward} strokeWidth={STROKE} />
+                )}
+              </View>
+              <View style={styles.txnMid}>
+                <Text style={styles.txnMeta}>{formatMoneyListDate(t.occurred_at)}</Text>
+                <Text style={styles.txnParty} numberOfLines={2}>
+                  {displayMoneyPartyPrimary(t)}
+                </Text>
+                {secondary ? (
+                  <Text style={styles.txnSecondary} numberOfLines={2}>
+                    {secondary}
                   </Text>
-                  {secondary ? (
-                    <Text style={styles.txnSecondary} numberOfLines={2}>
-                      {secondary}
-                    </Text>
-                  ) : null}
-                  {isReceipt && t.receipt_allocated === false ? (
-                    <View style={styles.allocatePill}>
-                      <Text style={styles.allocatePillText}>Needs allocation</Text>
-                    </View>
-                  ) : null}
-                </View>
-                <View style={styles.txnRight}>
-                  <Text style={[styles.txnAmt, { color: isReceipt ? tokens.inward : tokens.outward }]}>
-                    {formatIndianCurrency(t.amount)}
-                  </Text>
-                  <Text style={styles.methodLine}>{paymentMethodLabel(t.payment_method)}</Text>
-                </View>
-              </Pressable>
-            </View>
+                ) : null}
+                {isReceipt && t.receipt_allocated === false ? (
+                  <View style={styles.allocatePill}>
+                    <Text style={styles.allocatePillText}>Needs allocation</Text>
+                  </View>
+                ) : null}
+              </View>
+              <View style={styles.txnRight}>
+                <Text style={[styles.txnAmt, { color: isReceipt ? tokens.inward : tokens.outward }]}>
+                  {formatIndianCurrency(t.amount)}
+                </Text>
+                <Text style={styles.methodLine}>{paymentMethodLabel(t.payment_method)}</Text>
+              </View>
+            </Pressable>
           );
         })}
         {mobileLoadingMore ? (
@@ -521,15 +521,14 @@ const styles = StyleSheet.create({
     textTransform: "uppercase",
   },
   searchSpinner: { marginRight: 4 },
-  listBlock: { paddingTop: tokens.sp2 },
-  rowGap: { marginTop: tokens.sp2 },
+  listBlock: { gap: tokens.sp2 },
   txn: {
     flexDirection: "row",
     alignItems: "center",
     gap: tokens.sp3,
     minHeight: 48,
     paddingVertical: tokens.sp3,
-    paddingHorizontal: 14,
+    paddingHorizontal: tokens.sp3,
     borderWidth: 1,
     borderColor: tokens.borderDefault,
     borderRadius: tokens.radiusMd,
@@ -537,12 +536,11 @@ const styles = StyleSheet.create({
   },
   txnPressed: { opacity: 0.96 },
   txnIcon: {
-    width: 36,
-    height: 36,
+    width: 40,
+    height: 40,
     borderRadius: tokens.radiusMd,
     alignItems: "center",
     justifyContent: "center",
-    borderWidth: 1,
   },
   txnMid: { flex: 1, minWidth: 0, gap: 2 },
   txnMeta: {
@@ -557,22 +555,22 @@ const styles = StyleSheet.create({
   },
   txnSecondary: {
     fontFamily: "NotoSans-Regular",
-    fontSize: 13,
+    fontSize: 12,
     color: tokens.textSecondary,
     textAlign: "left",
   },
   txnRight: { alignItems: "flex-end", flexShrink: 0 },
   txnAmt: {
-    fontFamily: "NotoSerif-SemiBold",
-    fontSize: 28,
-    lineHeight: 32,
+    fontFamily: "NotoSans-SemiBold",
+    fontSize: 14,
+    lineHeight: 18,
     fontVariant: ["tabular-nums"],
   },
   methodLine: {
     fontFamily: "NotoSans-Regular",
-    fontSize: 13,
+    fontSize: 12,
     color: tokens.textSecondary,
-    marginTop: 4,
+    marginTop: 2,
     textTransform: "capitalize",
   },
   allocatePill: {

@@ -1,5 +1,14 @@
 import type { PartiesTabListRow } from "@stockright/shared/parties-tab";
 import { formatIndianCurrency } from "@stockright/shared/utils";
+import {
+  dataTableHeaderStatic,
+  dataTableTdAmount,
+  dataTableTdBodyMuted,
+  dataTableTdMono,
+  dataTableTdPrimary,
+  dataTableTdCount,
+} from "@/components/ui/data-table-classes";
+import { TablePageSizeSelect } from "@/components/ui/table-page-size-select";
 import { cn } from "@/lib/utils";
 
 interface PartiesActivityTableProps {
@@ -10,10 +19,6 @@ interface PartiesActivityTableProps {
   onPageChange: (page: number) => void;
   onPageSizeChange: (size: number) => void;
 }
-
-const cell = "px-3 py-2.5 font-[family-name:var(--font-body)] text-[15px] font-normal leading-snug text-[var(--text-primary)]";
-const cellMuted = "px-3 py-2.5 font-[family-name:var(--font-body)] text-[15px] font-normal leading-snug text-[var(--text-secondary)]";
-const cellMono = "px-3 py-2.5 font-[family-name:var(--font-mono)] text-[15px] font-normal leading-snug text-[var(--text-secondary)] tabular-nums";
 
 function formatIn(n: number): string {
   return n.toLocaleString("en-IN");
@@ -42,33 +47,15 @@ export function PartiesActivityTable({
         <table className="w-full min-w-[1160px] border-collapse text-left">
           <thead className="sticky top-0 z-[1] bg-[var(--bg-subtle)]">
             <tr className="border-b border-[var(--border-default)]">
-              <th className="px-3 py-2 text-left font-[family-name:var(--font-mono)] text-[11px] font-medium uppercase tracking-[0.1em] text-[var(--text-secondary)]">
-                Customer Code
-              </th>
-              <th className="min-w-[140px] px-3 py-2 text-left font-[family-name:var(--font-mono)] text-[11px] font-medium uppercase tracking-[0.1em] text-[var(--text-secondary)]">
-                Customer Name
-              </th>
-              <th className="min-w-[160px] px-3 py-2 text-left font-[family-name:var(--font-mono)] text-[11px] font-medium uppercase tracking-[0.1em] text-[var(--text-secondary)]">
-                Address
-              </th>
-              <th className="min-w-[140px] px-3 py-2 text-left font-[family-name:var(--font-mono)] text-[11px] font-medium uppercase tracking-[0.1em] text-[var(--text-secondary)]">
-                Active Lots (#Bags)
-              </th>
-              <th className="min-w-[140px] px-3 py-2 text-left font-[family-name:var(--font-mono)] text-[11px] font-medium uppercase tracking-[0.1em] text-[var(--text-secondary)]">
-                Aging Lots (#Bags)
-              </th>
-              <th className="min-w-[140px] px-3 py-2 text-left font-[family-name:var(--font-mono)] text-[11px] font-medium uppercase tracking-[0.1em] text-[var(--text-secondary)]">
-                Stale Lots (#Bags)
-              </th>
-              <th className="w-[120px] px-3 py-2 text-right font-[family-name:var(--font-mono)] text-[11px] font-medium uppercase tracking-[0.1em] text-[var(--text-secondary)]">
-                Rents Pending
-              </th>
-              <th className="w-[120px] px-3 py-2 text-right font-[family-name:var(--font-mono)] text-[11px] font-medium uppercase tracking-[0.1em] text-[var(--text-secondary)]">
-                Charges Pending
-              </th>
-              <th className="w-[128px] px-3 py-2 text-right font-[family-name:var(--font-mono)] text-[11px] font-medium uppercase tracking-[0.1em] text-[var(--text-secondary)]">
-                Outstanding
-              </th>
+              <th className={cn(dataTableHeaderStatic, "text-center")}>Customer code</th>
+              <th className={cn(dataTableHeaderStatic, "min-w-[140px]")}>Customer name</th>
+              <th className={cn(dataTableHeaderStatic, "min-w-[160px]")}>Address</th>
+              <th className={cn(dataTableHeaderStatic, "min-w-[140px] text-center")}>Active lots / bags</th>
+              <th className={cn(dataTableHeaderStatic, "min-w-[140px] text-center")}>Aging lots / bags</th>
+              <th className={cn(dataTableHeaderStatic, "min-w-[140px] text-center")}>Stale lots / bags</th>
+              <th className={cn(dataTableHeaderStatic, "w-[120px] text-right")}>Rents pending</th>
+              <th className={cn(dataTableHeaderStatic, "w-[120px] text-right")}>Charges pending</th>
+              <th className={cn(dataTableHeaderStatic, "w-[128px] text-right")}>Outstanding</th>
             </tr>
           </thead>
           <tbody>
@@ -77,21 +64,17 @@ export function PartiesActivityTable({
                 key={row.customer_id}
                 className="border-b border-[var(--border-default)] last:border-b-0"
               >
-                <td className={cn(cellMono, "max-w-[140px] truncate")}>{row.customer_code}</td>
-                <td className={cn(cell, "max-w-[200px] truncate")}>{row.customer_name}</td>
-                <td className={cn(cellMuted, "max-w-[220px]")}>
+                <td className={cn(dataTableTdMono, "max-w-[140px] truncate text-center")}>{row.customer_code}</td>
+                <td className={cn(dataTableTdPrimary, "max-w-[200px] truncate")}>{row.customer_name}</td>
+                <td className={cn(dataTableTdBodyMuted, "max-w-[220px]")}>
                   {row.address.trim() !== "" ? row.address : "—"}
                 </td>
-                <td className={cellMuted}>{lotsBagsCell(row.fresh_lot_count, row.fresh_bag_count)}</td>
-                <td className={cellMuted}>{lotsBagsCell(row.aging_lot_count, row.aging_bag_count)}</td>
-                <td className={cellMuted}>{lotsBagsCell(row.stale_lot_count, row.stale_bag_count)}</td>
-                <td className={cn(cellMono, "text-right tabular-nums")}>
-                  {formatIndianCurrency(row.outstanding_rents)}
-                </td>
-                <td className={cn(cellMono, "text-right tabular-nums")}>
-                  {formatIndianCurrency(row.outstanding_charges)}
-                </td>
-                <td className={cn(cellMono, "text-right tabular-nums text-[var(--pending)]")}>
+                <td className={dataTableTdCount}>{lotsBagsCell(row.fresh_lot_count, row.fresh_bag_count)}</td>
+                <td className={dataTableTdCount}>{lotsBagsCell(row.aging_lot_count, row.aging_bag_count)}</td>
+                <td className={dataTableTdCount}>{lotsBagsCell(row.stale_lot_count, row.stale_bag_count)}</td>
+                <td className={dataTableTdAmount}>{formatIndianCurrency(row.outstanding_rents)}</td>
+                <td className={dataTableTdAmount}>{formatIndianCurrency(row.outstanding_charges)}</td>
+                <td className={cn(dataTableTdAmount, "font-semibold text-[var(--pending)]")}>
                   {formatIndianCurrency(row.outstanding_total)}
                 </td>
               </tr>
@@ -105,19 +88,12 @@ export function PartiesActivityTable({
           Showing {start}–{end} of {totalCount}
         </p>
         <div className="flex flex-wrap items-center gap-3">
-          <label className="flex items-center gap-2 font-[family-name:var(--font-mono)] text-[12px] text-[var(--text-secondary)]">
+          <label
+            className="flex items-center gap-2 font-[family-name:var(--font-mono)] text-[12px] text-[var(--text-secondary)]"
+            htmlFor="parties-table-page-size"
+          >
             Rows per page
-            <select
-              value={pageSize}
-              onChange={(e) => onPageSizeChange(Number(e.target.value))}
-              className="min-h-[48px] rounded-[var(--radius-md)] border border-[var(--border-default)] bg-[var(--bg-surface)] px-3 py-2 text-[16px] text-[var(--text-primary)]"
-            >
-              {[10, 20, 50].map((n) => (
-                <option key={n} value={n}>
-                  {n}
-                </option>
-              ))}
-            </select>
+            <TablePageSizeSelect id="parties-table-page-size" value={pageSize} onChange={onPageSizeChange} />
           </label>
           <div className="flex items-center gap-2">
             <button
@@ -125,7 +101,7 @@ export function PartiesActivityTable({
               disabled={page <= 1}
               onClick={() => onPageChange(page - 1)}
               className={cn(
-                "min-h-[48px] rounded-[var(--radius-md)] border border-[var(--border-default)] px-4 text-[14px] font-medium text-[var(--text-primary)]",
+                "min-h-[48px] rounded-[var(--radius-md)] border border-[var(--border-default)] px-4 text-[14px] font-medium text-[var(--text-primary)] cursor-pointer",
                 page <= 1 ? "opacity-40" : "hover:bg-[var(--bg-subtle)]"
               )}
             >
@@ -139,7 +115,7 @@ export function PartiesActivityTable({
               disabled={page >= totalPages}
               onClick={() => onPageChange(page + 1)}
               className={cn(
-                "min-h-[48px] rounded-[var(--radius-md)] border border-[var(--border-default)] px-4 text-[14px] font-medium text-[var(--text-primary)]",
+                "min-h-[48px] rounded-[var(--radius-md)] border border-[var(--border-default)] px-4 text-[14px] font-medium text-[var(--text-primary)] cursor-pointer",
                 page >= totalPages ? "opacity-40" : "hover:bg-[var(--bg-subtle)]"
               )}
             >
