@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
-  Alert,
   Animated,
   DeviceEventEmitter,
   Dimensions,
@@ -16,7 +15,7 @@ import {
   View,
 } from "react-native";
 import * as Haptics from "expo-haptics";
-import { ArrowLeft, Check, ChevronDown, ChevronUp, Search, X } from "lucide-react-native";
+import { ChevronLeft, Check, ChevronDown, ChevronUp, Search, X } from "lucide-react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import {
   createReceiptWithAllocations,
@@ -31,7 +30,6 @@ import { useDebouncedValue } from "@stockright/shared/hooks";
 import {
   buildFifoAllocations,
   formatRupeeDigitsForInput,
-  formatRupeeInputLive,
   isPartialAllocation,
   parseIndianRupeeInput,
   PAYMENT_METHOD_VALUES,
@@ -42,6 +40,9 @@ import { formatIndianCurrency, partyInitials, ACTIVE_WAREHOUSE_ID_KEY } from "@s
 import { tokens } from "@stockright/shared/tokens";
 import { getSupabaseClient } from "@/lib/supabase";
 import { storage } from "@/lib/storage";
+import { BrandedAlertModal } from "@/components/ui/BrandedAlertModal";
+import { MobileDatePickerField } from "@/components/ui/MobileDatePickerField";
+import { AmountField } from "@/components/ui/AmountField";
 
 const PAGE_SIZE = 25;
 const MONEY_FEED_REFRESH_EVENT = "sr-money-refresh";
@@ -192,6 +193,13 @@ export function MobileAddReceiptScreen({ warehouseId: warehouseIdProp, onClose, 
   const [draft, setDraft] = useState<DraftRow[]>([]);
   const [submitting, setSubmitting] = useState(false);
 
+  type ReceiptDialog =
+    | { kind: "none" }
+    | { kind: "discard" }
+    | { kind: "ok"; title: string; message?: string; onOk: () => void }
+    | { kind: "error"; title: string; message: string };
+  const [dialog, setDialog] = useState<ReceiptDialog>({ kind: "none" });
+
   useEffect(() => {
     if (!warehouseId) return;
     let cancelled = false;
@@ -260,23 +268,32 @@ export function MobileAddReceiptScreen({ warehouseId: warehouseIdProp, onClose, 
 
   function requestClose() {
     if (dirty) {
-      Alert.alert("Discard changes?", "You have unsaved entries.", [
-        { text: "Keep editing", style: "cancel" },
-        { text: "Discard", style: "destructive", onPress: onClose },
-      ]);
+      setDialog({ kind: "discard" });
       return;
     }
     onClose();
   }
 
+  function closeDialog() {
+    setDialog({ kind: "none" });
+  }
+
   async function submit() {
     if (!warehouseId || !customer) {
-      Alert.alert("Choose a party");
+      setDialog({
+        kind: "ok",
+        title: "Choose a party",
+        onOk: closeDialog,
+      });
       return;
     }
     const amt = parseIndianRupeeInput(amountStr);
     if (amt === null || amt <= 0) {
-      Alert.alert("Enter a valid amount");
+      setDialog({
+        kind: "ok",
+        title: "Enter a valid amount",
+        onOk: closeDialog,
+      });
       return;
     }
 
@@ -293,7 +310,11 @@ export function MobileAddReceiptScreen({ warehouseId: warehouseIdProp, onClose, 
 
     const sumAlloc = lines.reduce((s, l) => s + l.amount, 0);
     if (sumAlloc > amt + 0.01) {
-      Alert.alert("Allocated amounts cannot exceed the receipt total.");
+      setDialog({
+        kind: "ok",
+        title: "Allocated amounts cannot exceed the receipt total.",
+        onOk: closeDialog,
+      });
       return;
     }
 
@@ -311,11 +332,18 @@ export function MobileAddReceiptScreen({ warehouseId: warehouseIdProp, onClose, 
       });
       DeviceEventEmitter.emit(MONEY_FEED_REFRESH_EVENT);
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      Alert.alert("Receipt recorded", undefined, [{ text: "OK", onPress: onDone }]);
+      setDialog({
+        kind: "ok",
+        title: "Receipt recorded",
+        onOk: () => {
+          closeDialog();
+          onDone();
+        },
+      });
     } catch (e: unknown) {
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       const msg = e instanceof Error ? e.message : "Could not save receipt.";
-      Alert.alert("Could not save", msg);
+      setDialog({ kind: "error", title: "Could not save", message: msg });
     } finally {
       setSubmitting(false);
     }
@@ -339,7 +367,7 @@ export function MobileAddReceiptScreen({ warehouseId: warehouseIdProp, onClose, 
           onPress={() => requestClose()}
           style={styles.iconBtn}
         >
-          <ArrowLeft size={22} color={tokens.textPrimary} strokeWidth={STROKE} />
+          <ChevronLeft size={22} color={tokens.textPrimary} strokeWidth={STROKE} />
         </Pressable>
         <Text style={styles.headerTitle} numberOfLines={1}>
           Add Receipt
@@ -356,31 +384,10 @@ export function MobileAddReceiptScreen({ warehouseId: warehouseIdProp, onClose, 
           <ChevronDown size={18} color={tokens.textTertiary} strokeWidth={STROKE} />
         </Pressable>
 
-        <Text style={styles.label}>Amount</Text>
-        <View style={styles.rupeeRow}>
-          <Text style={styles.rupeeSym}>₹</Text>
-          <TextInput
-            value={amountStr}
-            onChangeText={(t) => setAmountStr(formatRupeeInputLive(t))}
-            onBlur={() => {
-              const n = parseIndianRupeeInput(amountStr);
-              if (n !== null) setAmountStr(formatRupeeDigitsForInput(n));
-            }}
-            keyboardType="decimal-pad"
-            placeholder="0"
-            placeholderTextColor={tokens.textPlaceholder}
-            style={styles.rupeeInput}
-          />
-        </View>
+        <AmountField label="Amount" value={amountStr} onChange={setAmountStr} />
 
         <Text style={styles.label}>Date received</Text>
-        <TextInput
-          value={receiptDate}
-          onChangeText={setReceiptDate}
-          placeholder="YYYY-MM-DD"
-          placeholderTextColor={tokens.textPlaceholder}
-          style={styles.input}
-        />
+        <MobileDatePickerField value={receiptDate} onChange={setReceiptDate} />
 
         <Text style={styles.label}>Payment method</Text>
         <View style={styles.pmWrap}>
@@ -587,6 +594,33 @@ export function MobileAddReceiptScreen({ warehouseId: warehouseIdProp, onClose, 
           }
         </Animated.View>
       </Modal>
+
+      {dialog.kind === "discard" ?
+        <BrandedAlertModal
+          visible
+          title="Discard changes?"
+          message="You have unsaved entries."
+          secondaryLabel="Keep editing"
+          onSecondary={closeDialog}
+          confirmLabel="Discard"
+          primaryDestructive
+          onConfirm={() => {
+            closeDialog();
+            onClose();
+          }}
+        />
+      : null}
+      {dialog.kind === "ok" ?
+        <BrandedAlertModal
+          visible
+          title={dialog.title}
+          message={dialog.message}
+          onConfirm={dialog.onOk}
+        />
+      : null}
+      {dialog.kind === "error" ?
+        <BrandedAlertModal visible title={dialog.title} message={dialog.message} onConfirm={closeDialog} />
+      : null}
     </View>
   );
 }
@@ -638,30 +672,6 @@ const styles = StyleSheet.create({
   },
   fieldText: { fontFamily: "NotoSans-Regular", fontSize: 16, color: tokens.textPrimary },
   placeholder: { fontFamily: "NotoSans-Regular", fontSize: 16, color: tokens.textPlaceholder },
-  rupeeRow: {
-    minHeight: 48,
-    flexDirection: "row",
-    alignItems: "center",
-    borderWidth: 1,
-    borderColor: tokens.borderDefault,
-    borderRadius: tokens.radiusMd,
-    paddingHorizontal: 12,
-    backgroundColor: tokens.bgSubtle,
-  },
-  rupeeSym: {
-    fontFamily: "NotoSansMono-Regular",
-    fontSize: 16,
-    color: tokens.textSecondary,
-    marginRight: 6,
-  },
-  rupeeInput: {
-    flex: 1,
-    minHeight: 44,
-    fontFamily: "NotoSansMono-Regular",
-    fontSize: 16,
-    color: tokens.textPrimary,
-    paddingVertical: 8,
-  },
   input: {
     minHeight: 48,
     borderWidth: 1,
@@ -790,7 +800,7 @@ const styles = StyleSheet.create({
   submitBtnText: { fontFamily: "NotoSans-SemiBold", fontSize: 15, color: tokens.textOnBrand },
   overlayBackdrop: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: "rgba(28,26,22,0.45)",
+    backgroundColor: tokens.overlayScrim,
   },
   pickerPanel: {
     position: "absolute",

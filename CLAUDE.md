@@ -7,7 +7,7 @@ StockRight is a cold storage management platform. This is a **pnpm monorepo** wi
 | Package | Stack | Purpose |
 |---------|-------|---------|
 | `apps/web` | Next.js 15, Tailwind CSS 4, React 19 | Web app (Vercel) |
-| `apps/mobile` | Expo SDK 52, Expo Router v4, GlueStack UI | iOS + Android (EAS) |
+| `apps/mobile` | Expo SDK 54, Expo Router v6, GlueStack UI | iOS + Android (EAS) |
 | `packages/shared` | TypeScript, Zod | Shared types, API client, hooks, utils, i18n, tokens |
 | `packages/supabase` | Supabase CLI, Deno Edge Functions | DB migrations, edge functions, generated types |
 
@@ -50,18 +50,14 @@ pnpm db:types         # Regenerate packages/supabase/types.ts
 **Always consult `specs/STOCKRIGHT_BRAND_v3.md` before any UI decision.**
 
 Key rules:
-- Background: `--bg-page` (#FEFCF8) — warm cream, never pure white
-- Brand fills/icons: `--brand-ui` (#C8712A) — amber, fills and icons ONLY
-- Brand text: `--brand-text` (#8C4A12) — darker amber, ALL text uses this
-- Inward (receive/deposit): `--inward` (#0B7B6E) — teal
-- Outward (dispatch/error): `--outward` (#A83422) — terra cotta
-- Pending/billing: `--pending` (#7B5200)
-- Fonts: Noto Sans (UI), Noto Serif (headings), Noto Sans Mono (numbers) — Telugu/Devanagari subsets required
-- Input `font-size: 16px` LOCKED — iOS auto-zoom prevention
-- Touch targets: 48px minimum
-- Loading: skeleton screens only, never bare spinners
-- Colors live in `design-system/colors_and_type.css` — never hardcode hex values
-
+- **`specs/STOCKRIGHT_BRAND_v3.md`** + **HTML §04** are normative for UI; tokens only (`design-system/colors_and_type.css` / `packages/shared` `tokens`).
+- **Dashboard:** Use `DashboardKpiCard`, `DashboardSectionHeader`, `RegisterListRow` on web — Home tab is the canonical KPI/register rhythm (22px KPI values, 14px register amounts, 40×40 list icons without icon borders).
+- **Money:** `AmountField` + `DatePickerField` on web; `MobileDatePickerField` on mobile; **₹** + Indian grouping everywhere via shared formatters.
+- **Tables:** `data-table-classes`, `Badge` status cells, `TablePageSizeSelect` for page size — not unstyled `<select>` for pagination.
+- **Dialogs:** `AlertDialog` (web) and `BrandedAlertModal` (mobile) — not system alerts.
+- **Deep navigation:** `shouldHideMobileDashboardChrome` (`form-chrome.ts`) hides bottom tabs + FAB on full-screen routes (e.g. receipt, Preferences). Chevron-only back on stacked flows.
+- Loading: **`.skeleton`** shimmer, not `animate-pulse`-only; buttons use **loading labels**, not spinners inside (§3.5).
+- Input **16px** locked; touch targets **48px**; Noto fonts with Indian-script subsets.
 ---
 
 ## Auth Architecture

@@ -3,6 +3,17 @@
 import type { MoneyMovementRow, MoneySortColumn } from "@stockright/shared/api";
 import { displayMoneyPartyPrimary } from "@stockright/shared/money";
 import { formatIndianCurrency } from "@stockright/shared/utils";
+import { Badge } from "@/components/ui/Badge";
+import {
+  dataTableHeaderButtonClasses,
+  dataTableHeaderStatic,
+  dataTableTdAmount,
+  dataTableTdBody,
+  dataTableTdBodyMuted,
+  dataTableTdMono,
+  dataTableTdPrimary,
+} from "@/components/ui/data-table-classes";
+import { TablePageSizeSelect } from "@/components/ui/table-page-size-select";
 import { cn } from "@/lib/utils";
 
 interface MoneyActivityTableProps {
@@ -19,10 +30,6 @@ interface MoneyActivityTableProps {
   paymentMethodLabel: (raw: string | null) => string;
   referenceLabel: (row: MoneyMovementRow) => string;
 }
-
-const cell = "px-3 py-2.5 font-[family-name:var(--font-body)] text-[15px] font-normal leading-snug text-[var(--text-primary)]";
-const cellMuted = "px-3 py-2.5 font-[family-name:var(--font-body)] text-[15px] font-normal leading-snug text-[var(--text-secondary)]";
-const cellMono = "px-3 py-2.5 font-[family-name:var(--font-mono)] text-[15px] font-normal leading-snug text-[var(--text-secondary)] tabular-nums";
 
 function SortGlyph({ active, dir }: { active: boolean; dir: "asc" | "desc" }) {
   return (
@@ -44,6 +51,21 @@ function additionalDetails(row: MoneyMovementRow): { lines: string[]; showAlloca
   return { lines: n ? [n] : [], showAllocation: false };
 }
 
+function moneyTypeBadge(transactionType: MoneyMovementRow["transaction_type"]) {
+  if (transactionType === "receipt") {
+    return (
+      <Badge variant="inward" className="normal-case tracking-normal">
+        Receive
+      </Badge>
+    );
+  }
+  return (
+    <Badge variant="outward" className="normal-case tracking-normal">
+      Pay
+    </Badge>
+  );
+}
+
 export function MoneyActivityTable({
   rows,
   totalCount,
@@ -62,14 +84,10 @@ export function MoneyActivityTable({
   const start = totalCount === 0 ? 0 : (page - 1) * pageSize + 1;
   const end = Math.min(page * pageSize, totalCount);
 
-  function headerBtn(col: MoneySortColumn, label: string) {
+  function headerBtn(col: MoneySortColumn, label: string, align: "left" | "right" = "left") {
     const active = sortColumn === col;
     return (
-      <button
-        type="button"
-        onClick={() => onSort(col)}
-        className="flex min-h-[48px] w-full items-center px-3 py-2 text-left font-[family-name:var(--font-mono)] text-[11px] font-medium uppercase tracking-[0.1em] text-[var(--text-secondary)] hover:bg-[var(--bg-inset)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)]"
-      >
+      <button type="button" onClick={() => onSort(col)} className={dataTableHeaderButtonClasses(align)}>
         {label}
         <SortGlyph active={active} dir={sortDirection} />
       </button>
@@ -86,11 +104,9 @@ export function MoneyActivityTable({
               <th className="w-[100px]">{headerBtn("occurred_at", "Date")}</th>
               <th className="w-[100px]">{headerBtn("transaction_type", "Type")}</th>
               <th className="min-w-[160px]">{headerBtn("counterparty_name", "Party / expense type")}</th>
-              <th className="min-w-[140px] px-3 py-2 text-left font-[family-name:var(--font-mono)] text-[11px] font-medium uppercase tracking-[0.1em] text-[var(--text-secondary)]">
-                Additional details
-              </th>
+              <th className={cn(dataTableHeaderStatic, "min-w-[140px]")}>Additional details</th>
               <th className="w-[120px]">{headerBtn("payment_method", "Method")}</th>
-              <th className="w-[120px] text-right">{headerBtn("amount", "Amount")}</th>
+              <th className="w-[120px] text-right">{headerBtn("amount", "Amount", "right")}</th>
             </tr>
           </thead>
           <tbody>
@@ -98,11 +114,13 @@ export function MoneyActivityTable({
               const extra = additionalDetails(row);
               return (
                 <tr key={`${row.transaction_type}-${row.event_id}`} className="border-b border-[var(--border-default)] last:border-b-0">
-                  <td className={cn(cellMono, "max-w-[200px] truncate")}>{referenceLabel(row)}</td>
-                  <td className={cellMono}>{formatOccurredAt(row.occurred_at)}</td>
-                  <td className={cn(cellMuted, "capitalize")}>{row.transaction_type}</td>
-                  <td className={cn(cell, "max-w-[220px] truncate")}>{displayMoneyPartyPrimary(row)}</td>
-                  <td className={cn(cell, "max-w-[220px] align-top")}>
+                  <td className={cn(dataTableTdMono, "max-w-[200px] truncate")}>{referenceLabel(row)}</td>
+                  <td className={dataTableTdMono}>{formatOccurredAt(row.occurred_at)}</td>
+                  <td className="px-3 py-2.5 align-middle">{moneyTypeBadge(row.transaction_type)}</td>
+                  <td className={cn(dataTableTdPrimary, "max-w-[220px] truncate")}>
+                    {displayMoneyPartyPrimary(row)}
+                  </td>
+                  <td className={cn(dataTableTdBody, "max-w-[220px] align-top")}>
                     {extra.lines.map((line, i) => (
                       <span key={`${line}-${i}`} className="block truncate">
                         {line}
@@ -113,13 +131,15 @@ export function MoneyActivityTable({
                         Needs allocation
                       </span>
                     ) : null}
-                    {!extra.lines.length && !extra.showAllocation ? <span className="text-[var(--text-tertiary)]">—</span> : null}
+                    {!extra.lines.length && !extra.showAllocation ? (
+                      <span className="text-[var(--text-tertiary)]">—</span>
+                    ) : null}
                   </td>
-                  <td className={cellMuted}>{paymentMethodLabel(row.payment_method)}</td>
-                  <td className="px-3 py-2.5 text-right align-top">
+                  <td className={dataTableTdBodyMuted}>{paymentMethodLabel(row.payment_method)}</td>
+                  <td className={cn(dataTableTdAmount, "align-top")}>
                     <span
                       className={cn(
-                        "font-[family-name:var(--font-display)] text-[28px] font-bold tabular-nums leading-none",
+                        "font-semibold",
                         row.transaction_type === "receipt" ? "text-[var(--inward)]" : "text-[var(--outward)]"
                       )}
                     >
@@ -138,19 +158,12 @@ export function MoneyActivityTable({
           Showing {start}–{end} of {totalCount}
         </p>
         <div className="flex flex-wrap items-center gap-3">
-          <label className="flex items-center gap-2 font-[family-name:var(--font-mono)] text-[12px] text-[var(--text-secondary)]">
+          <label
+            className="flex items-center gap-2 font-[family-name:var(--font-mono)] text-[12px] text-[var(--text-secondary)]"
+            htmlFor="money-table-page-size"
+          >
             Rows per page
-            <select
-              value={pageSize}
-              onChange={(e) => onPageSizeChange(Number(e.target.value))}
-              className="min-h-[48px] rounded-[var(--radius-md)] border border-[var(--border-default)] bg-[var(--bg-surface)] px-3 py-2 text-[16px] text-[var(--text-primary)]"
-            >
-              {[10, 20, 50].map((n) => (
-                <option key={n} value={n}>
-                  {n}
-                </option>
-              ))}
-            </select>
+            <TablePageSizeSelect id="money-table-page-size" value={pageSize} onChange={onPageSizeChange} />
           </label>
           <div className="flex items-center gap-2">
             <button
@@ -158,7 +171,7 @@ export function MoneyActivityTable({
               disabled={page <= 1}
               onClick={() => onPageChange(page - 1)}
               className={cn(
-                "min-h-[48px] rounded-[var(--radius-md)] border border-[var(--border-default)] px-4 text-[14px] font-medium text-[var(--text-primary)]",
+                "min-h-[48px] rounded-[var(--radius-md)] border border-[var(--border-default)] px-4 text-[14px] font-medium text-[var(--text-primary)] cursor-pointer",
                 page <= 1 ? "opacity-40" : "hover:bg-[var(--bg-subtle)]"
               )}
             >
@@ -172,7 +185,7 @@ export function MoneyActivityTable({
               disabled={page >= totalPages}
               onClick={() => onPageChange(page + 1)}
               className={cn(
-                "min-h-[48px] rounded-[var(--radius-md)] border border-[var(--border-default)] px-4 text-[14px] font-medium text-[var(--text-primary)]",
+                "min-h-[48px] rounded-[var(--radius-md)] border border-[var(--border-default)] px-4 text-[14px] font-medium text-[var(--text-primary)] cursor-pointer",
                 page >= totalPages ? "opacity-40" : "hover:bg-[var(--bg-subtle)]"
               )}
             >

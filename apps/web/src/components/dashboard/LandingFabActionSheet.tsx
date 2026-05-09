@@ -49,13 +49,13 @@ export function LandingFabActionSheet({
 
   return (
     <div
-      className="fixed inset-0 z-[80] flex items-end justify-center bg-[rgba(28,26,22,0.45)]"
+      className="fab-sheet-backdrop fixed inset-0 z-[80] flex items-end justify-center bg-[var(--overlay-scrim)] fab-sheet-backdrop-enter"
       role="presentation"
       onClick={onClose}
       onKeyDown={(e) => e.key === "Escape" && onClose()}
     >
       <div
-        className="w-full max-w-lg rounded-t-[20px] bg-[var(--bg-surface)] px-4 pb-[calc(20px+env(safe-area-inset-bottom))] pt-3 shadow-[var(--shadow-3)]"
+        className="fab-sheet-panel w-full max-w-lg rounded-t-[20px] bg-[var(--bg-surface)] px-4 pb-[calc(20px+env(safe-area-inset-bottom))] pt-3 shadow-[var(--shadow-3)] fab-sheet-panel-enter"
         role="dialog"
         aria-modal="true"
         aria-labelledby="fab-sheet-title"

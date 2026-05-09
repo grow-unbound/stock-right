@@ -2,7 +2,7 @@
 
 import { useMemo } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft } from "lucide-react";
+import { ChevronLeft } from "lucide-react";
 import { useSessionUser } from "@/components/session/session-user-provider";
 import { AddReceiptForm } from "@/components/money/add-receipt/AddReceiptForm";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
@@ -21,7 +21,7 @@ export default function MoneyReceiptNewPage() {
           className="flex min-h-[48px] min-w-[48px] items-center justify-center rounded-[var(--radius-md)] text-[var(--text-primary)] focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-[var(--focus-ring)]"
           onClick={() => router.back()}
         >
-          <ArrowLeft className="size-5" strokeWidth={2} aria-hidden />
+          <ChevronLeft className="size-5" strokeWidth={2} aria-hidden />
         </button>
         <h1 className="min-w-0 flex-1 font-[family-name:var(--font-display)] text-[18px] font-semibold text-[var(--text-primary)]">
           Add Receipt

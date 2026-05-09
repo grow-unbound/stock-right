@@ -20,16 +20,20 @@ import { displayMoneyPartyPrimary, displayMoneyPartySecondary, filterMoneyRowsLo
 import { loadMoneyListSnapshot, loadMoneyPendingRows, saveMoneyListSnapshot } from "@stockright/shared/offline/app-cache";
 import { formatIndianCurrency, formatMoneyListDate } from "@stockright/shared/utils";
 import { DEMO_FAB_MONEY_ACTIONS } from "@stockright/shared/demo";
+import { DashboardKpiCard } from "@/components/dashboard/DashboardKpiCard";
 import { DashboardPageShell } from "@/components/dashboard/DashboardPageShell";
+import { DashboardSectionHeader } from "@/components/dashboard/DashboardSectionHeader";
+import { RegisterListRow } from "@/components/dashboard/RegisterListRow";
 import { AddReceiptForm } from "@/components/money/add-receipt/AddReceiptForm";
 import { FormSidebar } from "@/components/money/add-receipt/FormSidebar";
-import { Button } from "@/components/ui/Button";
 import { MoneyActivityTable } from "@/components/money/MoneyActivityTable";
+import { Button } from "@/components/ui/Button";
 import { useMoneyAccess } from "@/contexts/MoneyAccessContext";
 import { useSessionUser } from "@/components/session/session-user-provider";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { webMoneyAppCacheAdapter } from "@/lib/money-app-cache";
 import { useIsOffline } from "@/hooks/useIsOffline";
+import { cn } from "@/lib/utils";
 
 const STROKE = 2;
 
@@ -448,25 +452,21 @@ export function MoneyTab() {
           ) : null}
 
           <div className="grid grid-cols-2 gap-2.5">
-            <div className="rounded-[var(--radius-md)] border border-[var(--border-default)] bg-[var(--bg-surface)] p-3">
-              <p className="text-[10px] font-medium uppercase tracking-[0.06em] text-[var(--text-tertiary)]">This month received</p>
-              <p className="font-[family-name:var(--font-display)] text-[22px] font-semibold tabular-nums text-[var(--inward)]">
-                {kpis ? formatIndianCurrency(kpis.received) : "—"}
-              </p>
-              <p className="text-[11px] text-[var(--text-secondary)]">
-                {kpis ? `${kpis.rCount} receipts recorded` : "Loading totals…"}
-              </p>
-            </div>
-            <div className="rounded-[var(--radius-md)] border border-[var(--border-default)] bg-[var(--bg-surface)] p-3">
-              <p className="text-[10px] font-medium uppercase tracking-[0.06em] text-[var(--text-tertiary)]">This month paid</p>
-              <p className="font-[family-name:var(--font-display)] text-[22px] font-semibold tabular-nums text-[var(--outward)]">
-                {kpis ? formatIndianCurrency(kpis.paid) : "—"}
-              </p>
-              <p className="text-[11px] text-[var(--text-secondary)]">{kpis ? `${kpis.pCount} payments recorded` : "Loading totals…"}</p>
-            </div>
+            <DashboardKpiCard
+              label="This month received"
+              value={kpis ? formatIndianCurrency(kpis.received) : "—"}
+              sub={kpis ? `${kpis.rCount} receipts recorded` : "Loading totals…"}
+              accentClass="text-[var(--inward)]"
+            />
+            <DashboardKpiCard
+              label="This month paid"
+              value={kpis ? formatIndianCurrency(kpis.paid) : "—"}
+              sub={kpis ? `${kpis.pCount} payments recorded` : "Loading totals…"}
+              accentClass="text-[var(--outward)]"
+            />
           </div>
 
-          <p className="text-[11px] font-medium uppercase tracking-[0.08em] text-[var(--text-tertiary)]">Recent activity</p>
+          <DashboardSectionHeader label="Recent activity" />
 
           <div className="hidden sm:block">
             {offline && localData.length === 0 ? (
@@ -516,53 +516,47 @@ export function MoneyTab() {
                   const secondary = displayMoneyPartySecondary(t);
                   return (
                     <li key={`${t.transaction_type}-${t.event_id}`}>
-                      <div className="flex min-h-[48px] w-full items-center gap-3 rounded-[var(--radius-md)] border border-[var(--border-default)] bg-[var(--bg-surface)] px-3.5 py-3 text-left">
-                        <span
-                          className={
-                            isReceipt
-                              ? "flex size-9 shrink-0 items-center justify-center rounded-[var(--radius-md)] border border-[var(--inward-border)] bg-[var(--inward-bg)] text-[var(--inward)]"
-                              : "flex size-9 shrink-0 items-center justify-center rounded-[var(--radius-md)] border border-[var(--outward-border)] bg-[var(--outward-bg)] text-[var(--outward)]"
-                          }
-                        >
-                          {isReceipt ? (
+                      <RegisterListRow
+                        icon={
+                          isReceipt ? (
                             <HandCoins className="size-[18px]" strokeWidth={STROKE} aria-hidden />
                           ) : (
                             <Wallet className="size-[18px]" strokeWidth={STROKE} aria-hidden />
-                          )}
-                        </span>
-                        <span className="min-w-0 flex-1">
-                          <span className="block font-[family-name:var(--font-body)] text-[11px] text-[var(--text-tertiary)]">
-                            {formatMoneyListDate(t.occurred_at)}
-                          </span>
-                          <span className="mt-0.5 block truncate font-[family-name:var(--font-display)] text-[15px] font-semibold text-[var(--text-primary)]">
-                            {displayMoneyPartyPrimary(t)}
-                          </span>
-                          {secondary ? (
-                            <span className="mt-0.5 block truncate text-left font-[family-name:var(--font-body)] text-[13px] text-[var(--text-secondary)]">
-                              {secondary}
-                            </span>
-                          ) : null}
-                          {isReceipt && t.receipt_allocated === false ? (
-                            <span className="mt-1 inline-block rounded-[var(--radius-pill)] border border-[var(--pending-border)] bg-[var(--pending-bg)] px-2 py-0.5 font-[family-name:var(--font-mono)] text-[10px] uppercase tracking-[0.06em] text-[var(--pending)]">
-                              Needs allocation
-                            </span>
-                          ) : null}
-                        </span>
-                        <span className="shrink-0 text-right">
+                          )
+                        }
+                        iconShellClassName={
+                          isReceipt ? "bg-[var(--inward-bg)] text-[var(--inward)]" : "bg-[var(--outward-bg)] text-[var(--outward)]"
+                        }
+                        meta={formatMoneyListDate(t.occurred_at)}
+                        title={displayMoneyPartyPrimary(t)}
+                        detail={
+                          secondary || (isReceipt && t.receipt_allocated === false) ? (
+                            <>
+                              {secondary ? (
+                                <span className="block truncate text-[12px] text-[var(--text-secondary)]">
+                                  {secondary}
+                                </span>
+                              ) : null}
+                              {isReceipt && t.receipt_allocated === false ? (
+                                <span className="mt-1 inline-block rounded-[var(--radius-pill)] border border-[var(--pending-border)] bg-[var(--pending-bg)] px-2 py-0.5 font-[family-name:var(--font-mono)] text-[10px] uppercase tracking-[0.06em] text-[var(--pending)]">
+                                  Needs allocation
+                                </span>
+                              ) : null}
+                            </>
+                          ) : undefined
+                        }
+                        trailing={
                           <span
-                            className={
-                              isReceipt
-                                ? "block font-[family-name:var(--font-display)] text-[28px] font-bold tabular-nums leading-none text-[var(--inward)]"
-                                : "block font-[family-name:var(--font-display)] text-[28px] font-bold tabular-nums leading-none text-[var(--outward)]"
-                            }
+                            className={cn(
+                              "text-[14px] font-semibold tabular-nums leading-snug",
+                              isReceipt ? "text-[var(--inward)]" : "text-[var(--outward)]"
+                            )}
                           >
                             {formatIndianCurrency(t.amount)}
                           </span>
-                          <span className="mt-1 block font-[family-name:var(--font-body)] text-[13px] capitalize text-[var(--text-secondary)]">
-                            {paymentMethodLabel(t.payment_method)}
-                          </span>
-                        </span>
-                      </div>
+                        }
+                        trailingSub={paymentMethodLabel(t.payment_method)}
+                      />
                     </li>
                   );
                 })}

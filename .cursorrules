@@ -57,3 +57,12 @@
 - Write comments only when the WHY is non-obvious.
 - No docblock comments (JSDoc/TSDoc) unless generating a public library API.
 - No "added for X feature" or "used by Y component" comments — they rot.
+
+## Design system implementation (code)
+- **Specs:** `specs/STOCKRIGHT_BRAND_v3.md` + `specs/STOCKRIGHT_BRAND_v3.html` §04 — use tokens only; consult before new UI.
+- **Dashboard primitives (web):** `DashboardKpiCard`, `DashboardSectionHeader`, `RegisterListRow` under `apps/web/src/components/dashboard/`.
+- **Forms (web):** `AmountField`, `DatePickerField` (`date-picker-field.tsx`), `Select` (`select.tsx`, `table-page-size-select.tsx`); themed `Popover` + `Calendar` for dates — not raw `type="date"` as the default.
+- **Confirmations:** Web `AlertDialog` (`alert-dialog.tsx`); mobile `BrandedAlertModal` — never `window.alert` / `confirm` / `Alert.alert` for product UX.
+- **Money:** Always ₹ + Indian grouping via `formatIndianCurrency` / `formatRupee*` — no bare numeric money in UI.
+- **Deep nav (mobile-web):** Extend `apps/web/src/lib/form-chrome.ts` when adding full-screen flows so bottom tabs + FAB hide; back affordance is **chevron icon only** (no “Back” label).
+- **Motion:** Respect `prefers-reduced-motion` for sheet enter + route enter animations (`globals.css`).

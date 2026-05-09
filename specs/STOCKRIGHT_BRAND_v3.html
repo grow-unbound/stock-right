@@ -126,6 +126,7 @@
   --text-2xl:  30px;
   --text-3xl:  38px;
   --text-4xl:  48px;
+  --text-kpi:  22px;
 
   /* ── SPACING (4px grid) ──────────────────────────── */
   --sp-1:4px; --sp-2:8px; --sp-3:12px; --sp-4:16px;
@@ -311,6 +312,7 @@ code {
 .t-small   { font-family:var(--font-body); font-size:var(--text-sm); color:var(--text-tertiary); line-height:1.55; }
 .t-label   { font-family:var(--font-mono); font-size:var(--text-xs); font-weight:500; letter-spacing:.1em; text-transform:uppercase; color:var(--text-tertiary); }
 .t-number  { font-family:var(--font-display); font-size:var(--text-3xl); font-weight:700; letter-spacing:-.02em; color:var(--text-primary); }
+.t-kpi-dash { font-family:var(--font-display); font-size:var(--text-kpi); font-weight:600; letter-spacing:-.02em; color:var(--text-primary); }
 
 .i18n-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px,1fr)); gap: var(--sp-3); margin-top: var(--sp-5); }
 .i18n-card { background: var(--bg-surface); border-radius: var(--r-lg); padding: var(--sp-4) var(--sp-5); border: 1px solid var(--border-default); }
@@ -378,7 +380,7 @@ select.input { appearance:none; padding-right:28px; cursor:pointer; }
 .card { background:var(--bg-surface); border-radius:var(--r-xl); padding:var(--sp-5); border:1px solid var(--border-default); box-shadow:var(--shadow-sm); }
 .card-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(200px,1fr)); gap:var(--sp-3); }
 .card-label { font-family:var(--font-mono); font-size:10px; text-transform:uppercase; letter-spacing:.1em; color:var(--text-tertiary); margin-bottom:var(--sp-2); }
-.card-value { font-family:var(--font-display); font-size:var(--text-2xl); font-weight:700; color:var(--text-primary); line-height:1; margin-bottom:var(--sp-1); }
+.card-value { font-family:var(--font-display); font-size:var(--text-kpi); font-weight:600; color:var(--text-primary); line-height:1; margin-bottom:var(--sp-1); }
 .card-sub   { font-size:var(--text-sm); color:var(--text-tertiary); }
 .card-brand { background:var(--brand-ui); border-color:transparent; }
 .card-brand .card-label,.card-brand .card-sub { color:rgba(255,255,255,.65); }
@@ -399,7 +401,7 @@ select.input { appearance:none; padding-right:28px; cursor:pointer; }
 .log-party  { font-size:var(--text-sm); font-weight:600; color:var(--text-primary); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 .log-detail { font-size:var(--text-xs); color:var(--text-tertiary); margin-top:1px; }
 .log-right  { text-align:right; flex-shrink:0; }
-.log-qty    { font-family:var(--font-display); font-size:var(--text-base); font-weight:600; color:var(--text-primary); }
+.log-qty    { font-family:var(--font-body); font-size:14px; font-weight:600; color:var(--text-primary); }
 .log-qty-in  { color:var(--inward); }
 .log-qty-out { color:var(--outward); }
 .log-time   { font-size:var(--text-xs); color:var(--text-tertiary); margin-top:1px; }
@@ -739,9 +741,10 @@ td { padding:12px var(--sp-4); font-size:var(--text-sm); color:var(--text-second
     <div class="type-row"><div class="type-spec">Noto Serif<br>30px · 600<br>Section headings</div><div class="t-h2">Pending Collections</div></div>
     <div class="type-row"><div class="type-spec">Noto Serif<br>24px · 500<br>Card titles</div><div class="t-h3">Raju Cold Storage, Kurnool</div></div>
     <div class="type-row"><div class="type-spec">Noto Sans<br>15px · 400<br>Body copy</div><div class="t-body">Lot 42 received 07/05/2026 from Venkateshwara Traders. 240 bags at ₹18/kg. Driver: Suresh · AP 39 AB 1234.</div></div>
-    <div class="type-row"><div class="type-spec">Noto Sans<br>13px · 400<br>Captions</div><div class="t-small">Last synced 3 min ago · Offline entries will sync automatically</div></div>
+    <div class="type-row"><div class="type-spec">Noto Sans<br>13px · 400<br>Captions</div><div class="t-small">Last saved 3 min ago · Offline entries send when you’re online</div></div>
     <div class="type-row"><div class="type-spec">Noto Sans Mono<br>11px · 500<br>UPPERCASE · ls 0.1em<br>Column headers, tags</div><div class="t-label">Lot · Bags · Vehicle · Date · Party Code</div></div>
-    <div class="type-row"><div class="type-spec">Noto Serif<br>38px · 700<br>ls −0.02em<br>KPI values</div><div class="t-number">₹2,47,500</div></div>
+    <div class="type-row"><div class="type-spec">Noto Serif<br>22px · 600<br>ls −0.02em<br>Dashboard KPI grid (Home)</div><div class="t-kpi-dash">₹2,47,500</div></div>
+    <div class="type-row"><div class="type-spec">Noto Serif<br>38px · 700<br>ls −0.02em<br>Optional hero KPI</div><div class="t-number">₹2,47,500</div></div>
   </div>
   <div class="i18n-grid">
     <div class="i18n-card"><div class="i18n-script">Telugu · తెలుగు</div><div class="i18n-text">సరుకు లోపలికి వచ్చింది</div><div class="i18n-sub">Inward recorded</div></div>
@@ -815,7 +818,7 @@ td { padding:12px var(--sp-4); font-size:var(--text-sm); color:var(--text-second
   <div class="log-wrap" style="margin-bottom:var(--sp-6);">
     <div class="log-item"><div class="log-icon li-in">↓</div><div class="log-body"><div class="log-party">Venkateshwara Traders</div><div class="log-detail">Tomatoes · Lot #42 · AP 39 AB 1234</div></div><div class="log-right"><div class="log-qty log-qty-in">+240 bags</div><div class="log-time">9:14 AM</div></div></div>
     <div class="log-item"><div class="log-icon li-out">↑</div><div class="log-body"><div class="log-party">Sri Lakshmi Agency</div><div class="log-detail">Potato · Lot #38 · AP 07 CD 5678</div></div><div class="log-right"><div class="log-qty log-qty-out">−80 bags</div><div class="log-time">11:30 AM</div></div></div>
-    <div class="log-item" style="opacity:.6;"><div class="log-icon li-wait">⏳</div><div class="log-body"><div class="log-party">Queued — offline</div><div class="log-detail">Onion · 120 bags · syncing when online</div></div><div class="log-right"><div class="log-qty">+120 bags</div><div class="log-time">Pending</div></div></div>
+    <div class="log-item" style="opacity:.6;"><div class="log-icon li-wait">⏳</div><div class="log-body"><div class="log-party">Queued — offline</div><div class="log-detail">Onion · 120 bags · sends when online</div></div><div class="log-right"><div class="log-qty">+120 bags</div><div class="log-time">Pending</div></div></div>
   </div>
 
   <div class="doc-label" style="margin-bottom:var(--sp-3);">Data Table</div>

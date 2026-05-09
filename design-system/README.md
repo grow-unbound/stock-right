@@ -59,6 +59,21 @@ Root files:
 - `ui_kits/stockright-app/` — high-fidelity mobile UI kit (`index.html` + JSX components)
 - `screenshots/` — verification screenshots from the build process
 
+### App implementation (StockRight monorepo)
+
+Canonical UI modules (tokens only — no hardcoded colors in product code):
+
+| Concern | Location |
+|---------|----------|
+| Dashboard KPI cards, section headers, register list rows | `apps/web/src/components/dashboard/` — `DashboardKpiCard`, `DashboardSectionHeader`, `RegisterListRow` |
+| Desktop activity tables | `apps/web/src/components/ui/data-table-classes.ts`, `table-page-size-select.tsx`; `MoneyActivityTable`, `StockActivityTable`, `PartiesActivityTable` |
+| Amount inputs (₹ + Indian grouping) | Web: `apps/web/src/components/ui/AmountField.tsx` · Mobile: `apps/mobile/components/ui/AmountField.tsx` |
+| Branded date picker | Web: `apps/web/src/components/ui/date-picker-field.tsx` (+ `calendar.tsx`, `popover.tsx`) · Mobile: `apps/mobile/components/ui/MobileDatePickerField.tsx` |
+| Confirmations | Web: `apps/web/src/components/ui/alert-dialog.tsx` · Mobile: `apps/mobile/components/ui/BrandedAlertModal.tsx` |
+| Hide bottom tabs + FAB on deep flows (mobile-web) | `apps/web/src/lib/form-chrome.ts` (`shouldHideMobileDashboardChrome`) |
+| Design tokens (CSS) | Root: `apps/web/src/app/globals.css` imports · Source mirror: `design-system/colors_and_type.css` |
+| Mobile tokens (RN) | `packages/shared/src/tokens/index.ts` → `@stockright/shared/tokens` |
+
 ### Desktop data tables (web, `sm` and up)
 
 Register-style **tables are desktop-only** (`sm` breakpoint and above). Narrow viewports use **card lists** with server-backed infinite scroll and prefetch near the end of the list — no table chrome, no footer spinner rows.
@@ -111,9 +126,9 @@ The voice is the **experienced mandi accountant** — calm, honest, brief, never
 - **Money activity lists** use compact **`d MMM`** (e.g. `12 Jan`) via `formatMoneyListDate` in `@stockright/shared/utils` — scannable, matches card-list preview density in `preview/components-cards.html`.
 - **Bags, lots, parties** — operator vocabulary, never SKU / units / clients / inventory.
 
-### Money KPI (compact, two-up)
+### Dashboard KPI grid (Home / tab KPIs — canonical)
 
-Used on the Money tab beside filters: same **KPI** scale as `preview/type-numbers.html` — mono label **11px** uppercase **`letter-spacing: 0.1em`**, value **38px / 700** Noto Serif tabular, subline **13px** body. Teal/rust semantic fills for received/paid totals. Narrow viewports may use one step smaller numerals if two columns clip.
+The **in-app** 2×2 KPI grid matches the Home tab: mono **label** row **10px** uppercase (~`0.06em` tracking, tertiary), value **22px / 600** Noto Serif, optional subline **13px** body. Optional **38px / 700** hero KPIs are for marketing or emphasis only — not the default warehouse dashboard grid.
 
 ### Searchable transaction list (Money + Stock)
 
@@ -163,7 +178,7 @@ StockRight looks like a **smarter paper register**. Warm near-white backgrounds 
 ### Typography
 - **One family system: Noto.** Noto Serif for display/headings/numbers, Noto Sans for body, Noto Sans Mono for codes/timestamps/labels. They share metrics so mixing is seamless.
 - **Why Noto:** native Telugu, Devanagari, Tamil, Kannada, Bengali rendering. Latin-only serifs (Lora, Playfair, Merriweather) are forbidden because they break Indian script rendering.
-- **Numbers are Noto Serif Bold** — KPIs and currency values use the display serif at 38px / 700 to feel ledger-like. **Compact list amounts** (Money activity cards / register list) use **28px / 700** for the primary figure — see `preview/components-cards.html`.
+- **Numbers:** Dashboard KPI values use **22px / 600** Noto Serif on the canonical Home grid; optional larger hero figures may use **38px / 700**. **Register / activity row trailing amounts** use **14px / 600** Noto Sans with semantic color — see live Home tab and `RegisterListRow`.
 - **Labels are Noto Sans Mono UPPERCASE 11px ls 0.1em** — column headers and tags.
 
 ### Spacing

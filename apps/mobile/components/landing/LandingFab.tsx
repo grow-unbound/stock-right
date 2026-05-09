@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { Alert, Pressable, StyleSheet } from "react-native";
+import { Pressable, StyleSheet } from "react-native";
 import { Plus } from "lucide-react-native";
 import { usePathname, useRouter } from "expo-router";
 import * as Haptics from "expo-haptics";
@@ -13,6 +13,7 @@ import {
 import { tokens } from "@stockright/shared/tokens";
 import { FabActionSheet } from "./FabActionSheet";
 import { useMoneyAccessContext } from "@/contexts/MoneyAccessContext";
+import { BrandedAlertModal } from "@/components/ui/BrandedAlertModal";
 
 /** Keep in sync with `DashboardTabBar` height + `globals.css` `--tabbar-height` */
 const TABBAR_BASE = 64;
@@ -33,6 +34,7 @@ export function LandingFab() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const [open, setOpen] = useState(false);
+  const [comingSoonOpen, setComingSoonOpen] = useState(false);
   const { canManageMoney, loaded: moneyAccessLoaded } = useMoneyAccessContext();
 
   const segmentTab = useMemo(() => {
@@ -63,7 +65,7 @@ export function LandingFab() {
       return;
     }
     if (id === "add_payment") {
-      Alert.alert("Coming soon", "Record payment will be available in a later update.");
+      setComingSoonOpen(true);
     }
   }
 
@@ -83,6 +85,12 @@ export function LandingFab() {
         actions={config.actions}
         onClose={() => setOpen(false)}
         onSelect={segmentTab === "money" ? handleFabActionSelect : undefined}
+      />
+      <BrandedAlertModal
+        visible={comingSoonOpen}
+        title="Coming soon"
+        message="Record payment will be available in a later update."
+        onConfirm={() => setComingSoonOpen(false)}
       />
     </>
   );
