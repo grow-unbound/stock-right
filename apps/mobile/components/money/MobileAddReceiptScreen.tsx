@@ -1,8 +1,11 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
+  Animated,
   DeviceEventEmitter,
+  Dimensions,
+  FlatList,
   Modal,
   Pressable,
   ScrollView,
@@ -13,12 +16,14 @@ import {
   View,
 } from "react-native";
 import * as Haptics from "expo-haptics";
-import { Check, ChevronDown, ChevronUp, Search, X } from "lucide-react-native";
+import { ArrowLeft, Check, ChevronDown, ChevronUp, Search, X } from "lucide-react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import {
   createReceiptWithAllocations,
   fetchCustomerOutstandingTotals,
   fetchOutstandingAllocatable,
   searchCustomersQuickPick,
+  suggestNextReceiptReference,
   type OutstandingAllocatableRow,
   type PartiesTabRow,
 } from "@stockright/shared/api";
@@ -26,21 +31,22 @@ import { useDebouncedValue } from "@stockright/shared/hooks";
 import {
   buildFifoAllocations,
   formatRupeeDigitsForInput,
+  formatRupeeInputLive,
   isPartialAllocation,
   parseIndianRupeeInput,
   PAYMENT_METHOD_VALUES,
   paymentMethodLabel,
   type PaymentMethodValue,
 } from "@stockright/shared/receipt";
-import { formatIndianCurrency } from "@stockright/shared/utils";
+import { formatIndianCurrency, partyInitials, ACTIVE_WAREHOUSE_ID_KEY } from "@stockright/shared/utils";
 import { tokens } from "@stockright/shared/tokens";
-import { ACTIVE_WAREHOUSE_ID_KEY } from "@stockright/shared/utils";
 import { getSupabaseClient } from "@/lib/supabase";
 import { storage } from "@/lib/storage";
 
 const PAGE_SIZE = 25;
 const MONEY_FEED_REFRESH_EVENT = "sr-money-refresh";
 const STROKE = 2;
+const winW = Dimensions.get("window").width;
 
 function todayIso(): string {
   const d = new Date();
@@ -84,9 +90,23 @@ interface MobileAddReceiptScreenProps {
   onDone: () => void;
 }
 
+function mergeById(a: PartiesTabRow[], b: PartiesTabRow[]): PartiesTabRow[] {
+  const seen = new Set(a.map((r) => r.customer_id));
+  const out = [...a];
+  for (const row of b) {
+    if (!seen.has(row.customer_id)) {
+      seen.add(row.customer_id);
+      out.push(row);
+    }
+  }
+  return out;
+}
+
 export function MobileAddReceiptScreen({ warehouseId: warehouseIdProp, onClose, onDone }: MobileAddReceiptScreenProps) {
   const supabase = useMemo(() => getSupabaseClient(), []);
+  const insets = useSafeAreaInsets();
   const [warehouseId, setWarehouseId] = useState<string | null>(warehouseIdProp ?? null);
+  const slideX = useRef(new Animated.Value(winW)).current;
 
   useEffect(() => {
     if (warehouseIdProp) return;
@@ -103,62 +123,100 @@ export function MobileAddReceiptScreen({ warehouseId: warehouseIdProp, onClose, 
   const [customer, setCustomer] = useState<PartiesTabRow | null>(null);
   const [pickerOpen, setPickerOpen] = useState(false);
   const [pickerQuery, setPickerQuery] = useState("");
-  const debouncedPicker = useDebouncedValue(pickerQuery.trim(), 400);
+  const debouncedPicker = useDebouncedValue(pickerQuery.trim(), 320);
   const [pickerRows, setPickerRows] = useState<PartiesTabRow[]>([]);
-  const [pickerTotal, setPickerTotal] = useState(0);
+  const [pickerTotal, setPickerTotal] = useState<number | null>(null);
   const [pickerLoading, setPickerLoading] = useState(false);
+  const emptyPickCache = useRef<PartiesTabRow[] | null>(null);
 
-  const fetchPicker = useCallback(async () => {
-    if (!warehouseId || !pickerOpen) return;
-    setPickerLoading(true);
-    try {
-      const { rows, count } = await searchCustomersQuickPick(supabase, {
-        warehouseId,
-        q: debouncedPicker,
-        limit: PAGE_SIZE,
-        offset: 0,
-      });
-      setPickerRows(rows);
-      setPickerTotal(count ?? rows.length);
-    } finally {
-      setPickerLoading(false);
-    }
-  }, [debouncedPicker, pickerOpen, supabase, warehouseId]);
+  const fetchPickerPage = useCallback(
+    async (offset: number, reset: boolean) => {
+      if (!warehouseId) return;
+      setPickerLoading(true);
+      try {
+        const { rows, count } = await searchCustomersQuickPick(supabase, {
+          warehouseId,
+          q: debouncedPicker,
+          limit: PAGE_SIZE,
+          offset,
+        });
+        if (count !== null) setPickerTotal(count);
+        setPickerRows((prev) => (reset ? rows : mergeById(prev, rows)));
+        if (reset && debouncedPicker === "" && rows.length > 0) {
+          emptyPickCache.current = rows;
+        }
+      } finally {
+        setPickerLoading(false);
+      }
+    },
+    [debouncedPicker, supabase, warehouseId]
+  );
 
   useEffect(() => {
     if (!pickerOpen) return;
-    void fetchPicker();
-  }, [pickerOpen, debouncedPicker, fetchPicker]);
+    if (debouncedPicker === "" && emptyPickCache.current && emptyPickCache.current.length > 0) {
+      setPickerRows(emptyPickCache.current);
+    } else {
+      setPickerRows([]);
+    }
+    setPickerTotal(null);
+    void fetchPickerPage(0, true);
+  }, [pickerOpen, debouncedPicker, fetchPickerPage]);
+
+  useEffect(() => {
+    if (!pickerOpen) {
+      Animated.timing(slideX, { toValue: winW, duration: 0, useNativeDriver: true }).start();
+      return;
+    }
+    slideX.setValue(winW);
+    Animated.timing(slideX, { toValue: 0, duration: 240, useNativeDriver: true }).start();
+  }, [pickerOpen, slideX]);
+
+  const loadMorePicker = useCallback(() => {
+    if (pickerLoading) return;
+    if (pickerTotal !== null && pickerRows.length >= pickerTotal) return;
+    void fetchPickerPage(pickerRows.length, false);
+  }, [pickerLoading, pickerTotal, pickerRows.length, fetchPickerPage]);
 
   const [amountStr, setAmountStr] = useState("");
   const [receiptDate, setReceiptDate] = useState(todayIso());
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethodValue>("UPI");
   const [reference, setReference] = useState("");
+  const referenceManualRef = useRef(false);
+  const [notes, setNotes] = useState("");
   const [allocOpen, setAllocOpen] = useState(false);
   const [outstanding, setOutstanding] = useState<OutstandingAllocatableRow[]>([]);
   const [loadingLines, setLoadingLines] = useState(false);
+  const [outstandingError, setOutstandingError] = useState<string | null>(null);
   const [totals, setTotals] = useState<{ charges: number; rents: number } | null>(null);
   const [draft, setDraft] = useState<DraftRow[]>([]);
   const [submitting, setSubmitting] = useState(false);
 
-  const dirty =
-    customer !== null ||
-    amountStr.trim() !== "" ||
-    receiptDate !== todayIso() ||
-    paymentMethod !== "UPI" ||
-    reference.trim() !== "" ||
-    allocOpen;
+  useEffect(() => {
+    if (!warehouseId) return;
+    let cancelled = false;
+    void suggestNextReceiptReference(supabase, warehouseId).then((s) => {
+      if (cancelled || referenceManualRef.current) return;
+      setReference(s);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [warehouseId, supabase]);
 
   useEffect(() => {
-    if (!customer?.customer_id || !warehouseId) {
+    if (!allocOpen || !customer?.customer_id || !warehouseId) {
       setOutstanding([]);
       setTotals(null);
+      setOutstandingError(null);
       setDraft([]);
+      setLoadingLines(false);
       return;
     }
     let cancelled = false;
     void (async () => {
       setLoadingLines(true);
+      setOutstandingError(null);
       try {
         const [t, lines] = await Promise.all([
           fetchCustomerOutstandingTotals(supabase, warehouseId, customer.customer_id),
@@ -169,8 +227,9 @@ export function MobileAddReceiptScreen({ warehouseId: warehouseIdProp, onClose, 
         setOutstanding(lines);
       } catch {
         if (!cancelled) {
-          setOutstanding([]);
           setTotals(null);
+          setOutstanding([]);
+          setOutstandingError("Could not load outstanding details. You can still save the receipt.");
         }
       } finally {
         if (!cancelled) setLoadingLines(false);
@@ -179,7 +238,7 @@ export function MobileAddReceiptScreen({ warehouseId: warehouseIdProp, onClose, 
     return () => {
       cancelled = true;
     };
-  }, [customer, warehouseId, supabase]);
+  }, [allocOpen, customer, warehouseId, supabase]);
 
   useEffect(() => {
     const amt = parseIndianRupeeInput(amountStr);
@@ -189,6 +248,15 @@ export function MobileAddReceiptScreen({ warehouseId: warehouseIdProp, onClose, 
     }
     setDraft(buildDraft(outstanding, amt));
   }, [outstanding, amountStr]);
+
+  const dirty =
+    customer !== null ||
+    amountStr.trim() !== "" ||
+    receiptDate !== todayIso() ||
+    paymentMethod !== "UPI" ||
+    reference.trim() !== "" ||
+    notes.trim() !== "" ||
+    allocOpen;
 
   function requestClose() {
     if (dirty) {
@@ -238,8 +306,7 @@ export function MobileAddReceiptScreen({ warehouseId: warehouseIdProp, onClose, 
         totalAmount: amt,
         paymentMethod,
         referenceNumber: reference.trim() === "" ? null : reference.trim(),
-        notes: null,
-        recordedByProfileId: null,
+        notes: notes.trim() === "" ? null : notes.trim(),
         allocationLines: lines,
       });
       DeviceEventEmitter.emit(MONEY_FEED_REFRESH_EVENT);
@@ -264,51 +331,23 @@ export function MobileAddReceiptScreen({ warehouseId: warehouseIdProp, onClose, 
 
   return (
     <View style={styles.root}>
-      <Modal visible={pickerOpen} animationType="slide" onRequestClose={() => setPickerOpen(false)}>
-        <View style={styles.modalRoot}>
-          <View style={styles.modalHeader}>
-            <Text style={styles.modalTitle}>Choose party</Text>
-            <Pressable accessibilityRole="button" accessibilityLabel="Close" hitSlop={12} onPress={() => setPickerOpen(false)}>
-              <X size={22} color={tokens.textPrimary} strokeWidth={STROKE} />
-            </Pressable>
-          </View>
-          <View style={styles.searchRow}>
-            <Search size={18} color={tokens.textTertiary} strokeWidth={STROKE} />
-            <TextInput
-              value={pickerQuery}
-              onChangeText={setPickerQuery}
-              placeholder="Search name, code, phone…"
-              placeholderTextColor={tokens.textPlaceholder}
-              style={styles.searchInput}
-              autoCapitalize="none"
-              autoCorrect={false}
-            />
-          </View>
-          {pickerLoading && pickerRows.length === 0 ? (
-            <ActivityIndicator color={tokens.brandUi} style={{ marginTop: 24 }} />
-          ) : (
-            <ScrollView style={styles.pickerScroll}>
-              {pickerRows.map((r) => (
-                <Pressable
-                  key={r.customer_id}
-                  style={({ pressed }) => [styles.pickerRow, pressed && styles.pickerRowPressed]}
-                  onPress={() => {
-                    void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                    setCustomer(r);
-                    setPickerOpen(false);
-                  }}
-                >
-                  <Text style={styles.pickerName}>{r.customer_name}</Text>
-                  <Text style={styles.pickerCode}>{r.customer_code}</Text>
-                </Pressable>
-              ))}
-            </ScrollView>
-          )}
-          <Text style={styles.pickerHint}>{pickerTotal} active parties match</Text>
-        </View>
-      </Modal>
+      <View style={[styles.header, { paddingTop: Math.max(insets.top, 12) }]}>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Go back"
+          hitSlop={12}
+          onPress={() => requestClose()}
+          style={styles.iconBtn}
+        >
+          <ArrowLeft size={22} color={tokens.textPrimary} strokeWidth={STROKE} />
+        </Pressable>
+        <Text style={styles.headerTitle} numberOfLines={1}>
+          Add Receipt
+        </Text>
+        <View style={{ width: 44 }} />
+      </View>
 
-      <ScrollView style={styles.scroll} contentContainerStyle={styles.scrollContent}>
+      <ScrollView style={styles.scroll} contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
         <Text style={styles.label}>Party</Text>
         <Pressable style={styles.fieldBtn} onPress={() => setPickerOpen(true)}>
           <Text style={customer ? styles.fieldText : styles.placeholder}>
@@ -318,14 +357,21 @@ export function MobileAddReceiptScreen({ warehouseId: warehouseIdProp, onClose, 
         </Pressable>
 
         <Text style={styles.label}>Amount</Text>
-        <TextInput
-          value={amountStr}
-          onChangeText={setAmountStr}
-          keyboardType="decimal-pad"
-          placeholder="0"
-          placeholderTextColor={tokens.textPlaceholder}
-          style={styles.input}
-        />
+        <View style={styles.rupeeRow}>
+          <Text style={styles.rupeeSym}>₹</Text>
+          <TextInput
+            value={amountStr}
+            onChangeText={(t) => setAmountStr(formatRupeeInputLive(t))}
+            onBlur={() => {
+              const n = parseIndianRupeeInput(amountStr);
+              if (n !== null) setAmountStr(formatRupeeDigitsForInput(n));
+            }}
+            keyboardType="decimal-pad"
+            placeholder="0"
+            placeholderTextColor={tokens.textPlaceholder}
+            style={styles.rupeeInput}
+          />
+        </View>
 
         <Text style={styles.label}>Date received</Text>
         <TextInput
@@ -336,7 +382,7 @@ export function MobileAddReceiptScreen({ warehouseId: warehouseIdProp, onClose, 
           style={styles.input}
         />
 
-        <Text style={styles.label}>How they paid</Text>
+        <Text style={styles.label}>Payment method</Text>
         <View style={styles.pmWrap}>
           {PAYMENT_METHOD_VALUES.map((m) => (
             <Pressable
@@ -352,109 +398,131 @@ export function MobileAddReceiptScreen({ warehouseId: warehouseIdProp, onClose, 
         <Text style={styles.label}>Reference (optional)</Text>
         <TextInput
           value={reference}
-          onChangeText={setReference}
+          onChangeText={(t) => {
+            referenceManualRef.current = true;
+            setReference(t);
+          }}
           style={styles.input}
-          placeholder="UPI ref, cheque no."
+          placeholder="Reference number"
           placeholderTextColor={tokens.textPlaceholder}
         />
 
-        <Pressable style={styles.allocToggle} onPress={() => setAllocOpen((v) => !v)}>
-          <Text style={styles.allocToggleText}>Receipt allocations (optional)</Text>
-          {allocOpen ? (
-            <ChevronUp size={20} color={tokens.textTertiary} strokeWidth={STROKE} />
-          ) : (
-            <ChevronDown size={20} color={tokens.textTertiary} strokeWidth={STROKE} />
-          )}
-        </Pressable>
+        <Text style={styles.label}>Notes (optional)</Text>
+        <TextInput
+          value={notes}
+          onChangeText={setNotes}
+          style={[styles.input, styles.notes]}
+          placeholder="Anything your team should remember"
+          placeholderTextColor={tokens.textPlaceholder}
+          multiline
+          textAlignVertical="top"
+        />
 
-        {allocOpen ? (
-          <View style={styles.allocBox}>
-            {!customer ? (
-              <Text style={styles.muted}>Choose a party first.</Text>
-            ) : loadingLines ? (
-              <ActivityIndicator color={tokens.brandUi} />
-            ) : outstanding.length === 0 ? (
-              <Text style={styles.muted}>No unpaid charges or rents — recorded as advance credit.</Text>
-            ) : (
-              <>
-                {totals ? (
-                  <View style={styles.totalsRow}>
-                    <View style={styles.totalCard}>
-                      <Text style={styles.totalLbl}>Charges due</Text>
-                      <Text style={styles.totalVal}>{formatIndianCurrency(totals.charges)}</Text>
+        <View style={styles.allocSectionTop}>
+          <Pressable style={styles.allocToggle} onPress={() => setAllocOpen((v) => !v)}>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.allocSectionKicker}>Receipt allocations</Text>
+              <Text style={styles.allocToggleTitle}>
+                Apply to charges & rent <Text style={styles.allocOptional}>(optional)</Text>
+              </Text>
+            </View>
+            {allocOpen ?
+              <ChevronUp size={20} color={tokens.textTertiary} strokeWidth={STROKE} />
+            : <ChevronDown size={20} color={tokens.textTertiary} strokeWidth={STROKE} />}
+          </Pressable>
+
+          {allocOpen ?
+            <View style={styles.allocBody}>
+              {!customer ?
+                <Text style={styles.muted}>Choose a party first.</Text>
+              : outstandingError ?
+                <Text style={styles.errText}>{outstandingError}</Text>
+              : loadingLines ?
+                <ActivityIndicator color={tokens.brandUi} />
+              : outstanding.length === 0 ?
+                <Text style={styles.muted}>
+                  No unpaid charges or rents on file for this party. This receipt will be recorded as advance credit.
+                </Text>
+              : <>
+                  {totals ?
+                    <View style={styles.totalsRow}>
+                      <View style={styles.totalCard}>
+                        <Text style={styles.totalLbl}>Charges due</Text>
+                        <Text style={styles.totalVal}>{formatIndianCurrency(totals.charges)}</Text>
+                      </View>
+                      <View style={styles.totalCard}>
+                        <Text style={styles.totalLbl}>Rents due</Text>
+                        <Text style={styles.totalVal}>{formatIndianCurrency(totals.rents)}</Text>
+                      </View>
                     </View>
-                    <View style={styles.totalCard}>
-                      <Text style={styles.totalLbl}>Rents due</Text>
-                      <Text style={styles.totalVal}>{formatIndianCurrency(totals.rents)}</Text>
-                    </View>
-                  </View>
-                ) : null}
-                {draft.map((row) => {
-                  const partial =
-                    row.enabled &&
-                    row.allocated > 0 &&
-                    isPartialAllocation(row.allocated, row.remainingAmount);
-                  const typeLabel = row.lineKind === "rent" ? "Rent" : row.source.line_label;
-                  return (
-                    <View key={`${row.lineKind}-${row.lineId}`} style={styles.allocRow}>
-                      <View style={styles.allocRowTop}>
-                        <Switch
-                          value={row.enabled}
-                          onValueChange={(on) => {
+                  : null}
+                  {draft.map((row) => {
+                    const partial =
+                      row.enabled &&
+                      row.allocated > 0 &&
+                      isPartialAllocation(row.allocated, row.remainingAmount);
+                    const typeLabel = row.lineKind === "rent" ? "Rent" : row.source.line_label;
+                    return (
+                      <View key={`${row.lineKind}-${row.lineId}`} style={styles.allocRow}>
+                        <View style={styles.allocRowTop}>
+                          <Switch
+                            value={row.enabled}
+                            onValueChange={(on) => {
+                              setDraft((prev) =>
+                                prev.map((r) =>
+                                  r.lineId === row.lineId && r.lineKind === row.lineKind ?
+                                    { ...r, enabled: on, allocated: on ? r.allocated : 0 }
+                                  : r
+                                )
+                              );
+                            }}
+                            trackColor={{ false: tokens.bgInset, true: tokens.brandSubtle }}
+                            thumbColor={tokens.bgSurface}
+                          />
+                          <View style={{ flex: 1 }}>
+                            <Text style={styles.allocMeta}>
+                              Lot {row.source.lot_number} · {row.source.product_name}
+                            </Text>
+                            <Text style={styles.allocTitle}>
+                              {typeLabel} · {row.source.balance_bags}/{row.source.original_bags} bags left
+                            </Text>
+                            <Text style={styles.allocDue}>Due {formatIndianCurrency(row.remainingAmount)}</Text>
+                            {partial ?
+                              <Text style={styles.partialBadge}>PARTIAL ALLOCATION</Text>
+                            : null}
+                          </View>
+                        </View>
+                        <TextInput
+                          keyboardType="decimal-pad"
+                          editable={row.enabled}
+                          value={row.enabled ? formatRupeeDigitsForInput(row.allocated) : "0"}
+                          onChangeText={(raw) => {
+                            const n = parseIndianRupeeInput(raw);
                             setDraft((prev) =>
                               prev.map((r) =>
-                                r.lineId === row.lineId && r.lineKind === row.lineKind
-                                  ? { ...r, enabled: on, allocated: on ? r.allocated : 0 }
-                                  : r
-                              )
-                            );
-                          }}
-                          trackColor={{ false: tokens.bgInset, true: tokens.brandSubtle }}
-                          thumbColor={tokens.bgSurface}
-                        />
-                        <View style={{ flex: 1 }}>
-                          <Text style={styles.allocMeta}>
-                            Lot {row.source.lot_number} · {row.source.product_name}
-                          </Text>
-                          <Text style={styles.allocTitle}>
-                            {typeLabel} · {row.source.balance_bags}/{row.source.original_bags} bags left
-                          </Text>
-                          <Text style={styles.allocDue}>Due {formatIndianCurrency(row.remainingAmount)}</Text>
-                          {partial ? (
-                            <Text style={styles.partialBadge}>PARTIAL ALLOCATION</Text>
-                          ) : null}
-                        </View>
-                      </View>
-                      <TextInput
-                        keyboardType="decimal-pad"
-                        editable={row.enabled}
-                        value={row.enabled ? formatRupeeDigitsForInput(row.allocated) : "0"}
-                        onChangeText={(raw) => {
-                          const n = parseIndianRupeeInput(raw);
-                          setDraft((prev) =>
-                            prev.map((r) =>
-                              r.lineId === row.lineId && r.lineKind === row.lineKind
-                                ? {
+                                r.lineId === row.lineId && r.lineKind === row.lineKind ?
+                                  {
                                     ...r,
                                     allocated: n === null ? 0 : Math.min(n, r.remainingAmount),
                                     enabled: (n ?? 0) > 0,
                                   }
                                 : r
-                            )
-                          );
-                        }}
-                        style={styles.allocAmt}
-                      />
-                    </View>
-                  );
-                })}
-              </>
-            )}
-          </View>
-        ) : null}
+                              )
+                            );
+                          }}
+                          style={styles.allocAmt}
+                        />
+                      </View>
+                    );
+                  })}
+                </>
+              }
+            </View>
+          : null}
+        </View>
       </ScrollView>
 
-      <View style={styles.footer}>
+      <View style={[styles.footer, { paddingBottom: Math.max(insets.bottom, 12) }]}>
         <Pressable style={styles.cancelBtn} onPress={requestClose} disabled={submitting}>
           <X size={18} color={tokens.textPrimary} strokeWidth={STROKE} />
           <Text style={styles.cancelBtnText}>Cancel</Text>
@@ -464,6 +532,61 @@ export function MobileAddReceiptScreen({ warehouseId: warehouseIdProp, onClose, 
           <Text style={styles.submitBtnText}>{submitting ? "Creating…" : "Create receipt"}</Text>
         </Pressable>
       </View>
+
+      <Modal visible={pickerOpen} transparent animationType="fade" onRequestClose={() => setPickerOpen(false)}>
+        <Pressable style={styles.overlayBackdrop} onPress={() => setPickerOpen(false)} accessibilityLabel="Close" />
+        <Animated.View style={[styles.pickerPanel, { transform: [{ translateX: slideX }] }]}>
+          <View style={styles.pickerHeader}>
+            <Text style={styles.pickerTitle}>Choose party</Text>
+            <Pressable hitSlop={12} onPress={() => setPickerOpen(false)} accessibilityLabel="Close">
+              <X size={22} color={tokens.textPrimary} strokeWidth={STROKE} />
+            </Pressable>
+          </View>
+          <View style={styles.searchRow}>
+            <Search size={18} color={tokens.textTertiary} strokeWidth={STROKE} />
+            <TextInput
+              value={pickerQuery}
+              onChangeText={setPickerQuery}
+              placeholder="Search name, code, phone…"
+              placeholderTextColor={tokens.textPlaceholder}
+              style={styles.searchInput}
+              autoCapitalize="none"
+              autoCorrect={false}
+            />
+          </View>
+          {pickerLoading && pickerRows.length === 0 ?
+            <ActivityIndicator color={tokens.brandUi} style={{ marginTop: 24 }} />
+          : <View style={{ flex: 1, minHeight: 0 }}>
+              <FlatList
+                style={{ flex: 1 }}
+                data={pickerRows}
+                keyExtractor={(item) => item.customer_id}
+                contentContainerStyle={styles.pickerListContent}
+                onEndReached={loadMorePicker}
+                onEndReachedThreshold={0.35}
+                renderItem={({ item }) => (
+                  <Pressable
+                    style={({ pressed }) => [styles.pickerRow, pressed && styles.pickerRowPressed]}
+                    onPress={() => {
+                      void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                      setCustomer(item);
+                      setPickerOpen(false);
+                    }}
+                  >
+                    <View style={styles.avatar}>
+                      <Text style={styles.avatarText}>{partyInitials(item.customer_name)}</Text>
+                    </View>
+                    <View style={{ flex: 1, minWidth: 0 }}>
+                      <Text style={styles.pickerName}>{item.customer_name}</Text>
+                      <Text style={styles.pickerCode}>{item.customer_code}</Text>
+                    </View>
+                  </Pressable>
+                )}
+              />
+            </View>
+          }
+        </Animated.View>
+      </Modal>
     </View>
   );
 }
@@ -471,9 +594,28 @@ export function MobileAddReceiptScreen({ warehouseId: warehouseIdProp, onClose, 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: tokens.bgPage },
   center: { flex: 1, alignItems: "center", justifyContent: "center", padding: 24 },
+  header: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: 8,
+    paddingBottom: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: tokens.borderDefault,
+    backgroundColor: tokens.bgSurface,
+  },
+  iconBtn: { minWidth: 48, minHeight: 48, alignItems: "center", justifyContent: "center" },
+  headerTitle: {
+    flex: 1,
+    fontFamily: "NotoSerif-SemiBold",
+    fontSize: 18,
+    color: tokens.textPrimary,
+    textAlign: "center",
+  },
   scroll: { flex: 1 },
-  scrollContent: { padding: 16, paddingBottom: 120 },
+  scrollContent: { paddingHorizontal: 16, paddingBottom: 24 },
   muted: { fontFamily: "NotoSans-Regular", fontSize: 14, color: tokens.textSecondary },
+  errText: { fontFamily: "NotoSans-Regular", fontSize: 14, color: tokens.outward },
   label: {
     marginBottom: 6,
     marginTop: 12,
@@ -496,6 +638,30 @@ const styles = StyleSheet.create({
   },
   fieldText: { fontFamily: "NotoSans-Regular", fontSize: 16, color: tokens.textPrimary },
   placeholder: { fontFamily: "NotoSans-Regular", fontSize: 16, color: tokens.textPlaceholder },
+  rupeeRow: {
+    minHeight: 48,
+    flexDirection: "row",
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: tokens.borderDefault,
+    borderRadius: tokens.radiusMd,
+    paddingHorizontal: 12,
+    backgroundColor: tokens.bgSubtle,
+  },
+  rupeeSym: {
+    fontFamily: "NotoSansMono-Regular",
+    fontSize: 16,
+    color: tokens.textSecondary,
+    marginRight: 6,
+  },
+  rupeeInput: {
+    flex: 1,
+    minHeight: 44,
+    fontFamily: "NotoSansMono-Regular",
+    fontSize: 16,
+    color: tokens.textPrimary,
+    paddingVertical: 8,
+  },
   input: {
     minHeight: 48,
     borderWidth: 1,
@@ -507,6 +673,7 @@ const styles = StyleSheet.create({
     color: tokens.textPrimary,
     backgroundColor: tokens.bgSubtle,
   },
+  notes: { minHeight: 96, paddingTop: 10 },
   pmWrap: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
   pmChip: {
     paddingVertical: 10,
@@ -515,33 +682,34 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: tokens.borderDefault,
     backgroundColor: tokens.bgSubtle,
+    minHeight: 48,
+    justifyContent: "center",
   },
   pmChipOn: { borderColor: tokens.brandUi, backgroundColor: tokens.brandSubtle },
   pmChipText: { fontFamily: "NotoSans-Regular", fontSize: 14, color: tokens.textPrimary },
   pmChipTextOn: { fontFamily: "NotoSans-SemiBold", color: tokens.brandText },
+  allocSectionTop: { marginTop: 8, borderTopWidth: 1, borderTopColor: tokens.borderDefault, paddingTop: 12 },
+  allocSectionKicker: {
+    fontFamily: "NotoSans-Medium",
+    fontSize: 10,
+    letterSpacing: 0.6,
+    textTransform: "uppercase",
+    color: tokens.textTertiary,
+  },
   allocToggle: {
-    marginTop: 16,
-    minHeight: 48,
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "space-between",
-    paddingVertical: 10,
-    paddingHorizontal: 12,
-    borderRadius: tokens.radiusMd,
-    borderWidth: 1,
-    borderColor: tokens.borderDefault,
-    backgroundColor: tokens.bgSubtle,
+    gap: 8,
+    minHeight: 48,
   },
-  allocToggleText: { fontFamily: "NotoSerif-SemiBold", fontSize: 15, color: tokens.textPrimary },
-  allocBox: {
-    marginTop: 8,
-    padding: 12,
-    borderRadius: tokens.radiusMd,
-    borderWidth: 1,
-    borderColor: tokens.borderDefault,
-    backgroundColor: tokens.bgSurface,
-    gap: 10,
+  allocToggleTitle: {
+    fontFamily: "NotoSerif-SemiBold",
+    fontSize: 15,
+    color: tokens.textPrimary,
+    marginTop: 4,
   },
+  allocOptional: { fontFamily: "NotoSans-Regular", fontSize: 14, color: tokens.textSecondary },
+  allocBody: { marginTop: 12, gap: 10 },
   totalsRow: { flexDirection: "row", gap: 8 },
   totalCard: {
     flex: 1,
@@ -591,7 +759,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     gap: 8,
     padding: 12,
-    paddingBottom: 28,
+    paddingBottom: 12,
     borderTopWidth: 1,
     borderTopColor: tokens.borderDefault,
     backgroundColor: tokens.bgSurface,
@@ -620,9 +788,31 @@ const styles = StyleSheet.create({
     backgroundColor: tokens.brandUi,
   },
   submitBtnText: { fontFamily: "NotoSans-SemiBold", fontSize: 15, color: tokens.textOnBrand },
-  modalRoot: { flex: 1, backgroundColor: tokens.bgPage, paddingTop: 48, paddingHorizontal: 16 },
-  modalHeader: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 12 },
-  modalTitle: { fontFamily: "NotoSerif-SemiBold", fontSize: 18, color: tokens.textPrimary },
+  overlayBackdrop: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: "rgba(28,26,22,0.45)",
+  },
+  pickerPanel: {
+    position: "absolute",
+    top: 0,
+    right: 0,
+    bottom: 0,
+    width: Math.min(winW, 420),
+    maxWidth: "100%",
+    flexDirection: "column",
+    backgroundColor: tokens.bgSurface,
+    borderLeftWidth: 1,
+    borderLeftColor: tokens.borderDefault,
+    paddingTop: 48,
+    paddingHorizontal: 12,
+  },
+  pickerHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 12,
+  },
+  pickerTitle: { fontFamily: "NotoSerif-SemiBold", fontSize: 18, color: tokens.textPrimary },
   searchRow: {
     flexDirection: "row",
     alignItems: "center",
@@ -635,10 +825,13 @@ const styles = StyleSheet.create({
     backgroundColor: tokens.bgSubtle,
   },
   searchInput: { flex: 1, fontFamily: "NotoSans-Regular", fontSize: 16, color: tokens.textPrimary, minHeight: 44 },
-  pickerScroll: { flex: 1, marginTop: 12 },
+  pickerListContent: { paddingBottom: 32, paddingTop: 8 },
   pickerRow: {
-    paddingVertical: 14,
-    paddingHorizontal: 12,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 10,
     borderRadius: tokens.radiusMd,
     borderWidth: 1,
     borderColor: tokens.borderDefault,
@@ -646,7 +839,19 @@ const styles = StyleSheet.create({
     backgroundColor: tokens.bgSubtle,
   },
   pickerRowPressed: { opacity: 0.92 },
+  avatar: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: tokens.brandSubtle,
+  },
+  avatarText: {
+    fontFamily: "NotoSans-SemiBold",
+    fontSize: 13,
+    color: tokens.brandText,
+  },
   pickerName: { fontFamily: "NotoSerif-SemiBold", fontSize: 15, color: tokens.textPrimary },
   pickerCode: { fontFamily: "NotoSansMono-Regular", fontSize: 13, color: tokens.textSecondary, marginTop: 2 },
-  pickerHint: { fontSize: 12, color: tokens.textSecondary, marginTop: 8, marginBottom: 24 },
 });

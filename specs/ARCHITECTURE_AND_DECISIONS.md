@@ -90,6 +90,14 @@
 
 ---
 
+## Forms & full-screen entry (cross-cutting)
+
+- **Web (mobile-web):** Hide bottom tab bar + FAB on full-screen form routes using `shouldHideMobileDashboardChrome` — see `apps/web/src/lib/form-chrome.ts` (consumed by `BottomTabBar` and `DashboardPageShell`).
+- **Mobile (Expo Router):** Screens that must not show the tab navigator register **outside** `(tabs)` as siblings on the dashboard `Stack` (e.g. `app/(dashboard)/money/receipt/new.tsx`). Nested tabs layout would keep the bar visible.
+- **Party picker data:** Quick search uses `searchCustomersQuickPick` in `@stockright/shared/api` (direct `customers` rows, `is_active`); merged infinite scroll in UI. Detailed party balances still come from warehouse RPCs when needed.
+
+---
+
 ## PART 2: DATA FLOW DIAGRAMS
 
 ### Flow 1: Recording a Delivery (with Blocking)
@@ -167,35 +175,20 @@ Job must be idempotent:
 
 ### Flow 3: Payment Allocation (FIFO)
 
+**Implementation (MVP):** No separate HTTP API. The client inserts into **`customer_receipts`** via Supabase (PostgREST) with RLS, then calls **`confirm_receipt_allocations`** (RPC) with allocation lines. The insert includes **`tenant_id`** from the selected warehouse row (must match **`current_tenant_id()`** for the session) and **`recorded_by`** = authenticated **`user_profiles.id`** (same as `auth.uid()`).
+
 ```
-Customer sends payment:
-  1. POST /api/customers/:id/receipts { receiptDate, totalAmount, paymentMethod }
-  2. Backend queries unpaid items for customer:
-     • unpaidRents = SELECT * FROM rent_accruals WHERE customerID's lots AND isPaid=false ORDER BY accrualDate ASC
-     • unpaidCharges = SELECT * FROM transaction_charges WHERE customerID's lots AND isPaid=false ORDER BY createdAt ASC
-  3. Merge & sort by date (FIFO): [rent1, charge1, rent2, charge2, ...]
-  4. Create CustomerReceipt:
-     • receiptID = new UUID
-     • totalAmount = input
-  5. Allocate receipt iteratively:
-     remaining = totalAmount
-     FOR EACH item IN [rent1, charge1, ...]:
-       allocate = MIN(item.amount, remaining)
-       CREATE ReceiptAllocation { receiptID, itemID, amount: allocate }
-       IF item.type === 'rent':
-         UPDATE rent_accruals SET isPaid=true, paidDate=TODAY WHERE id=itemID
-       ELSE:
-         UPDATE transaction_charges SET isPaid=true, paidDate=TODAY WHERE id=itemID
-       remaining -= allocate
-       IF remaining === 0: BREAK
-  6. If remaining > 0:
-     • Store unallocated receipt (partial payment to follow-ups)
-  7. Check lot status transition:
-     • For each lot in allocation:
-       IF lot.balanceBags === 0 AND lot.outstanding === 0:
-         UPDATE lot SET status = 'CLEARED'
-  8. Return 200 { receiptID, allocations: [...] }
+Operator records payment (web + mobile):
+  1. INSERT customer_receipts {
+       warehouse_id, customer_id, tenant_id (from warehouses row),
+       receipt_date, total_amount, payment_method,
+       reference_number?, notes?, recorded_by = auth uid
+     } — RLS: tenant_id and warehouse_id must match session scope
+  2. RPC confirm_receipt_allocations(p_receipt_id, p_lines) applies FIFO-style
+     allocation rules inside Postgres (rent/charge lines, credit remainder).
 ```
+
+Legacy pseudo-flow (conceptual FIFO ordering of unpaid items) remains useful for understanding allocation intent; the authoritative behavior lives in the **`confirm_receipt_allocations`** implementation and related migrations.
 
 ---
 

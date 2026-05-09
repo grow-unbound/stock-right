@@ -421,7 +421,6 @@ export type Database = {
         Insert: {
           id?: string
           last_updated_at?: string
-          net_amount?: number | null
           payments_amount?: number
           payments_count?: number
           receipt_parties?: number
@@ -434,7 +433,6 @@ export type Database = {
         Update: {
           id?: string
           last_updated_at?: string
-          net_amount?: number | null
           payments_amount?: number
           payments_count?: number
           receipt_parties?: number

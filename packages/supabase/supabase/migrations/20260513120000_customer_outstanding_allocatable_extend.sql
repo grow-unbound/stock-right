@@ -1,5 +1,6 @@
 -- Extend customer_outstanding_allocatable with product + bag context for receipt allocation UI.
 
+DROP FUNCTION IF EXISTS public.customer_outstanding_allocatable(uuid, uuid);
 CREATE OR REPLACE FUNCTION public.customer_outstanding_allocatable(
   p_warehouse_id uuid,
   p_customer_id uuid

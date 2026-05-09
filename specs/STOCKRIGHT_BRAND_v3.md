@@ -224,6 +224,18 @@ Do **not** use `badge-online` / “● Online” on desktop web.
   - **Clearing search** resets **page 1** offset paging and refetches the default window.
   - **Offline:** hydrate from device storage (last list per warehouse + chip + optional pending rows); same local filter applies; no live Supabase reads until online.
 
+### 3.9 Forms & stacked overlays (normative)
+
+- **Chrome:** On full-screen **record forms** and **search overlays**, hide the **bottom tab bar** (mobile app + mobile-web) and the **FAB**. Desktop keeps side nav; only bottom chrome is suppressed on narrow viewports where it applies.
+- **Back / dismiss:** Primary navigate-back control is **icon-only** (arrow). Do not pair it with the word “Back”.
+- **Layout:** **Sticky** header (title + dismiss) and **sticky** footer (primary actions); **only** the middle body scrolls.
+- **Desktop drawer width:** Form shell and nested search overlays share one width token — same as the money form sidebar (`min(480px, max(400px, 35vw))`).
+- **Mobile picker panels:** Prefer **edge slide + backdrop fade** (same family as web drawer). Avoid OS-style bottom-sheet presentation for searchable party lists.
+- **Performance:** Load heavy reference data **lazily** — e.g. open allocations only when the section expands; open party data when the picker opens.
+- **Search lists:** **Infinite scroll** near list end; no separate “Load more” row for party pickers. Omit “X matches” hint lines.
+- **Party rows:** Show **avatar initials** for scan alignment.
+- **Money — Add receipt:** Label **Payment method**; show methods as **chips** (not `<select>`). **₹** + live Indian comma grouping on amount. **Reference** auto-suggested from recent receipts (overridable). **Notes** optional and visible. The row stored for the receipt always sets **`recorded_by`** to the signed-in operator’s profile id (`auth` user id = `user_profiles.id`) for audit. **Allocations:** section uses uppercase kicker + title (same rhythm as dashboard sections); outstanding RPC errors stay **inside** the section.
+
 ---
 
 ## 4. Navigation

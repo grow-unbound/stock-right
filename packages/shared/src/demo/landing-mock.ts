@@ -288,6 +288,7 @@ export function getLandingFabConfig(
   actions: LandingFabAction[];
 } | null {
   const base = pathname.replace(/\/$/, "") || "/";
+  if (base.includes("/receipt/new")) return null;
   if (base === "/stock") return { title: "Add to stock", actions: DEMO_FAB_STOCK_ACTIONS };
   if (base === "/parties") return { title: "Add party", actions: DEMO_FAB_PARTIES_ACTIONS };
   if (base === "/money") {

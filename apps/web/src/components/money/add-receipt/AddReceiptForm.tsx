@@ -75,7 +75,13 @@ function buildDraftFromOutstanding(
   });
 }
 
-export function AddReceiptForm({ variant, warehouseId, supabase, onClose, onSuccess }: AddReceiptFormProps) {
+export function AddReceiptForm({
+  variant: _layoutVariant,
+  warehouseId,
+  supabase,
+  onClose,
+  onSuccess,
+}: AddReceiptFormProps) {
   const [customer, setCustomer] = useState<PartiesTabRow | null>(null);
   const [customerPickerOpen, setCustomerPickerOpen] = useState(false);
   const [amountStr, setAmountStr] = useState("");
@@ -226,7 +232,6 @@ export function AddReceiptForm({ variant, warehouseId, supabase, onClose, onSucc
         paymentMethod,
         referenceNumber: reference.trim() === "" ? null : reference.trim(),
         notes: notes.trim() === "" ? null : notes.trim(),
-        recordedByProfileId: null,
         allocationLines: lines,
       });
       toast.success("Receipt recorded.");
@@ -240,7 +245,7 @@ export function AddReceiptForm({ variant, warehouseId, supabase, onClose, onSucc
     }
   }
 
-  const headerPad = variant === "fullscreen" ? "pt-[env(safe-area-inset-top)]" : "";
+  const headerPad = "";
 
   return (
     <div className={`flex min-h-0 flex-1 flex-col overflow-hidden ${headerPad}`}>

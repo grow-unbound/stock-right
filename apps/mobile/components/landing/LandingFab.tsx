@@ -37,6 +37,7 @@ export function LandingFab() {
 
   const segmentTab = useMemo(() => {
     if (!pathname) return undefined;
+    if (pathname.includes("/receipt/new")) return undefined;
     if (pathname.startsWith("/stock")) return "stock";
     if (pathname.startsWith("/parties")) return "parties";
     if (pathname.startsWith("/money")) return "money";

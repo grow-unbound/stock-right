@@ -1,6 +1,8 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { z } from "zod";
 
+import { PaymentMethodSchema } from "../receipt/schemas";
+
 const OutstandingRowSchema = z.object({
   line_kind: z.enum(["rent", "charge"]),
   line_id: z.string().uuid(),
@@ -65,6 +67,16 @@ export interface ConfirmAllocationInputLine {
   amount: number;
 }
 
+async function requireProfileIdForRecording(client: SupabaseClient): Promise<string> {
+  const {
+    data: { user },
+    error,
+  } = await client.auth.getUser();
+  if (error) throw error;
+  if (!user) throw new Error("Sign in required to record a receipt.");
+  return user.id;
+}
+
 export async function insertCustomerReceipt(
   client: SupabaseClient,
   params: {
@@ -75,20 +87,38 @@ export async function insertCustomerReceipt(
     paymentMethod: string;
     referenceNumber?: string | null;
     notes?: string | null;
-    recordedByProfileId?: string | null;
   }
 ): Promise<{ id: string }> {
+  const paymentMethod = PaymentMethodSchema.parse(params.paymentMethod);
+
+  const recordedBy = await requireProfileIdForRecording(client);
+
+  const { data: wh, error: whErr } = await client
+    .from("warehouses")
+    .select("tenant_id")
+    .eq("id", params.warehouseId)
+    .maybeSingle();
+
+  if (whErr) throw whErr;
+  if (!wh) throw new Error("Warehouse not found or not accessible.");
+
+  const totalAmount = Math.round(params.totalAmount * 100) / 100;
+  if (!Number.isFinite(totalAmount) || totalAmount <= 0) {
+    throw new Error("Receipt total must be a positive amount.");
+  }
+
   const { data, error } = await client
     .from("customer_receipts")
     .insert({
       warehouse_id: params.warehouseId,
       customer_id: params.customerId,
+      tenant_id: wh.tenant_id,
       receipt_date: params.receiptDate,
-      total_amount: params.totalAmount,
-      payment_method: params.paymentMethod,
+      total_amount: totalAmount,
+      payment_method: paymentMethod,
       reference_number: params.referenceNumber ?? null,
       notes: params.notes ?? null,
-      recorded_by: params.recordedByProfileId ?? null,
+      recorded_by: recordedBy,
     })
     .select("id")
     .single();
@@ -181,7 +211,6 @@ export async function createReceiptWithAllocations(
     paymentMethod: string;
     referenceNumber?: string | null;
     notes?: string | null;
-    recordedByProfileId?: string | null;
     allocationLines: ConfirmAllocationInputLine[];
   }
 ): Promise<{ receiptId: string; appliedTotal: number; creditRemaining: number }> {
@@ -193,7 +222,6 @@ export async function createReceiptWithAllocations(
     paymentMethod: params.paymentMethod,
     referenceNumber: params.referenceNumber,
     notes: params.notes,
-    recordedByProfileId: params.recordedByProfileId,
   });
 
   const result = await confirmReceiptAllocations(client, id, params.allocationLines);
