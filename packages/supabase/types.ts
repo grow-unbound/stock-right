@@ -1870,27 +1870,49 @@ export type Database = {
           transaction_type: string
         }[]
       }
+      count_parties_tab: {
+        Args: {
+          p_filter?: string
+          p_search?: string
+          p_warehouse_id: string
+        }
+        Returns: number
+      }
       list_parties_tab: {
         Args: {
           p_filter?: string
-          p_limit?: number
-          p_offset?: number
+          p_page?: number
+          p_page_size?: number
           p_search?: string
           p_warehouse_id: string
         }
         Returns: {
           address: string
-          bag_count: number
+          aging_bag_count: number
+          aging_lot_count: number
+          bags_active_stale_delivered: number
           customer_code: string
           customer_id: string
           customer_name: string
-          filter_total: number
-          has_stock: boolean
-          last_activity_date: string
-          lot_count: number
-          mobile: string
-          outstanding: number
-          phone: string
+          fresh_bag_count: number
+          fresh_lot_count: number
+          lots_active: number
+          lots_delivered: number
+          lots_stale: number
+          outstanding_charges: number
+          outstanding_rents: number
+          outstanding_total: number
+          stale_bag_count: number
+          stale_lot_count: number
+        }[]
+      }
+      parties_tab_kpis: {
+        Args: { p_warehouse_id: string }
+        Returns: {
+          customers_with_outstanding: number
+          parties_with_stale: number
+          stale_stock_bags: number
+          total_outstanding: number
         }[]
       }
       list_stock_movements: {

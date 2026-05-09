@@ -1,5 +1,7 @@
-import type { SupabaseClient } from "@supabase/supabase-js";
-
+/**
+ * Customer row shape used by receipt party picker (`searchCustomersQuickPick`).
+ * Distinct from `PartiesTabListRow` in `@stockright/shared/parties-tab` (full tab list).
+ */
 export interface PartiesTabRow {
   customer_id: string;
   customer_code: string;
@@ -15,28 +17,16 @@ export interface PartiesTabRow {
   filter_total: number;
 }
 
-export async function listPartiesTabPage(
-  client: SupabaseClient,
-  params: {
-    warehouseId: string;
-    /** Same semantics as Parties tab — use `'active'` for the standard party list. */
-    filter: "all" | "active" | "pending";
-    search: string;
-    limit: number;
-    offset: number;
-  }
-): Promise<{ rows: PartiesTabRow[]; filterTotal: number }> {
-  const { data, error } = await client.rpc("list_parties_tab", {
-    p_warehouse_id: params.warehouseId,
-    p_filter: params.filter,
-    p_search: params.search.trim() === "" ? "" : params.search.trim(),
-    p_limit: params.limit,
-    p_offset: params.offset,
-  });
+export type {
+  PartiesTabListRow,
+  PartiesTabKpis,
+  PartiesTabFilterId,
+  PartiesTabCachePayload,
+} from "../parties-tab";
 
-  if (error) throw error;
-
-  const rowsRaw = (data ?? []) as PartiesTabRow[];
-  const filterTotal = rowsRaw.length > 0 ? rowsRaw[0].filter_total : 0;
-  return { rows: rowsRaw, filterTotal };
-}
+export {
+  partiesTabCacheKey,
+  fetchPartiesTabKpis,
+  countPartiesTab,
+  listPartiesTab,
+} from "../parties-tab";
