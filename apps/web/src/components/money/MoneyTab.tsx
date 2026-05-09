@@ -2,7 +2,8 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { HandCoins, Loader2, SearchX, Wallet } from "lucide-react";
+import { HandCoins, Loader2, Receipt, SearchX, Wallet } from "lucide-react";
+import { toast } from "sonner";
 import {
   type MoneyMovementRow,
   type MoneySortColumn,
@@ -20,7 +21,8 @@ import { loadMoneyListSnapshot, loadMoneyPendingRows, saveMoneyListSnapshot } fr
 import { formatIndianCurrency, formatMoneyListDate } from "@stockright/shared/utils";
 import { DEMO_FAB_MONEY_ACTIONS } from "@stockright/shared/demo";
 import { DashboardPageShell } from "@/components/dashboard/DashboardPageShell";
-import { LandingFabActionSheet } from "@/components/dashboard/LandingFabActionSheet";
+import { AddReceiptForm } from "@/components/money/add-receipt/AddReceiptForm";
+import { FormSidebar } from "@/components/money/add-receipt/FormSidebar";
 import { Button } from "@/components/ui/Button";
 import { MoneyActivityTable } from "@/components/money/MoneyActivityTable";
 import { useMoneyAccess } from "@/contexts/MoneyAccessContext";
@@ -30,8 +32,6 @@ import { webMoneyAppCacheAdapter } from "@/lib/money-app-cache";
 import { useIsOffline } from "@/hooks/useIsOffline";
 
 const STROKE = 2;
-
-type DesktopMoneySheet = "receipt" | "payment" | null;
 
 type ChipId = "all" | "receipt" | "payment";
 
@@ -67,7 +67,16 @@ export function MoneyTab() {
   const [searchInput, setSearchInput] = useState("");
   const debouncedSearch = useDebouncedValue(searchInput.trim(), 400);
   const [chip, setChip] = useState<ChipId>("all");
-  const [desktopSheet, setDesktopSheet] = useState<DesktopMoneySheet>(null);
+  const [receiptFormOpen, setReceiptFormOpen] = useState(false);
+  const [moneyFeedNonce, setMoneyFeedNonce] = useState(0);
+
+  useEffect(() => {
+    function onMoneyRefresh() {
+      setMoneyFeedNonce((n) => n + 1);
+    }
+    window.addEventListener("sr-money-refresh", onMoneyRefresh);
+    return () => window.removeEventListener("sr-money-refresh", onMoneyRefresh);
+  }, []);
 
   const [sortColumn, setSortColumn] = useState<MoneySortColumn>("occurred_at");
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc");
@@ -145,7 +154,7 @@ export function MoneyTab() {
         setKpis(null);
       }
     })();
-  }, [warehouseId, accessLoaded, canManageMoney, supabase]);
+  }, [warehouseId, accessLoaded, canManageMoney, supabase, moneyFeedNonce]);
 
   useEffect(() => {
     if (!warehouseId || !canManageMoney || !offline) return;
@@ -236,6 +245,7 @@ export function MoneyTab() {
     sortDirection,
     supabase,
     moneyCache,
+    moneyFeedNonce,
   ]);
 
   useEffect(() => {
@@ -317,6 +327,7 @@ export function MoneyTab() {
     wide,
     supabase,
     moneyCache,
+    moneyFeedNonce,
   ]);
 
   mobileNearEndRef.current = () => {
@@ -370,18 +381,26 @@ export function MoneyTab() {
           variant="secondary"
           size="sm"
           type="button"
-          className="min-w-[var(--cta-tab-min-width)] justify-center"
-          onClick={() => setDesktopSheet("receipt")}
+          className="min-w-[var(--cta-tab-min-width)] justify-center gap-2"
+          onClick={() => {
+            if (offline) {
+              toast.error("Connect once to record money.");
+              return;
+            }
+            setReceiptFormOpen(true);
+          }}
         >
+          <Receipt className="size-[18px] shrink-0" strokeWidth={STROKE} aria-hidden />
           {addReceipt.label}
         </Button>
         <Button
           variant="primary"
           size="sm"
           type="button"
-          className="min-w-[var(--cta-tab-min-width)] justify-center"
-          onClick={() => setDesktopSheet("payment")}
+          className="min-w-[var(--cta-tab-min-width)] justify-center gap-2"
+          onClick={() => toast.info("Add Payment will be available soon.")}
         >
+          <Wallet className="size-[18px] shrink-0" strokeWidth={STROKE} aria-hidden />
           {addPayment.label}
         </Button>
       </>
@@ -408,6 +427,14 @@ export function MoneyTab() {
       onChipChange={(id) => setChip(id as ChipId)}
       desktopActions={desktopActions}
       moneyFabEnabled={canManageMoney}
+      moneyFabOnSelect={(id) => {
+        if (offline) {
+          toast.error("Connect once to record money.");
+          return;
+        }
+        if (id === "add_receipt") router.push("/money/receipt/new");
+        if (id === "add_payment") toast.info("Add Payment will be available soon.");
+      }}
       searchValue={searchInput}
       onSearchChange={setSearchInput}
       searchAccessory={searchAccessory}
@@ -546,14 +573,23 @@ export function MoneyTab() {
         </div>
       )}
 
-      {desktopSheet && addReceipt && addPayment ? (
-        <LandingFabActionSheet
-          open
-          title={desktopSheet === "receipt" ? addReceipt.label : addPayment.label}
-          actions={desktopSheet === "receipt" ? [addReceipt] : [addPayment]}
-          onClose={() => setDesktopSheet(null)}
-        />
-      ) : null}
+      <FormSidebar
+        open={receiptFormOpen && Boolean(warehouseId) && !offline}
+        title="Add Receipt"
+        onClose={() => setReceiptFormOpen(false)}
+      >
+        {warehouseId ? (
+          <AddReceiptForm
+            variant="sidebar"
+            warehouseId={warehouseId}
+            supabase={supabase}
+            onClose={() => setReceiptFormOpen(false)}
+            onSuccess={() => {
+              window.dispatchEvent(new CustomEvent("sr-money-refresh"));
+            }}
+          />
+        ) : null}
+      </FormSidebar>
     </DashboardPageShell>
   );
 }

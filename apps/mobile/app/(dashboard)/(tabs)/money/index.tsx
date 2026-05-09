@@ -8,6 +8,7 @@ import {
   type NativeSyntheticEvent,
   type NativeScrollEvent,
   ActivityIndicator,
+  DeviceEventEmitter,
 } from "react-native";
 import { HandCoins, SearchX, Wallet } from "lucide-react-native";
 import { useFocusEffect, useRouter } from "expo-router";
@@ -42,6 +43,7 @@ import { useIsOffline } from "@/hooks/useIsOffline";
 
 const STROKE = 2;
 const MOBILE_PAGE_SIZE = 15;
+const MONEY_FEED_REFRESH_EVENT = "sr-money-refresh";
 
 type ChipId = "all" | "receipt" | "payment";
 
@@ -86,6 +88,7 @@ export default function MoneyScreen() {
   const [totalCount, setTotalCount] = useState(0);
   const [kpis, setKpis] = useState<{ received: number; paid: number; rCount: number; pCount: number } | null>(null);
   const [initialLoading, setInitialLoading] = useState(true);
+  const [moneyFeedNonce, setMoneyFeedNonce] = useState(0);
 
   const localDataRef = useRef<MoneyMovementRow[]>([]);
   localDataRef.current = localData;
@@ -122,6 +125,22 @@ export default function MoneyScreen() {
   }, [warehouseId]);
 
   useEffect(() => {
+    const sub = DeviceEventEmitter.addListener(MONEY_FEED_REFRESH_EVENT, () => {
+      setMoneyFeedNonce((n) => n + 1);
+    });
+    return () => sub.remove();
+  }, []);
+
+  useEffect(() => {
+    if (moneyFeedNonce === 0) return;
+    setMobilePage(1);
+    setLocalData([]);
+    setInitialLoading(true);
+    prevMobileSearchRef.current = null;
+    prevMobileChipRef.current = null;
+  }, [moneyFeedNonce]);
+
+  useEffect(() => {
     if (!accessLoaded) return;
     if (!canManageMoney) {
       router.replace("/");
@@ -147,7 +166,7 @@ export default function MoneyScreen() {
         setKpis(null);
       }
     })();
-  }, [warehouseId, accessLoaded, canManageMoney, supabase]);
+  }, [warehouseId, accessLoaded, canManageMoney, supabase, moneyFeedNonce]);
 
   useEffect(() => {
     if (!warehouseId || !canManageMoney || !offline) return;
@@ -166,7 +185,7 @@ export default function MoneyScreen() {
     return () => {
       cancelled = true;
     };
-  }, [warehouseId, chip, offline, canManageMoney, moneyCache]);
+  }, [warehouseId, chip, offline, canManageMoney, moneyCache, moneyFeedNonce]);
 
   useEffect(() => {
     if (!warehouseId || !canManageMoney || offline) return;
@@ -236,7 +255,17 @@ export default function MoneyScreen() {
     return () => {
       cancelled = true;
     };
-  }, [warehouseId, debouncedSearch, chip, mobilePage, canManageMoney, offline, supabase, moneyCache]);
+  }, [
+    warehouseId,
+    debouncedSearch,
+    chip,
+    mobilePage,
+    canManageMoney,
+    offline,
+    supabase,
+    moneyCache,
+    moneyFeedNonce,
+  ]);
 
   endFetchRef.current = () => {
     if (!warehouseId || offline || mobileLoadingMore) return;

@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
-import { Pressable, StyleSheet } from "react-native";
+import { Alert, Pressable, StyleSheet } from "react-native";
 import { Plus } from "lucide-react-native";
-import { usePathname } from "expo-router";
+import { usePathname, useRouter } from "expo-router";
 import * as Haptics from "expo-haptics";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import type { LandingFabAction } from "@stockright/shared/demo";
@@ -30,14 +30,16 @@ function resolveFabConfig(segmentTab: string | undefined, allowMoneyFab: boolean
 
 export function LandingFab() {
   const pathname = usePathname();
+  const router = useRouter();
   const insets = useSafeAreaInsets();
   const [open, setOpen] = useState(false);
   const { canManageMoney, loaded: moneyAccessLoaded } = useMoneyAccessContext();
 
   const segmentTab = useMemo(() => {
-    if (pathname === "/stock") return "stock";
-    if (pathname === "/parties") return "parties";
-    if (pathname === "/money") return "money";
+    if (!pathname) return undefined;
+    if (pathname.startsWith("/stock")) return "stock";
+    if (pathname.startsWith("/parties")) return "parties";
+    if (pathname.startsWith("/money")) return "money";
     return undefined;
   }, [pathname]);
 
@@ -51,6 +53,17 @@ export function LandingFab() {
   async function handleFabPress() {
     await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     setOpen(true);
+  }
+
+  function handleFabActionSelect(id: string) {
+    if (segmentTab !== "money") return;
+    if (id === "add_receipt") {
+      router.push("/money/receipt/new");
+      return;
+    }
+    if (id === "add_payment") {
+      Alert.alert("Coming soon", "Record payment will be available in a later update.");
+    }
   }
 
   return (
@@ -68,6 +81,7 @@ export function LandingFab() {
         title={config.title}
         actions={config.actions}
         onClose={() => setOpen(false)}
+        onSelect={segmentTab === "money" ? handleFabActionSelect : undefined}
       />
     </>
   );
