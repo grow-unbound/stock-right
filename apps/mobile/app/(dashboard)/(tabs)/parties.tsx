@@ -13,6 +13,7 @@ import { SearchX, User } from "lucide-react-native";
 import { useFocusEffect } from "expo-router";
 import {
   applyPartiesTabClientFilters,
+  buildPartiesTabVisibleRows,
   countPartiesTab,
   fetchPartiesTabKpis,
   isPartiesTabFilterId,
@@ -90,8 +91,11 @@ export default function PartiesScreen() {
   const [filterId, setFilterId] = useState<PartiesTabFilterId>("all");
   const [searchInput, setSearchInput] = useState("");
   const debouncedSearch = useDebouncedValue(searchInput.trim(), 400);
+  const searchInputRef = useRef(searchInput);
+  searchInputRef.current = searchInput;
 
   const [localData, setLocalData] = useState<PartiesTabListRow[]>([]);
+  const [baselineRows, setBaselineRows] = useState<PartiesTabListRow[]>([]);
   const [mobilePage, setMobilePage] = useState(1);
   const [mobileLoadingMore, setMobileLoadingMore] = useState(false);
   const [remoteSearchPending, setRemoteSearchPending] = useState(false);
@@ -113,13 +117,20 @@ export default function PartiesScreen() {
   const endFetchRef = useRef<() => void>(() => {});
 
   const searchResults = useMemo(
-    () => applyPartiesTabClientFilters(localData, filterId, searchInput),
-    [localData, filterId, searchInput]
+    () =>
+      buildPartiesTabVisibleRows({
+        baselineRows,
+        serverRows: localData,
+        filterId,
+        searchInputRaw: searchInput,
+      }),
+    [baselineRows, localData, filterId, searchInput]
   );
 
   useEffect(() => {
     setMobilePage(1);
     setLocalData([]);
+    setBaselineRows([]);
     setInitialLoading(true);
     prevMobileSearchRef.current = null;
     prevMobileFilterRef.current = null;
@@ -153,10 +164,12 @@ export default function PartiesScreen() {
       if (cached) {
         setKpis(cached.kpis);
         setLocalData(cached.baselineRows);
+        setBaselineRows(cached.baselineRows);
         setTotalCount(cached.baselineRows.length);
       } else {
         setKpis(null);
         setLocalData([]);
+        setBaselineRows([]);
         setTotalCount(0);
       }
       setInitialLoading(false);
@@ -184,7 +197,7 @@ export default function PartiesScreen() {
     const loadingMore = mobilePageToFetch > 1;
 
     if (loadingMore) setMobileLoadingMore(true);
-    if (search !== "") setRemoteSearchPending(true);
+    if (debouncedSearch !== "") setRemoteSearchPending(true);
     if (mobilePageToFetch === 1 && localDataRef.current.length === 0) {
       setInitialLoading(true);
     }
@@ -224,6 +237,13 @@ export default function PartiesScreen() {
           }
           return next;
         });
+
+        if (filterId === "all" && search === "") {
+          setBaselineRows((prev) =>
+            mobilePageToFetch === 1 ? mergeUniquePartyRows([], rows) : mergeUniquePartyRows(prev, rows)
+          );
+        }
+
         setDataSource("network");
       } catch (e) {
         if (!cancelled) {
@@ -233,12 +253,10 @@ export default function PartiesScreen() {
           if (cached) {
             setDataSource("cache");
             setKpis(cached.kpis);
-            setLocalData(
-              applyPartiesTabClientFilters(cached.baselineRows, filterId, searchInput)
-            );
-            setTotalCount(
-              applyPartiesTabClientFilters(cached.baselineRows, filterId, debouncedSearch).length
-            );
+            const needle = searchInputRef.current;
+            setLocalData(applyPartiesTabClientFilters(cached.baselineRows, filterId, needle));
+            setBaselineRows(cached.baselineRows);
+            setTotalCount(applyPartiesTabClientFilters(cached.baselineRows, filterId, debouncedSearch).length);
           }
         }
       } finally {
@@ -253,17 +271,7 @@ export default function PartiesScreen() {
     return () => {
       cancelled = true;
     };
-  }, [
-    warehouseId,
-    debouncedSearch,
-    filterId,
-    mobilePage,
-    offline,
-    supabase,
-    cacheKey,
-    partiesCacheAdapter,
-    searchInput,
-  ]);
+  }, [warehouseId, debouncedSearch, filterId, mobilePage, offline, supabase, cacheKey, partiesCacheAdapter]);
 
   endFetchRef.current = () => {
     if (!warehouseId || offline || mobileLoadingMore) return;

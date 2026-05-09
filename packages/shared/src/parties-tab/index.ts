@@ -4,3 +4,4 @@ export * from "./fetch";
 export * from "./client-filter";
 export * from "./merge";
 export * from "./cache";
+export * from "./visible-rows";

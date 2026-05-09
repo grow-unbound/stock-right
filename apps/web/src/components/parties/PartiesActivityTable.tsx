@@ -39,7 +39,7 @@ export function PartiesActivityTable({
   return (
     <div className="flex flex-col gap-3">
       <div className="overflow-x-auto rounded-[var(--radius-md)] border border-[var(--border-default)] bg-[var(--bg-surface)]">
-        <table className="w-full min-w-[1040px] border-collapse text-left">
+        <table className="w-full min-w-[1160px] border-collapse text-left">
           <thead className="sticky top-0 z-[1] bg-[var(--bg-subtle)]">
             <tr className="border-b border-[var(--border-default)]">
               <th className="px-3 py-2 text-left font-[family-name:var(--font-mono)] text-[11px] font-medium uppercase tracking-[0.1em] text-[var(--text-secondary)]">
@@ -66,6 +66,9 @@ export function PartiesActivityTable({
               <th className="w-[120px] px-3 py-2 text-right font-[family-name:var(--font-mono)] text-[11px] font-medium uppercase tracking-[0.1em] text-[var(--text-secondary)]">
                 Charges Pending
               </th>
+              <th className="w-[128px] px-3 py-2 text-right font-[family-name:var(--font-mono)] text-[11px] font-medium uppercase tracking-[0.1em] text-[var(--text-secondary)]">
+                Outstanding
+              </th>
             </tr>
           </thead>
           <tbody>
@@ -87,6 +90,9 @@ export function PartiesActivityTable({
                 </td>
                 <td className={cn(cellMono, "text-right tabular-nums")}>
                   {formatIndianCurrency(row.outstanding_charges)}
+                </td>
+                <td className={cn(cellMono, "text-right tabular-nums text-[var(--pending)]")}>
+                  {formatIndianCurrency(row.outstanding_total)}
                 </td>
               </tr>
             ))}

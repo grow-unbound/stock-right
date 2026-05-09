@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Loader2, SearchX, User } from "lucide-react";
 import {
   applyPartiesTabClientFilters,
+  buildPartiesTabVisibleRows,
   countPartiesTab,
   fetchPartiesTabKpis,
   isPartiesTabFilterId,
@@ -52,8 +53,8 @@ function PartyListSkeleton() {
 
 function partyLotSummaryLine(row: PartiesTabListRow): string {
   const totalLots = row.lots_active + row.lots_stale + row.lots_delivered;
-  const lotWord = totalLots === 1 ? "lot" : "lots";
-  return `${totalLots} ${lotWord} (${row.lots_active} active, ${row.lots_stale} stale, ${row.lots_delivered} delivered) · ${formatBags(row.bags_active_stale_delivered)} bags`;
+  const lotWord = totalLots === 1 ? "lot" : "Lots";
+  return `${totalLots} ${lotWord} · ${formatBags(row.bags_active_stale_delivered)} Bags`;
 }
 
 export default function PartiesPage() {
@@ -65,6 +66,8 @@ export default function PartiesPage() {
   const [filterId, setFilterId] = useState<PartiesTabFilterId>("all");
   const [searchInput, setSearchInput] = useState("");
   const debouncedSearch = useDebouncedValue(searchInput.trim(), 400);
+  const searchInputRef = useRef(searchInput);
+  searchInputRef.current = searchInput;
 
   const [wide, setWide] = useState(true);
   const [desktopPage, setDesktopPage] = useState(1);
@@ -73,6 +76,7 @@ export default function PartiesPage() {
   const [mobileLoadingMore, setMobileLoadingMore] = useState(false);
 
   const [localData, setLocalData] = useState<PartiesTabListRow[]>([]);
+  const [baselineRows, setBaselineRows] = useState<PartiesTabListRow[]>([]);
   const [totalCount, setTotalCount] = useState(0);
   const [kpis, setKpis] = useState<PartiesTabKpis | null>(null);
   const kpisRef = useRef<PartiesTabKpis | null>(null);
@@ -101,9 +105,20 @@ export default function PartiesPage() {
     [warehouseId]
   );
 
-  const searchResults = useMemo(
+  const desktopTableRows = useMemo(
     () => applyPartiesTabClientFilters(localData, filterId, searchInput),
     [localData, filterId, searchInput]
+  );
+
+  const mobileSearchResults = useMemo(
+    () =>
+      buildPartiesTabVisibleRows({
+        baselineRows,
+        serverRows: localData,
+        filterId,
+        searchInputRaw: searchInput,
+      }),
+    [baselineRows, localData, filterId, searchInput]
   );
 
   useEffect(() => {
@@ -118,6 +133,7 @@ export default function PartiesPage() {
     setDesktopPage(1);
     setMobilePage(1);
     setLocalData([]);
+    setBaselineRows([]);
     setInitialLoading(true);
     prevDesktopSearchRef.current = null;
     prevMobileSearchRef.current = null;
@@ -125,6 +141,17 @@ export default function PartiesPage() {
     prevMobileFilterRef.current = null;
     setLoadError(null);
   }, [warehouseId]);
+
+  useEffect(() => {
+    setDesktopPage(1);
+    setMobilePage(1);
+    setLocalData([]);
+    setBaselineRows([]);
+    prevDesktopSearchRef.current = null;
+    prevMobileSearchRef.current = null;
+    prevDesktopFilterRef.current = null;
+    prevMobileFilterRef.current = null;
+  }, [wide]);
 
   useEffect(() => {
     if (!warehouseId || offline) return;
@@ -153,10 +180,12 @@ export default function PartiesPage() {
       if (cached) {
         setKpis(cached.kpis);
         setLocalData(cached.baselineRows);
+        setBaselineRows(cached.baselineRows);
         setTotalCount(cached.baselineRows.length);
       } else {
         setKpis(null);
         setLocalData([]);
+        setBaselineRows([]);
         setTotalCount(0);
       }
       setInitialLoading(false);
@@ -186,7 +215,7 @@ export default function PartiesPage() {
     if (localDataRef.current.length === 0) {
       setDesktopLoading(true);
     }
-    if (search !== "") setRemoteSearchPending(true);
+    if (debouncedSearch !== "") setRemoteSearchPending(true);
     setLoadError(null);
 
     void (async () => {
@@ -208,7 +237,6 @@ export default function PartiesPage() {
         if (cancelled) return;
         setTotalCount(count);
         setLocalData(rows);
-        setDataSource("network");
 
         const k = kpisRef.current;
         if (cacheKey && desktopPageToFetch === 1 && search === "") {
@@ -217,6 +245,11 @@ export default function PartiesPage() {
             kpis: k ?? null,
           });
         }
+        if (filterId === "all" && search === "" && desktopPageToFetch === 1) {
+          setBaselineRows(rows);
+        }
+
+        setDataSource("network");
       } catch (e) {
         if (!cancelled) {
           const msg = e instanceof Error ? e.message : "Could not load parties";
@@ -225,12 +258,10 @@ export default function PartiesPage() {
           if (cached) {
             setDataSource("cache");
             setKpis(cached.kpis);
-            setLocalData(
-              applyPartiesTabClientFilters(cached.baselineRows, filterId, searchInput)
-            );
-            setTotalCount(
-              applyPartiesTabClientFilters(cached.baselineRows, filterId, debouncedSearch).length
-            );
+            const needle = searchInputRef.current;
+            setLocalData(applyPartiesTabClientFilters(cached.baselineRows, filterId, needle));
+            setBaselineRows(cached.baselineRows);
+            setTotalCount(applyPartiesTabClientFilters(cached.baselineRows, filterId, debouncedSearch).length);
           }
         }
       } finally {
@@ -245,18 +276,7 @@ export default function PartiesPage() {
     return () => {
       cancelled = true;
     };
-  }, [
-    warehouseId,
-    offline,
-    wide,
-    filterId,
-    debouncedSearch,
-    desktopPage,
-    desktopPageSize,
-    supabase,
-    cacheKey,
-    searchInput,
-  ]);
+  }, [warehouseId, offline, wide, filterId, debouncedSearch, desktopPage, desktopPageSize, supabase, cacheKey]);
 
   useEffect(() => {
     if (!warehouseId || offline || wide) return;
@@ -274,7 +294,7 @@ export default function PartiesPage() {
 
     const loadingMore = mobilePageToFetch > 1;
     if (loadingMore) setMobileLoadingMore(true);
-    if (search !== "") setRemoteSearchPending(true);
+    if (debouncedSearch !== "") setRemoteSearchPending(true);
     if (mobilePageToFetch === 1 && localDataRef.current.length === 0) {
       setInitialLoading(true);
     }
@@ -314,6 +334,13 @@ export default function PartiesPage() {
           }
           return next;
         });
+
+        if (filterId === "all" && search === "") {
+          setBaselineRows((prev) =>
+            mobilePageToFetch === 1 ? mergeUniquePartyRows([], rows) : mergeUniquePartyRows(prev, rows)
+          );
+        }
+
         setDataSource("network");
       } catch (e) {
         if (!cancelled) {
@@ -323,12 +350,10 @@ export default function PartiesPage() {
           if (cached) {
             setDataSource("cache");
             setKpis(cached.kpis);
-            setLocalData(
-              applyPartiesTabClientFilters(cached.baselineRows, filterId, searchInput)
-            );
-            setTotalCount(
-              applyPartiesTabClientFilters(cached.baselineRows, filterId, debouncedSearch).length
-            );
+            const needle = searchInputRef.current;
+            setLocalData(applyPartiesTabClientFilters(cached.baselineRows, filterId, needle));
+            setBaselineRows(cached.baselineRows);
+            setTotalCount(applyPartiesTabClientFilters(cached.baselineRows, filterId, debouncedSearch).length);
           }
         }
       } finally {
@@ -343,20 +368,10 @@ export default function PartiesPage() {
     return () => {
       cancelled = true;
     };
-  }, [
-    warehouseId,
-    offline,
-    wide,
-    debouncedSearch,
-    filterId,
-    mobilePage,
-    supabase,
-    cacheKey,
-    searchInput,
-  ]);
+  }, [warehouseId, offline, wide, debouncedSearch, filterId, mobilePage, supabase, cacheKey]);
 
   mobileNearEndRef.current = () => {
-    if (!warehouseId || offline || mobileLoadingMore) return;
+    if (!warehouseId || offline || wide || mobileLoadingMore) return;
     const loaded = localData.length;
     if (loaded === 0 || totalCount === 0 || loaded >= totalCount) return;
     if (loaded < mobilePage * MOBILE_PAGE_SIZE - 4) return;
@@ -403,7 +418,7 @@ export default function PartiesPage() {
     Boolean(warehouseId) &&
     !desktopLoading &&
     !initialLoading &&
-    searchResults.length === 0 &&
+    (wide ? desktopTableRows.length === 0 : mobileSearchResults.length === 0) &&
     !(offline && localData.length === 0);
 
   const showDesktopSkeleton =
@@ -474,7 +489,7 @@ export default function PartiesPage() {
                     {kpis ? `${formatBags(kpis.staleStockBags)} bags` : "—"}
                   </p>
                   <p className="text-[11px] text-[var(--text-secondary)]">
-                    {kpis ? `${formatBags(kpis.partiesWithStale)} parties` : "Loading…"}
+                    {kpis ? `${formatBags(kpis.partiesWithStale)} customers` : "Loading…"}
                   </p>
                 </div>
               </>
@@ -504,7 +519,7 @@ export default function PartiesPage() {
                 </div>
               ) : (
                 <PartiesActivityTable
-                  rows={searchResults}
+                  rows={desktopTableRows}
                   totalCount={totalCount}
                   page={desktopPage}
                   pageSize={desktopPageSize}
@@ -533,7 +548,7 @@ export default function PartiesPage() {
                 </div>
               ) : (
                 <ul className="flex flex-col gap-2">
-                  {searchResults.map((row) => (
+                  {mobileSearchResults.map((row) => (
                     <li key={partyRowKey(row)}>
                       <div className="flex min-h-[48px] w-full items-center gap-3 rounded-[var(--radius-md)] border border-[var(--border-default)] bg-[var(--bg-surface)] px-3.5 py-3 text-left">
                         <span className="flex size-9 shrink-0 items-center justify-center rounded-[var(--radius-md)] border border-[var(--border-default)] bg-[var(--bg-subtle)] text-[var(--brand-text)]">
