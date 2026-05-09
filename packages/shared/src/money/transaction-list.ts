@@ -18,9 +18,11 @@ export function displayMoneyPartyPrimary(row: MoneyMovementRow): string {
   if (row.transaction_type === "receipt") {
     return row.counterparty_name.trim() || "—";
   }
-  const party = row.counterparty_name.trim();
-  if (party.length > 0) return party;
-  return row.expenditure_head?.trim() || "—";
+  const pt = row.payment_type_name?.trim();
+  if (pt && pt.length > 0) return pt;
+  const head = row.expenditure_head?.trim();
+  if (head && head.length > 0) return head;
+  return "—";
 }
 
 export function displayMoneyPartySecondary(row: MoneyMovementRow): string | null {

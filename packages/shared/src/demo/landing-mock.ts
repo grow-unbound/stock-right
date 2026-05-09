@@ -246,6 +246,15 @@ export const DEMO_FAB_MONEY_ACTIONS: LandingFabAction[] = [
   },
 ];
 
+export const DEMO_FAB_USERS_ACTIONS: LandingFabAction[] = [
+  {
+    id: "add_user",
+    label: "Add user",
+    hint: "Invite someone with phone and email access for your organization.",
+    tone: "neutral",
+  },
+];
+
 export function formatRupeesPlain(ruppees: number): string {
   return ruppees.toLocaleString("en-IN");
 }
@@ -288,9 +297,19 @@ export function getLandingFabConfig(
   actions: LandingFabAction[];
 } | null {
   const base = pathname.replace(/\/$/, "") || "/";
-  if (base.includes("/receipt/new")) return null;
+  if (
+    base.includes("/receipt/new") ||
+    base.includes("/payment/new") ||
+    base.includes("/parties/new") ||
+    base.includes("/stock/lot/new") ||
+    base.includes("/users/new") ||
+    /^\/users\/.+/.test(base)
+  ) {
+    return null;
+  }
   if (base === "/stock") return { title: "Add to stock", actions: DEMO_FAB_STOCK_ACTIONS };
   if (base === "/parties") return { title: "Add party", actions: DEMO_FAB_PARTIES_ACTIONS };
+  if (base === "/users") return { title: "Add user", actions: DEMO_FAB_USERS_ACTIONS };
   if (base === "/money") {
     if (options?.enableMoneyFab === false) return null;
     return { title: "Record money", actions: DEMO_FAB_MONEY_ACTIONS };

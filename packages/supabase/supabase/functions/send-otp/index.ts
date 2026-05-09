@@ -42,12 +42,15 @@ Deno.serve(async (req) => {
       // Look up existing user by phone
       const { data: profile } = await adminClient
         .from("user_profiles")
-        .select("id, email, display_name")
+        .select("id, email, display_name, is_active")
         .eq("phone", phone)
         .maybeSingle();
 
       if (!profile) {
         return error("PHONE_NOT_FOUND", "Phone not registered", 404);
+      }
+      if (profile.is_active === false) {
+        return error("ACCOUNT_INACTIVE", "This account is inactive", 403);
       }
       if (!profile.email) {
         return error("NO_EMAIL", "No email on file for this account", 400);

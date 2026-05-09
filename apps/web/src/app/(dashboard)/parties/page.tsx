@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import { Loader2, SearchX, User } from "lucide-react";
 import {
   applyPartiesTabClientFilters,
@@ -22,13 +23,15 @@ import {
 } from "@stockright/shared/parties-tab";
 import { DEMO_FAB_PARTIES_ACTIONS } from "@stockright/shared/demo";
 import { useDebouncedValue } from "@stockright/shared/hooks";
+import { PARTIES_REFRESH_EVENT } from "@stockright/shared/api";
 import { formatIndianCurrency } from "@stockright/shared/utils";
 import { DashboardKpiCard } from "@/components/dashboard/DashboardKpiCard";
 import { DashboardPageShell } from "@/components/dashboard/DashboardPageShell";
 import { DashboardSectionHeader } from "@/components/dashboard/DashboardSectionHeader";
-import { LandingFabActionSheet } from "@/components/dashboard/LandingFabActionSheet";
 import { RegisterListRow } from "@/components/dashboard/RegisterListRow";
+import { AddPartyForm } from "@/components/parties/add-party/AddPartyForm";
 import { PartiesActivityTable } from "@/components/parties/PartiesActivityTable";
+import { FormSidebar } from "@/components/money/add-receipt/FormSidebar";
 import { Button } from "@/components/ui/Button";
 import { useSessionUser } from "@/components/session/session-user-provider";
 import { useIsOffline } from "@/hooks/useIsOffline";
@@ -41,8 +44,6 @@ const MOBILE_PAGE_SIZE = 15;
 function formatBags(n: number): string {
   return n.toLocaleString("en-IN");
 }
-
-type DesktopPartiesSheet = "party" | null;
 
 function PartyListSkeleton() {
   return (
@@ -61,6 +62,7 @@ function partyLotSummaryLine(row: PartiesTabListRow): string {
 }
 
 export default function PartiesPage() {
+  const router = useRouter();
   const { context } = useSessionUser();
   const warehouseId = context?.warehouseId ?? null;
   const offline = useIsOffline();
@@ -90,6 +92,7 @@ export default function PartiesPage() {
   const [remoteSearchPending, setRemoteSearchPending] = useState(false);
   const [dataSource, setDataSource] = useState<"network" | "cache">("network");
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [addPartyOpen, setAddPartyOpen] = useState(false);
 
   const localDataRef = useRef<PartiesTabListRow[]>([]);
   localDataRef.current = localData;
@@ -101,12 +104,22 @@ export default function PartiesPage() {
   const mobileNearEndRef = useRef<() => void>(() => {});
   const sentinelRef = useRef<HTMLDivElement>(null);
 
-  const [desktopSheet, setDesktopSheet] = useState<DesktopPartiesSheet>(null);
-
   const cacheKey = useMemo(
     () => (warehouseId ? partiesTabCacheKey(warehouseId) : null),
     [warehouseId]
   );
+
+  useEffect(() => {
+    function onPartiesRefresh(e: Event) {
+      const ce = e as CustomEvent<PartiesTabListRow | undefined>;
+      const row = ce.detail;
+      if (!row) return;
+      setLocalData((prev) => mergeUniquePartyRows([row], prev));
+      setBaselineRows((prev) => mergeUniquePartyRows([row], prev));
+    }
+    window.addEventListener(PARTIES_REFRESH_EVENT, onPartiesRefresh);
+    return () => window.removeEventListener(PARTIES_REFRESH_EVENT, onPartiesRefresh);
+  }, []);
 
   const desktopTableRows = useMemo(
     () => applyPartiesTabClientFilters(localData, filterId, searchInput),
@@ -406,7 +419,13 @@ export default function PartiesPage() {
       size="sm"
       type="button"
       className="min-w-[var(--cta-tab-min-width)] justify-center"
-      onClick={() => setDesktopSheet("party")}
+      onClick={() => {
+        if (wide) {
+          setAddPartyOpen(true);
+        } else {
+          router.push("/parties/new");
+        }
+      }}
     >
       {addParty.label}
     </Button>
@@ -443,6 +462,14 @@ export default function PartiesPage() {
       }}
       desktopActions={desktopActions}
       searchAccessory={searchAccessory}
+      fabActionOnSelect={(id) => {
+        if (id !== "add_party") return;
+        if (wide) {
+          setAddPartyOpen(true);
+        } else {
+          router.push("/parties/new");
+        }
+      }}
     >
       <div className="flex flex-col gap-4 px-0 pt-4">
         {!warehouseId ? (
@@ -570,14 +597,20 @@ export default function PartiesPage() {
         ) : null}
       </div>
 
-      {desktopSheet && addParty ? (
-        <LandingFabActionSheet
-          open
-          title="Add party"
-          actions={[addParty]}
-          onClose={() => setDesktopSheet(null)}
-        />
-      ) : null}
+      <FormSidebar
+        open={addPartyOpen && Boolean(warehouseId) && !offline}
+        title="Add Party"
+        onClose={() => setAddPartyOpen(false)}
+      >
+        {warehouseId ? (
+          <AddPartyForm
+            warehouseId={warehouseId}
+            supabase={supabase}
+            onClose={() => setAddPartyOpen(false)}
+            onSuccess={() => {}}
+          />
+        ) : null}
+      </FormSidebar>
     </DashboardPageShell>
   );
 }

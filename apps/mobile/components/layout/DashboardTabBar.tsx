@@ -2,7 +2,7 @@ import type { BottomTabBarProps } from "@react-navigation/bottom-tabs";
 import { Pressable, Text, View, StyleSheet } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import * as Haptics from "expo-haptics";
-import { LayoutDashboard, Package, Users, Banknote } from "lucide-react-native";
+import { LayoutDashboard, Package, Users, Banknote, UserCog } from "lucide-react-native";
 import { tokens } from "@stockright/shared/tokens";
 
 const TABBAR_HEIGHT = 64;
@@ -14,6 +14,7 @@ const ROUTE_ICONS = {
   stock: Package,
   parties: Users,
   money: Banknote,
+  users: UserCog,
 } as const;
 
 type RouteName = keyof typeof ROUTE_ICONS;

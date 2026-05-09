@@ -1,7 +1,9 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import { Loader2, PackageMinus, PackagePlus, SearchX } from "lucide-react";
+import { toast } from "sonner";
 import {
   applyStockTabClientFilters,
   countStockMovements,
@@ -24,13 +26,15 @@ import {
   type StockTabKpis,
 } from "@stockright/shared/stock-tab";
 import { DEMO_FAB_STOCK_ACTIONS } from "@stockright/shared/demo";
+import { STOCK_REFRESH_EVENT } from "@stockright/shared/api";
 import { useDebouncedValue } from "@stockright/shared/hooks";
 import { DashboardKpiCard } from "@/components/dashboard/DashboardKpiCard";
 import { DashboardPageShell } from "@/components/dashboard/DashboardPageShell";
 import { DashboardSectionHeader } from "@/components/dashboard/DashboardSectionHeader";
-import { LandingFabActionSheet } from "@/components/dashboard/LandingFabActionSheet";
 import { RegisterListRow } from "@/components/dashboard/RegisterListRow";
 import { StockActivityTable } from "@/components/stock/StockActivityTable";
+import { AddLotForm } from "@/components/stock/add-lot/AddLotForm";
+import { FormSidebar } from "@/components/money/add-receipt/FormSidebar";
 import { Button } from "@/components/ui/Button";
 import { useSessionUser } from "@/components/session/session-user-provider";
 import { useIsOffline } from "@/hooks/useIsOffline";
@@ -48,8 +52,6 @@ function movementLabel(row: StockMovementRow): string {
 function formatBags(n: number): string {
   return n.toLocaleString("en-IN");
 }
-
-type DesktopStockSheet = "lot" | "delivery" | null;
 
 function StockListSkeleton() {
   return (
@@ -70,6 +72,7 @@ const webStockCacheAdapter = {
 };
 
 export default function StockPage() {
+  const router = useRouter();
   const { context } = useSessionUser();
   const warehouseId = context?.warehouseId ?? null;
   const offline = useIsOffline();
@@ -99,6 +102,7 @@ export default function StockPage() {
   const [remoteSearchPending, setRemoteSearchPending] = useState(false);
   const [dataSource, setDataSource] = useState<"network" | "cache">("network");
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [addLotOpen, setAddLotOpen] = useState(false);
 
   const prevDesktopSearchRef = useRef<string | null>(null);
   const prevMobileSearchRef = useRef<string | null>(null);
@@ -111,12 +115,21 @@ export default function StockPage() {
   const mobileNearEndRef = useRef<() => void>(() => {});
   const sentinelRef = useRef<HTMLDivElement>(null);
 
-  const [desktopSheet, setDesktopSheet] = useState<DesktopStockSheet>(null);
-
   const cacheKey = useMemo(
     () => (warehouseId ? stockTabCacheKey(warehouseId) : null),
     [warehouseId]
   );
+
+  useEffect(() => {
+    function onStockRefresh(e: Event) {
+      const ce = e as CustomEvent<StockMovementRow | undefined>;
+      const row = ce.detail;
+      if (!row) return;
+      setLocalData((prev) => mergeUniqueStockRows([row], prev));
+    }
+    window.addEventListener(STOCK_REFRESH_EVENT, onStockRefresh);
+    return () => window.removeEventListener(STOCK_REFRESH_EVENT, onStockRefresh);
+  }, []);
 
   const searchResults = useMemo(
     () => applyStockTabClientFilters(localData, filterId, searchInput),
@@ -428,14 +441,20 @@ export default function StockPage() {
   const addDelivery = DEMO_FAB_STOCK_ACTIONS[1];
 
   const desktopActions =
-    addLot && addDelivery ? (
+    addLot && addDelivery ?
       <>
         <Button
           variant="secondary"
           size="sm"
           type="button"
           className="min-w-[var(--cta-tab-min-width)] justify-center"
-          onClick={() => setDesktopSheet("lot")}
+          onClick={() => {
+            if (wide) {
+              setAddLotOpen(true);
+            } else {
+              router.push("/stock/lot/new");
+            }
+          }}
         >
           {addLot.label}
         </Button>
@@ -444,12 +463,12 @@ export default function StockPage() {
           size="sm"
           type="button"
           className="min-w-[var(--cta-tab-min-width)] justify-center"
-          onClick={() => setDesktopSheet("delivery")}
+          onClick={() => toast.message("Coming soon", { description: "Record dispatch will be available in a later update." })}
         >
           {addDelivery.label}
         </Button>
       </>
-    ) : null;
+    : null;
 
   const searchAccessory =
     searchInput.trim() !== "" && (remoteSearchPending || searchInput.trim() !== debouncedSearch) ? (
@@ -485,6 +504,18 @@ export default function StockPage() {
       }}
       desktopActions={desktopActions}
       searchAccessory={searchAccessory}
+      fabActionOnSelect={(id) => {
+        if (id === "add_lot") {
+          if (wide) {
+            setAddLotOpen(true);
+          } else {
+            router.push("/stock/lot/new");
+          }
+        }
+        if (id === "add_delivery") {
+          toast.message("Coming soon", { description: "Record dispatch will be available in a later update." });
+        }
+      }}
     >
       <div className="flex flex-col gap-4 px-0 pt-4">
         {!warehouseId ? (
@@ -635,14 +666,20 @@ export default function StockPage() {
         ) : null}
       </div>
 
-      {desktopSheet && addLot && addDelivery ? (
-        <LandingFabActionSheet
-          open
-          title={desktopSheet === "lot" ? addLot.label : addDelivery.label}
-          actions={desktopSheet === "lot" ? [addLot] : [addDelivery]}
-          onClose={() => setDesktopSheet(null)}
-        />
-      ) : null}
+      <FormSidebar
+        open={addLotOpen && Boolean(warehouseId) && !offline}
+        title="Add Lot"
+        onClose={() => setAddLotOpen(false)}
+      >
+        {warehouseId ? (
+          <AddLotForm
+            warehouseId={warehouseId}
+            supabase={supabase}
+            onClose={() => setAddLotOpen(false)}
+            onSuccess={() => {}}
+          />
+        ) : null}
+      </FormSidebar>
     </DashboardPageShell>
   );
 }

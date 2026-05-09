@@ -4,11 +4,12 @@ import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
 import type { LucideIcon } from "lucide-react";
-import { LayoutDashboard, Package, Users, Banknote, UserCircle, LogOut } from "lucide-react";
+import { LayoutDashboard, Package, Users, Banknote, UserCircle, LogOut, UserCog } from "lucide-react";
 import { DEMO_PROFILE_USER } from "@stockright/shared/demo";
 import { Badge } from "@/components/ui/Badge";
 import { useIsOffline } from "@/hooks/useIsOffline";
 import { useMoneyAccess } from "@/contexts/MoneyAccessContext";
+import { useUserAdminAccess } from "@/contexts/UserAdminAccessContext";
 import { cn } from "@/lib/utils";
 import { logoutAction } from "@/app/actions/session";
 import { useSessionUser } from "@/components/session/session-user-provider";
@@ -18,6 +19,7 @@ interface SideNavItem {
   label: string;
   icon: LucideIcon;
   requiresMoney?: boolean;
+  requiresTenantUsers?: boolean;
 }
 
 const navItems: SideNavItem[] = [
@@ -25,6 +27,7 @@ const navItems: SideNavItem[] = [
   { href: "/stock", label: "Stock", icon: Package },
   { href: "/parties", label: "Parties", icon: Users },
   { href: "/money", label: "Money", icon: Banknote, requiresMoney: true },
+  { href: "/users", label: "Users & Roles", icon: UserCog, requiresTenantUsers: true },
   { href: "/settings", label: "Preferences", icon: UserCircle },
 ];
 
@@ -33,6 +36,7 @@ export function SideNav() {
   const offline = useIsOffline();
   const { context } = useSessionUser();
   const { canManageMoney, loaded } = useMoneyAccess();
+  const { canManageTenantUsers, loaded: loadedTenantUsers } = useUserAdminAccess();
 
   const displayName = context?.fullName?.trim() || context?.phone || "Account";
   const subtitleLine =
@@ -40,7 +44,11 @@ export function SideNav() {
       ? `${context.roleLabel} · ${context.warehouseName}`
       : `${context?.roleLabel ?? "—"}`;
 
-  const visibleItems = navItems.filter((item) => !item.requiresMoney || !loaded || canManageMoney);
+  const visibleItems = navItems.filter((item) => {
+    if (item.requiresMoney && loaded && !canManageMoney) return false;
+    if (item.requiresTenantUsers && loadedTenantUsers && !canManageTenantUsers) return false;
+    return true;
+  });
 
   return (
     <nav

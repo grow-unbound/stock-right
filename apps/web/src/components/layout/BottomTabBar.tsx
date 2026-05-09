@@ -3,8 +3,9 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import type { LucideIcon } from "lucide-react";
-import { LayoutDashboard, Package, Users, Banknote } from "lucide-react";
+import { LayoutDashboard, Package, Users, Banknote, UserCog } from "lucide-react";
 import { useMoneyAccess } from "@/contexts/MoneyAccessContext";
+import { useUserAdminAccess } from "@/contexts/UserAdminAccessContext";
 import { shouldHideMobileDashboardChrome } from "@/lib/form-chrome";
 import { cn } from "@/lib/utils";
 
@@ -13,6 +14,7 @@ interface DashboardTabItem {
   label: string;
   icon: LucideIcon;
   requiresMoney?: boolean;
+  requiresTenantUsers?: boolean;
 }
 
 const tabs: DashboardTabItem[] = [
@@ -20,12 +22,18 @@ const tabs: DashboardTabItem[] = [
   { href: "/stock", label: "Stock", icon: Package },
   { href: "/parties", label: "Parties", icon: Users },
   { href: "/money", label: "Money", icon: Banknote, requiresMoney: true },
+  { href: "/users", label: "Users", icon: UserCog, requiresTenantUsers: true },
 ];
 
 export function BottomTabBar() {
   const pathname = usePathname() ?? "";
   const { canManageMoney, loaded } = useMoneyAccess();
-  const visibleTabs = tabs.filter((t) => !t.requiresMoney || !loaded || canManageMoney);
+  const { canManageTenantUsers, loaded: loadedTenantUsers } = useUserAdminAccess();
+  const visibleTabs = tabs.filter((t) => {
+    if (t.requiresMoney && loaded && !canManageMoney) return false;
+    if (t.requiresTenantUsers && loadedTenantUsers && !canManageTenantUsers) return false;
+    return true;
+  });
 
   if (shouldHideMobileDashboardChrome(pathname)) {
     return null;

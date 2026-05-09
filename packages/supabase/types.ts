@@ -1964,6 +1964,7 @@ export type Database = {
         }[]
       }
       user_can_manage_money: { Args: never; Returns: boolean }
+      user_can_manage_tenant_users: { Args: never; Returns: boolean }
       rent_yearly_cutoff_in_year: {
         Args: { p_cut_day: number; p_cut_month: number; p_year: number }
         Returns: string

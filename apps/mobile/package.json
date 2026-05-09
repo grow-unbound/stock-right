@@ -8,6 +8,8 @@
     "android": "expo start --android",
     "ios": "expo start --ios",
     "build:preview": "eas build --profile preview",
+    "build:uat": "eas build --profile preview --platform all",
+    "build:dev-client": "eas build --profile development --platform all",
     "build:production": "eas build --profile production",
     "typecheck": "tsc --noEmit"
   },
@@ -26,6 +28,7 @@
     "@supabase/supabase-js": "^2.49.4",
     "expo": "~54.0.34",
     "expo-constants": "~18.0.13",
+    "expo-dev-client": "~6.0.21",
     "expo-font": "~14.0.11",
     "expo-haptics": "~15.0.8",
     "expo-linking": "~8.0.12",
@@ -48,6 +51,7 @@
     "@babel/core": "^7.25.2",
     "@types/node": "^22.0.0",
     "@types/react": "^19.1.17",
+    "eas-cli": "^18.11.0",
     "typescript": "^5.7.3"
   }
 }

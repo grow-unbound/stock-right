@@ -14,7 +14,7 @@ export default function MoneyReceiptNewPage() {
   const supabase = useMemo(() => createSupabaseBrowserClient(), []);
 
   return (
-    <div className="flex min-h-[100dvh] flex-col bg-[var(--bg-page)] pb-[env(safe-area-inset-bottom)] pt-[env(safe-area-inset-top)]">
+    <div className="flex h-[100dvh] min-h-0 flex-col overflow-hidden bg-[var(--bg-page)] pb-[env(safe-area-inset-bottom)] pt-[env(safe-area-inset-top)]">
       <header className="flex shrink-0 items-center gap-1 border-b border-[var(--border-default)] bg-[var(--bg-surface)] px-1 py-1 sm:px-2">
         <button
           type="button"
@@ -28,15 +28,17 @@ export default function MoneyReceiptNewPage() {
         </h1>
       </header>
       {warehouseId ? (
-        <AddReceiptForm
-          variant="fullscreen"
-          warehouseId={warehouseId}
-          supabase={supabase}
-          onClose={() => router.back()}
-          onSuccess={() => {
-            window.dispatchEvent(new CustomEvent("sr-money-refresh"));
-          }}
-        />
+        <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+          <AddReceiptForm
+            variant="fullscreen"
+            warehouseId={warehouseId}
+            supabase={supabase}
+            onClose={() => router.back()}
+            onSuccess={() => {
+              window.dispatchEvent(new CustomEvent("sr-money-refresh"));
+            }}
+          />
+        </div>
       ) : (
         <p className="p-4 text-[15px] text-[var(--text-secondary)]">Select a warehouse first.</p>
       )}

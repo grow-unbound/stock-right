@@ -6,6 +6,7 @@ import {
   Pressable,
   StyleSheet,
   ActivityIndicator,
+  DeviceEventEmitter,
   type NativeSyntheticEvent,
   type NativeScrollEvent,
 } from "react-native";
@@ -29,6 +30,7 @@ import {
   type PartiesTabListRow,
   writePartiesTabCache,
 } from "@stockright/shared/parties-tab";
+import { PARTIES_REFRESH_EVENT } from "@stockright/shared/api";
 import { useDebouncedValue } from "@stockright/shared/hooks";
 import { ACTIVE_WAREHOUSE_ID_KEY, formatIndianCurrency } from "@stockright/shared/utils";
 import { tokens } from "@stockright/shared/tokens";
@@ -115,6 +117,15 @@ export default function PartiesScreen() {
   const prevMobileFilterRef = useRef<PartiesTabFilterId | null>(null);
 
   const endFetchRef = useRef<() => void>(() => {});
+
+  useEffect(() => {
+    const sub = DeviceEventEmitter.addListener(PARTIES_REFRESH_EVENT, (row: PartiesTabListRow) => {
+      if (!row?.customer_id) return;
+      setLocalData((prev) => mergeUniquePartyRows([row], prev));
+      setBaselineRows((prev) => mergeUniquePartyRows([row], prev));
+    });
+    return () => sub.remove();
+  }, []);
 
   const searchResults = useMemo(
     () =>

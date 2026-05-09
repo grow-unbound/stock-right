@@ -78,6 +78,15 @@ Deno.serve(async (req) => {
       await provisionNewUser(adminClient, userId);
     }
 
+    const { data: profileGate } = await adminClient
+      .from("user_profiles")
+      .select("is_active")
+      .eq("id", userId)
+      .maybeSingle();
+    if (profileGate?.is_active === false) {
+      return error("ACCOUNT_INACTIVE", "This account is inactive", 403);
+    }
+
     // Confirm user identities — our OTP flow is the verification.
     // Users created via createUser() have email_confirmed_at=null by default,
     // and GoTrue refuses to issue tokens for unconfirmed users.

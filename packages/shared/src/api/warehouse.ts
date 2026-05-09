@@ -18,7 +18,26 @@ export async function listWarehouses(
 
   if (error) throw error;
 
-  return (data ?? []).map((row) => ({
+  return (data ?? []).map(mapWarehouseRow);
+}
+
+export async function listWarehousesForTenant(
+  client: SupabaseClient,
+  tenantId: string
+): Promise<Warehouse[]> {
+  const { data, error } = await client
+    .from("warehouses")
+    .select("id, tenant_id, warehouse_name, warehouse_code, city, state, capacity_bags, created_at")
+    .eq("tenant_id", tenantId)
+    .order("warehouse_name", { ascending: true });
+
+  if (error) throw error;
+
+  return (data ?? []).map(mapWarehouseRow);
+}
+
+function mapWarehouseRow(row: Record<string, unknown>): Warehouse {
+  return {
     id: row.id as string,
     tenantId: row.tenant_id as string,
     warehouseName: row.warehouse_name as string,
@@ -27,7 +46,7 @@ export async function listWarehouses(
     state: row.state as string | null,
     capacityBags: row.capacity_bags as number | null,
     createdAt: row.created_at as string,
-  }));
+  };
 }
 
 export async function createWarehouse(

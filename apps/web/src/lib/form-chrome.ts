@@ -1,6 +1,10 @@
 const HIDE_CHROME_PATTERNS: RegExp[] = [
   /\/receipt\/new(\/|$)/,
+  /\/payment\/new(\/|$)/,
+  /\/parties\/new(\/|$)/,
+  /\/stock\/lot\/new(\/|$)/,
   /^\/settings(\/|$)/,
+  /^\/users\/.+/,
 ];
 
 /** Hide mobile bottom tab bar + FAB on full-screen / deep stack flows (<640px web). */

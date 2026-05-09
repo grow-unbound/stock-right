@@ -6,6 +6,7 @@ import {
   Pressable,
   StyleSheet,
   ActivityIndicator,
+  DeviceEventEmitter,
   type NativeSyntheticEvent,
   type NativeScrollEvent,
 } from "react-native";
@@ -29,6 +30,7 @@ import {
   type StockTabFilterId,
   type StockTabKpis,
 } from "@stockright/shared/stock-tab";
+import { STOCK_REFRESH_EVENT } from "@stockright/shared/api";
 import { useDebouncedValue } from "@stockright/shared/hooks";
 import { ACTIVE_WAREHOUSE_ID_KEY } from "@stockright/shared/utils";
 import { tokens } from "@stockright/shared/tokens";
@@ -105,6 +107,14 @@ export default function StockScreen() {
   const prevMobileFilterRef = useRef<StockTabFilterId | null>(null);
 
   const endFetchRef = useRef<() => void>(() => {});
+
+  useEffect(() => {
+    const sub = DeviceEventEmitter.addListener(STOCK_REFRESH_EVENT, (row: StockMovementRow) => {
+      if (!row?.lot_id) return;
+      setLocalData((prev) => mergeUniqueStockRows([row], prev));
+    });
+    return () => sub.remove();
+  }, []);
 
   const searchResults = useMemo(
     () => applyStockTabClientFilters(localData, filterId, searchInput),

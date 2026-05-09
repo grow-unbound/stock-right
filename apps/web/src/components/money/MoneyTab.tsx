@@ -9,6 +9,7 @@ import {
   type MoneySortColumn,
   MoneySortColumnSchema,
   MONEY_FILTER_CHIPS,
+  MONEY_REFRESH_EVENT,
   calendarMonthRangeLocal,
   countMoneyMovements,
   displayMoneyReference,
@@ -26,6 +27,7 @@ import { DashboardSectionHeader } from "@/components/dashboard/DashboardSectionH
 import { RegisterListRow } from "@/components/dashboard/RegisterListRow";
 import { AddReceiptForm } from "@/components/money/add-receipt/AddReceiptForm";
 import { FormSidebar } from "@/components/money/add-receipt/FormSidebar";
+import { AddPaymentForm } from "@/components/money/add-payment/AddPaymentForm";
 import { MoneyActivityTable } from "@/components/money/MoneyActivityTable";
 import { Button } from "@/components/ui/Button";
 import { useMoneyAccess } from "@/contexts/MoneyAccessContext";
@@ -72,14 +74,15 @@ export function MoneyTab() {
   const debouncedSearch = useDebouncedValue(searchInput.trim(), 400);
   const [chip, setChip] = useState<ChipId>("all");
   const [receiptFormOpen, setReceiptFormOpen] = useState(false);
+  const [paymentFormOpen, setPaymentFormOpen] = useState(false);
   const [moneyFeedNonce, setMoneyFeedNonce] = useState(0);
 
   useEffect(() => {
     function onMoneyRefresh() {
       setMoneyFeedNonce((n) => n + 1);
     }
-    window.addEventListener("sr-money-refresh", onMoneyRefresh);
-    return () => window.removeEventListener("sr-money-refresh", onMoneyRefresh);
+    window.addEventListener(MONEY_REFRESH_EVENT, onMoneyRefresh);
+    return () => window.removeEventListener(MONEY_REFRESH_EVENT, onMoneyRefresh);
   }, []);
 
   const [sortColumn, setSortColumn] = useState<MoneySortColumn>("occurred_at");
@@ -402,7 +405,13 @@ export function MoneyTab() {
           size="sm"
           type="button"
           className="min-w-[var(--cta-tab-min-width)] justify-center gap-2"
-          onClick={() => toast.info("Add Payment will be available soon.")}
+          onClick={() => {
+            if (offline) {
+              toast.error("Connect once to record money.");
+              return;
+            }
+            setPaymentFormOpen(true);
+          }}
         >
           <Wallet className="size-[18px] shrink-0" strokeWidth={STROKE} aria-hidden />
           {addPayment.label}
@@ -431,13 +440,13 @@ export function MoneyTab() {
       onChipChange={(id) => setChip(id as ChipId)}
       desktopActions={desktopActions}
       moneyFabEnabled={canManageMoney}
-      moneyFabOnSelect={(id) => {
+      fabActionOnSelect={(id) => {
         if (offline) {
           toast.error("Connect once to record money.");
           return;
         }
         if (id === "add_receipt") router.push("/money/receipt/new");
-        if (id === "add_payment") toast.info("Add Payment will be available soon.");
+        if (id === "add_payment") router.push("/money/payment/new");
       }}
       searchValue={searchInput}
       onSearchChange={setSearchInput}
@@ -579,7 +588,24 @@ export function MoneyTab() {
             supabase={supabase}
             onClose={() => setReceiptFormOpen(false)}
             onSuccess={() => {
-              window.dispatchEvent(new CustomEvent("sr-money-refresh"));
+              window.dispatchEvent(new CustomEvent(MONEY_REFRESH_EVENT));
+            }}
+          />
+        ) : null}
+      </FormSidebar>
+      <FormSidebar
+        open={paymentFormOpen && Boolean(warehouseId) && !offline}
+        title="Add Payment"
+        onClose={() => setPaymentFormOpen(false)}
+      >
+        {warehouseId ? (
+          <AddPaymentForm
+            variant="sidebar"
+            warehouseId={warehouseId}
+            supabase={supabase}
+            onClose={() => setPaymentFormOpen(false)}
+            onSuccess={() => {
+              window.dispatchEvent(new CustomEvent(MONEY_REFRESH_EVENT));
             }}
           />
         ) : null}
