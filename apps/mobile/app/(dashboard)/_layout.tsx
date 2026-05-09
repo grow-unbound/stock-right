@@ -9,6 +9,13 @@ export default function DashboardLayout() {
       <WarehouseGate>
         <Stack screenOptions={{ headerShown: false }}>
           <Stack.Screen name="(tabs)" />
+          <Stack.Screen
+            name="money/receipt/new"
+            options={{
+              animation: "slide_from_right",
+              presentation: "card",
+            }}
+          />
           <Stack.Screen name="profile" />
         </Stack>
       </WarehouseGate>

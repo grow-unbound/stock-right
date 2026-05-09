@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import type { LucideIcon } from "lucide-react";
 import { LayoutDashboard, Package, Users, Banknote } from "lucide-react";
 import { useMoneyAccess } from "@/contexts/MoneyAccessContext";
+import { shouldHideMobileDashboardChrome } from "@/lib/form-chrome";
 import { cn } from "@/lib/utils";
 
 interface DashboardTabItem {
@@ -25,6 +26,10 @@ export function BottomTabBar() {
   const pathname = usePathname() ?? "";
   const { canManageMoney, loaded } = useMoneyAccess();
   const visibleTabs = tabs.filter((t) => !t.requiresMoney || !loaded || canManageMoney);
+
+  if (shouldHideMobileDashboardChrome(pathname)) {
+    return null;
+  }
 
   return (
     <nav
