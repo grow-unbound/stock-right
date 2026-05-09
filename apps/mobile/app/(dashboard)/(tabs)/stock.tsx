@@ -15,7 +15,6 @@ import {
   applyStockTabClientFilters,
   countStockMovements,
   fetchStockTabKpis,
-  formatLotStatusLabel,
   formatStockActivityDate,
   isStockTabFilterId,
   listStockMovements,
@@ -44,10 +43,6 @@ const MOBILE_PAGE_SIZE = 15;
 
 function formatBags(n: number): string {
   return n.toLocaleString("en-IN");
-}
-
-function movementLabel(tx: StockMovementRow["transaction_type"]): string {
-  return tx === "lodgement" ? "Inward" : "Outward";
 }
 
 function ListSkeleton() {
@@ -405,7 +400,6 @@ export default function StockScreen() {
                       styles.txnIcon,
                       {
                         backgroundColor: isLodgement ? tokens.inwardBg : tokens.outwardBg,
-                        borderColor: isLodgement ? tokens.inwardBorder : tokens.outwardBorder,
                       },
                     ]}
                   >
@@ -417,19 +411,25 @@ export default function StockScreen() {
                   </View>
                   <View style={styles.txnMid}>
                     <Text style={styles.txnMeta}>
-                      {movementLabel(row.transaction_type)} · {row.lot_number} ·{" "}
-                      {formatStockActivityDate(row.tx_date)}
+                      {row.lot_number} · {formatStockActivityDate(row.tx_date)}
                     </Text>
                     <Text style={styles.txnParty} numberOfLines={1}>
                       {row.customer_name}
                     </Text>
                     <Text style={styles.txnProduct} numberOfLines={1}>
-                      {row.product_name} · {formatLotStatusLabel(row.lot_status)}
+                      {row.product_name}
                     </Text>
                   </View>
                   <View style={styles.txnRight}>
-                    <Text style={styles.txnAmt}>{formatBags(row.num_bags)}</Text>
-                    <Text style={styles.txnType}>Bags</Text>
+                    <Text
+                      style={[
+                        styles.txnAmt,
+                        { color: isLodgement ? tokens.inward : tokens.outward },
+                      ]}
+                    >
+                      {isLodgement ? "+" : "−"}
+                      {formatBags(row.num_bags)} bags
+                    </Text>
                   </View>
                 </Pressable>
               );
@@ -530,7 +530,7 @@ const styles = StyleSheet.create({
     gap: tokens.sp3,
     minHeight: 48,
     paddingVertical: tokens.sp3,
-    paddingHorizontal: 14,
+    paddingHorizontal: tokens.sp3,
     borderWidth: 1,
     borderColor: tokens.borderDefault,
     borderRadius: tokens.radiusMd,
@@ -538,12 +538,11 @@ const styles = StyleSheet.create({
   },
   txnPressed: { opacity: 0.96 },
   txnIcon: {
-    width: 36,
-    height: 36,
+    width: 40,
+    height: 40,
     borderRadius: tokens.radiusMd,
     alignItems: "center",
     justifyContent: "center",
-    borderWidth: 1,
   },
   txnMid: { flex: 1, minWidth: 0, gap: 2 },
   txnMeta: {
@@ -552,7 +551,7 @@ const styles = StyleSheet.create({
     color: tokens.textTertiary,
   },
   txnParty: {
-    fontFamily: "NotoSans-SemiBold",
+    fontFamily: "NotoSerif-SemiBold",
     fontSize: 15,
     color: tokens.textPrimary,
   },
@@ -563,17 +562,10 @@ const styles = StyleSheet.create({
   },
   txnRight: { alignItems: "flex-end" },
   txnAmt: {
-    fontFamily: "NotoSerif-SemiBold",
-    fontSize: 17,
+    fontFamily: "NotoSans-SemiBold",
+    fontSize: 14,
+    lineHeight: 18,
     fontVariant: ["tabular-nums"],
-    color: tokens.textPrimary,
-  },
-  txnType: {
-    fontFamily: "NotoSans-Regular",
-    fontSize: 10,
-    letterSpacing: 0.06,
-    color: tokens.textTertiary,
-    textTransform: "uppercase",
   },
   skeleton: {
     minHeight: 88,

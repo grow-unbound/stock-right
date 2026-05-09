@@ -1,5 +1,5 @@
 import { useRef } from "react";
-import { View, Text, TextInput, StyleSheet } from "react-native";
+import { View, Text, TextInput, StyleSheet, Platform } from "react-native";
 import { tokens } from "@stockright/shared/tokens";
 
 interface OtpInputProps {
@@ -72,13 +72,20 @@ const styles = StyleSheet.create({
   row: { flexDirection: "row", gap: 8, justifyContent: "center" },
   cell: {
     width: 48,
-    height: 56,
+    height: 48,
     borderRadius: tokens.radiusMd,
     borderWidth: 1.5,
     fontSize: 22,
+    lineHeight: 22,
+    paddingVertical: 0,
     fontFamily: "NotoSans-SemiBold",
     color: tokens.textPrimary,
     backgroundColor: tokens.bgSubtle,
+    textAlignVertical: "center",
+    ...Platform.select({
+      android: { includeFontPadding: false },
+      default: {},
+    }),
   },
   cellDefault: { borderColor: tokens.borderDefault },
   cellFilled: {

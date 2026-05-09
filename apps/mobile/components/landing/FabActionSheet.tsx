@@ -56,7 +56,7 @@ export function FabActionSheet({ open, title, actions, onClose, onSelect }: FabA
   }
 
   return (
-    <Modal transparent animationType="fade" visible={open} onRequestClose={onClose}>
+    <Modal transparent animationType="slide" visible={open} onRequestClose={onClose}>
       <Pressable style={styles.backdrop} onPress={onClose} accessibilityLabel="Close">
         <Pressable style={styles.sheet} onPress={(e) => e.stopPropagation()}>
           <View style={styles.handle} />
@@ -97,7 +97,7 @@ export function FabActionSheet({ open, title, actions, onClose, onSelect }: FabA
 const styles = StyleSheet.create({
   backdrop: {
     flex: 1,
-    backgroundColor: "rgba(28,26,22,0.45)",
+    backgroundColor: tokens.overlayScrim,
     justifyContent: "flex-end",
   },
   sheet: {
