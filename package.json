@@ -1,6 +1,7 @@
 {
   "name": "@stockright/root",
   "private": true,
+  "packageManager": "pnpm@10.15.1",
   "scripts": {
     "dev:web": "pnpm --filter=@stockright/web dev",
     "dev:mobile": "pnpm --filter=@stockright/mobile start",
