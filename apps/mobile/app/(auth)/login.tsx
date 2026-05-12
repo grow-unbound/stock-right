@@ -3,7 +3,7 @@ import { View, Text, ScrollView, KeyboardAvoidingView, Platform, StyleSheet } fr
 import { useRouter } from "expo-router";
 import { PhoneInput } from "@/components/auth/PhoneInput";
 import { Button } from "@/components/ui/Button";
-import { sendOtp, OTP_ERROR_CODES } from "@stockright/shared/api";
+import { sendOtp, OTP_ERROR_CODES, OtpError, OTP_EMAIL_DELIVERY_FAILED_HINT } from "@stockright/shared/api";
 import { indianPhoneSchema } from "@stockright/shared/utils";
 import { storage } from "@/lib/storage";
 import { tokens } from "@stockright/shared/tokens";
@@ -36,11 +36,12 @@ export default function LoginScreen() {
       await storage.set("otp_phone", phone);
       router.push("/(auth)/verify?from=login");
     } catch (err: unknown) {
-      const code = (err as { code?: string }).code;
-      if (code === OTP_ERROR_CODES.PHONE_NOT_FOUND) {
+      if (err instanceof OtpError && err.code === OTP_ERROR_CODES.EMAIL_FAILED) {
+        setError(OTP_EMAIL_DELIVERY_FAILED_HINT);
+      } else if (err instanceof OtpError && err.code === OTP_ERROR_CODES.PHONE_NOT_FOUND) {
         setPageState("not_registered");
       } else {
-        setError((err as Error).message ?? "Something went wrong.");
+        setError(err instanceof Error ? err.message : "Something went wrong.");
       }
     } finally {
       setIsLoading(false);

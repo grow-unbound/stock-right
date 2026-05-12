@@ -3,7 +3,14 @@ import { View, Text, ScrollView, TouchableOpacity, KeyboardAvoidingView, Platfor
 import { useRouter, useLocalSearchParams } from "expo-router";
 import { OtpInput } from "@/components/auth/OtpInput";
 import { Button } from "@/components/ui/Button";
-import { sendOtp, verifyOtp, warehouseFromVerifyOtpRow } from "@stockright/shared/api";
+import {
+  sendOtp,
+  verifyOtp,
+  warehouseFromVerifyOtpRow,
+  OtpError,
+  OTP_ERROR_CODES,
+  OTP_EMAIL_DELIVERY_FAILED_HINT,
+} from "@stockright/shared/api";
 import { ACTIVE_WAREHOUSE_ID_KEY } from "@stockright/shared/utils";
 import { storage } from "@/lib/storage";
 import { tokens } from "@stockright/shared/tokens";
@@ -125,7 +132,13 @@ export default function VerifyScreen() {
       setExpiryCountdown(OTP_EXPIRY_SECONDS);
       setResendCountdown(RESEND_COOLDOWN_SECONDS);
     } catch (err: unknown) {
-      setError((err as Error).message ?? "Failed to resend.");
+      setError(
+        err instanceof OtpError && err.code === OTP_ERROR_CODES.EMAIL_FAILED
+          ? OTP_EMAIL_DELIVERY_FAILED_HINT
+          : err instanceof Error
+            ? err.message
+            : "Failed to resend."
+      );
     } finally {
       setIsResending(false);
     }
