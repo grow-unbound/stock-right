@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { X } from "lucide-react";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { toast } from "sonner";
 import type { TenantUserRow } from "@stockright/shared/api";
@@ -25,6 +26,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { cn } from "@/lib/utils";
 
 const labelClass =
   "mb-1 block text-[12px] font-medium uppercase tracking-[0.06em] text-[var(--text-tertiary)]";
@@ -33,6 +35,8 @@ const inputClass =
 
 interface TenantUserFormProps {
   mode: "create" | "edit";
+  layoutVariant?: "sidebar" | "detailPane";
+  title?: string;
   tenantId: string;
   warehouses: Warehouse[];
   supabase: SupabaseClient;
@@ -43,6 +47,8 @@ interface TenantUserFormProps {
 
 export function TenantUserForm({
   mode,
+  layoutVariant = "sidebar",
+  title,
   tenantId,
   warehouses,
   supabase,
@@ -159,8 +165,10 @@ export function TenantUserForm({
     }
   }
 
-  return (
-    <form onSubmit={handleSubmit} className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto p-4">
+  const formTitle = title ?? (mode === "create" ? "Add user" : "Edit user");
+
+  const fieldList = (
+    <>
       <div>
         <label htmlFor="tu-full-name" className={labelClass}>
           Full Name
@@ -243,7 +251,7 @@ export function TenantUserForm({
         </div>
       )}
 
-      <fieldset className="min-w-0">
+      <fieldset className={cn("min-w-0", layoutVariant === "detailPane" && "lg:col-span-2")}>
         <legend className={`${labelClass} mb-2 px-0`}>Warehouses</legend>
         <div className="flex max-h-[220px] flex-col gap-2 overflow-y-auto rounded-[var(--radius-md)] border border-[var(--border-default)] bg-[var(--bg-subtle)] p-3">
           {warehouses.map((w) => (
@@ -265,15 +273,69 @@ export function TenantUserForm({
           <p className="mt-1 text-[12px] text-[var(--outward)]">{errors.warehouseIds}</p>
         )}
       </fieldset>
+    </>
+  );
 
-      <div className="mt-auto flex shrink-0 flex-col gap-2 border-t border-[var(--border-default)] pt-4">
-        <Button type="submit" disabled={submitting} className="min-h-[48px] w-full">
-          {submitting ? (mode === "create" ? "Adding…" : "Saving…") : mode === "create" ? "Add user" : "Save"}
-        </Button>
-        <Button type="button" variant="ghost" className="min-h-[48px] w-full" onClick={onClose}>
-          Cancel
-        </Button>
+  const footerActions = (
+    <div
+      className={cn(
+        "flex shrink-0 flex-col gap-2 border-t border-[var(--border-default)] bg-[var(--bg-surface)] sm:flex-row sm:justify-end sm:gap-2",
+        layoutVariant === "detailPane" ?
+          "px-4 py-3 pb-[calc(12px+env(safe-area-inset-bottom))] sm:pb-3"
+        : "pt-4 mt-auto"
+      )}
+    >
+      <Button
+        type="button"
+        variant="ghost"
+        className="min-h-[48px] w-full min-w-[var(--cta-tab-min-width)] justify-center sm:w-auto sm:shrink-0"
+        onClick={onClose}
+      >
+        Cancel
+      </Button>
+      <Button
+        type="submit"
+        disabled={submitting}
+        className="min-h-[48px] w-full min-w-[var(--cta-tab-min-width)] justify-center sm:w-auto sm:shrink-0"
+      >
+        {submitting ? (mode === "create" ? "Adding…" : "Saving…") : mode === "create" ? "Add user" : "Save"}
+      </Button>
+    </div>
+  );
+
+  if (layoutVariant === "detailPane") {
+    return (
+      <div className="flex h-full min-h-0 flex-col overflow-hidden rounded-[var(--radius-md)] border border-[var(--border-default)] bg-[var(--bg-surface)]">
+        <div className="sticky top-0 z-[1] flex shrink-0 items-center justify-between bg-[var(--bg-page)] px-4 py-3">
+          <h2 className="font-[family-name:var(--font-display)] text-[18px] font-semibold text-[var(--text-primary)]">
+            {formTitle}
+          </h2>
+          <button
+            type="button"
+            className="flex min-h-[48px] min-w-[48px] items-center justify-center rounded-[var(--radius-md)] text-[var(--text-primary)] focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-[var(--focus-ring)]"
+            onClick={onClose}
+            aria-label="Close form"
+          >
+            <X className="size-5" strokeWidth={2} aria-hidden />
+          </button>
+        </div>
+        <form
+          onSubmit={handleSubmit}
+          className="flex min-h-0 flex-1 flex-col overflow-hidden"
+        >
+          <div className="min-h-0 flex-1 overflow-y-auto px-4 pb-4 pt-2">
+            <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 lg:gap-x-6">{fieldList}</div>
+          </div>
+          {footerActions}
+        </form>
       </div>
+    );
+  }
+
+  return (
+    <form onSubmit={handleSubmit} className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto p-4">
+      {fieldList}
+      {footerActions}
     </form>
   );
 }

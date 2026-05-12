@@ -229,10 +229,32 @@ a { color: var(--brand-text); text-decoration: none; }
   }
 }
 
+@media (prefers-reduced-motion: no-preference) {
+  .sr-side-fade {
+    transition:
+      opacity var(--duration-base) var(--ease-out),
+      transform var(--duration-base) var(--ease-out);
+  }
+  .sr-side-fade-out {
+    opacity: 0;
+    transform: translateX(8px);
+  }
+  .sr-side-fade-in {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .fab-sheet-backdrop-enter,
   .fab-sheet-panel-enter,
   .deep-route-enter {
     animation: none !important;
+  }
+  .sr-side-fade,
+  .sr-side-fade-out,
+  .sr-side-fade-in {
+    transition: none !important;
+    transform: none !important;
   }
 }

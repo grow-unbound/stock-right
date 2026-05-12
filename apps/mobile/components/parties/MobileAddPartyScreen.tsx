@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
   DeviceEventEmitter,
+  FlatList,
+  Modal,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -9,15 +11,24 @@ import {
   View,
 } from "react-native";
 import * as Haptics from "expo-haptics";
-import { ChevronLeft } from "lucide-react-native";
+import { ChevronDown, ChevronLeft, Search, X } from "lucide-react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { insertCustomer, PARTIES_REFRESH_EVENT } from "@stockright/shared/api";
+import {
+  fetchDistinctPartyCodesForWarehouse,
+  findActiveCustomerCodeOwningPrimaryPhone,
+  insertCustomer,
+  PARTIES_REFRESH_EVENT,
+  type PartyCodePickRow,
+  warehouseHasActiveCustomerCode,
+} from "@stockright/shared/api";
+import { useDebouncedValue } from "@stockright/shared/hooks";
 import { buildPlaceholderPartyListRow } from "@stockright/shared/parties-tab";
 import { ACTIVE_WAREHOUSE_ID_KEY } from "@stockright/shared/utils";
 import { tokens } from "@stockright/shared/tokens";
 import { BrandedAlertModal } from "@/components/ui/BrandedAlertModal";
 import { getSupabaseClient } from "@/lib/supabase";
 import { storage } from "@/lib/storage";
+import { MobilePartyPhoneField } from "./MobilePartyPhoneField";
 
 const STROKE = 2;
 
@@ -36,10 +47,24 @@ export function MobileAddPartyScreen({ warehouseId: warehouseIdProp, onClose, on
   const [phone, setPhone] = useState("");
   const [alternateMobile, setAlternateMobile] = useState("");
   const [address, setAddress] = useState("");
+  const [phoneLocked, setPhoneLocked] = useState(false);
+  const [phoneConflictHint, setPhoneConflictHint] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [discardOpen, setDiscardOpen] = useState(false);
   const [errorOpen, setErrorOpen] = useState<{ title: string; message: string } | null>(null);
-  const initialRef = useRef({ customerName: "", customerCode: "", phone: "", alternateMobile: "", address: "" });
+  const [codePickerOpen, setCodePickerOpen] = useState(false);
+  const [codeSearch, setCodeSearch] = useState("");
+  const debouncedCodeSearch = useDebouncedValue(codeSearch.trim(), 320);
+  const [codeRows, setCodeRows] = useState<PartyCodePickRow[]>([]);
+  const [codeLoading, setCodeLoading] = useState(false);
+  const initialRef = useRef({
+    customerName: "",
+    customerCode: "",
+    phone: "",
+    alternateMobile: "",
+    address: "",
+    phoneLocked: false,
+  });
 
   useEffect(() => {
     if (warehouseIdProp) return;
@@ -53,14 +78,102 @@ export function MobileAddPartyScreen({ warehouseId: warehouseIdProp, onClose, on
     };
   }, [warehouseIdProp]);
 
+  useEffect(() => {
+    if (!codePickerOpen || !warehouseId) return;
+    let cancelled = false;
+    setCodeLoading(true);
+    void fetchDistinctPartyCodesForWarehouse(supabase, {
+      warehouseId,
+      q: debouncedCodeSearch,
+      limit: 120,
+    })
+      .then((rows) => {
+        if (!cancelled) setCodeRows(rows);
+      })
+      .finally(() => {
+        if (!cancelled) setCodeLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [codePickerOpen, debouncedCodeSearch, supabase, warehouseId]);
+
+  useEffect(() => {
+    if (!codePickerOpen) setCodeSearch("");
+  }, [codePickerOpen]);
+
+  const debouncedCode = useDebouncedValue(customerCode.trim(), 320);
+  const debouncedPhone = useDebouncedValue(phone.trim(), 320);
+
+  useEffect(() => {
+    let cancelled = false;
+    async function run(): Promise<void> {
+      if (!warehouseId || !debouncedCode || !debouncedPhone || phoneLocked) {
+        setPhoneConflictHint(null);
+        return;
+      }
+      try {
+        const exists = await warehouseHasActiveCustomerCode(supabase, {
+          warehouseId,
+          customerCode: debouncedCode,
+        });
+        if (cancelled) return;
+        if (exists) {
+          setPhoneConflictHint(null);
+          return;
+        }
+        const other = await findActiveCustomerCodeOwningPrimaryPhone(supabase, {
+          warehouseId,
+          phoneRaw: debouncedPhone,
+          excludeCustomerCode: debouncedCode,
+        });
+        if (cancelled) return;
+        if (other) {
+          setPhoneConflictHint(`Phone number is already set up for ${other}.`);
+        } else {
+          setPhoneConflictHint(null);
+        }
+      } catch {
+        if (!cancelled) setPhoneConflictHint(null);
+      }
+    }
+    void run();
+    return () => {
+      cancelled = true;
+    };
+  }, [debouncedCode, debouncedPhone, phoneLocked, supabase, warehouseId]);
+
   const dirty = useMemo(() => {
     if (customerName.trim() !== initialRef.current.customerName) return true;
     if (customerCode.trim() !== initialRef.current.customerCode) return true;
     if (phone.trim() !== initialRef.current.phone) return true;
     if (alternateMobile.trim() !== initialRef.current.alternateMobile) return true;
     if (address.trim() !== initialRef.current.address) return true;
+    if (phoneLocked !== initialRef.current.phoneLocked) return true;
     return false;
-  }, [customerName, customerCode, phone, alternateMobile, address]);
+  }, [customerName, customerCode, phone, alternateMobile, address, phoneLocked]);
+
+  function handleCodePick(row: PartyCodePickRow) {
+    setCustomerCode(row.customer_code);
+    setCodePickerOpen(false);
+    void Haptics.selectionAsync();
+    if (row.phoneInconsistent) {
+      setErrorOpen({
+        title: "Cannot use this code",
+        message: "This party code has conflicting phone numbers on file. Fix the data first.",
+      });
+      setPhone("");
+      setPhoneLocked(false);
+      return;
+    }
+    if (row.phone) {
+      setPhone(row.phone);
+      setPhoneLocked(true);
+    } else {
+      setPhone("");
+      setPhoneLocked(false);
+    }
+  }
 
   async function handleSubmit() {
     if (!warehouseId) return;
@@ -96,7 +209,7 @@ export function MobileAddPartyScreen({ warehouseId: warehouseIdProp, onClose, on
   const labelStyle = styles.label;
   const inputStyle = styles.input;
 
-  const bottomPad = Math.max(insets.bottom, 12);
+  const bottomPadByLayout = Math.max(insets.bottom, 12);
 
   if (!warehouseId) {
     return (
@@ -132,8 +245,44 @@ export function MobileAddPartyScreen({ warehouseId: warehouseIdProp, onClose, on
       <ScrollView
         keyboardShouldPersistTaps="handled"
         style={{ flex: 1 }}
-        contentContainerStyle={[styles.scrollContent, { paddingBottom: bottomPad + 96 }]}
+        contentContainerStyle={[styles.scrollContent, { paddingBottom: bottomPadByLayout + 96 }]}
       >
+        <Text style={labelStyle}>Party code</Text>
+        <View style={styles.codeRow}>
+          <TextInput
+            value={customerCode}
+            onChangeText={(t) => {
+              setCustomerCode(t);
+              setPhoneLocked(false);
+            }}
+            style={[inputStyle, styles.codeInputFlex]}
+            placeholder="Short code"
+            placeholderTextColor={tokens.textPlaceholder}
+            autoCapitalize="characters"
+          />
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Search existing party codes"
+            onPress={() => {
+              void Haptics.selectionAsync();
+              setCodePickerOpen(true);
+            }}
+            style={styles.codeChevronBtn}
+          >
+            <ChevronDown size={22} color={tokens.textTertiary} strokeWidth={STROKE} />
+          </Pressable>
+        </View>
+
+        <MobilePartyPhoneField
+          label="Phone number"
+          value={phone}
+          onChange={setPhone}
+          disabled={phoneLocked}
+        />
+        {phoneConflictHint ? (
+          <Text style={styles.phoneConflictHint}>{phoneConflictHint}</Text>
+        ) : null}
+
         <Text style={labelStyle}>Party name</Text>
         <TextInput
           value={customerName}
@@ -144,35 +293,7 @@ export function MobileAddPartyScreen({ warehouseId: warehouseIdProp, onClose, on
           autoCapitalize="words"
         />
 
-        <Text style={labelStyle}>Party code</Text>
-        <TextInput
-          value={customerCode}
-          onChangeText={setCustomerCode}
-          style={inputStyle}
-          placeholder="Short code"
-          placeholderTextColor={tokens.textPlaceholder}
-          autoCapitalize="characters"
-        />
-
-        <Text style={labelStyle}>Phone (optional)</Text>
-        <TextInput
-          value={phone}
-          onChangeText={setPhone}
-          style={inputStyle}
-          placeholder="10-digit mobile"
-          placeholderTextColor={tokens.textPlaceholder}
-          keyboardType="phone-pad"
-        />
-
-        <Text style={labelStyle}>Alternate mobile (optional)</Text>
-        <TextInput
-          value={alternateMobile}
-          onChangeText={setAlternateMobile}
-          style={inputStyle}
-          placeholder="Second number"
-          placeholderTextColor={tokens.textPlaceholder}
-          keyboardType="phone-pad"
-        />
+        <MobilePartyPhoneField label="Alternate number" value={alternateMobile} onChange={setAlternateMobile} />
 
         <Text style={labelStyle}>Address (optional)</Text>
         <TextInput
@@ -185,7 +306,7 @@ export function MobileAddPartyScreen({ warehouseId: warehouseIdProp, onClose, on
         />
       </ScrollView>
 
-      <View style={[styles.footer, { paddingBottom: bottomPad }]}>
+      <View style={[styles.footer, { paddingBottom: bottomPadByLayout }]}>
         <Pressable
           accessibilityRole="button"
           onPress={() => {
@@ -210,6 +331,67 @@ export function MobileAddPartyScreen({ warehouseId: warehouseIdProp, onClose, on
           <Text style={styles.footerBtnPrimaryText}>{submitting ? "Saving…" : "Save party"}</Text>
         </Pressable>
       </View>
+
+      <Modal
+        visible={codePickerOpen}
+        animationType="slide"
+        presentationStyle="fullScreen"
+        onRequestClose={() => setCodePickerOpen(false)}
+      >
+        <View style={[styles.modalRoot, { paddingTop: insets.top }]}>
+          <View style={styles.modalHeader}>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Close"
+              onPress={() => setCodePickerOpen(false)}
+              style={styles.modalHeaderBtn}
+            >
+              <X size={22} color={tokens.textPrimary} strokeWidth={STROKE} />
+            </Pressable>
+            <Text style={styles.modalTitle}>Choose party code</Text>
+            <View style={styles.modalHeaderBtn} />
+          </View>
+          <View style={styles.modalSearchWrap}>
+            <Search size={18} color={tokens.textTertiary} strokeWidth={STROKE} />
+            <TextInput
+              value={codeSearch}
+              onChangeText={setCodeSearch}
+              placeholder="Search code…"
+              placeholderTextColor={tokens.textPlaceholder}
+              style={styles.modalSearchInput}
+              autoFocus
+            />
+          </View>
+          {codeLoading && codeRows.length === 0 ? (
+            <Text style={styles.modalEmpty}>Loading…</Text>
+          ) : null}
+          {!codeLoading && codeRows.length === 0 ? (
+            <Text style={styles.modalEmpty}>No codes found. Type a new code on the form.</Text>
+          ) : null}
+          <FlatList
+            data={codeRows}
+            keyExtractor={(item) => item.customer_code}
+            keyboardShouldPersistTaps="handled"
+            style={{ flex: 1 }}
+            contentContainerStyle={{ paddingBottom: insets.bottom + 24 }}
+            renderItem={({ item }) => (
+              <Pressable
+                onPress={() => handleCodePick(item)}
+                style={styles.codeListRow}
+              >
+                <Text style={styles.codeListCode}>{item.customer_code}</Text>
+                {item.phoneInconsistent ? (
+                  <Text style={styles.codeListWarn}>Conflicting numbers on file</Text>
+                ) : item.phone ? (
+                  <Text style={styles.codeListMeta}>{item.phone}</Text>
+                ) : (
+                  <Text style={styles.codeListMetaMuted}>No primary phone on file</Text>
+                )}
+              </Pressable>
+            )}
+          />
+        </View>
+      </Modal>
 
       <BrandedAlertModal
         visible={discardOpen}
@@ -275,6 +457,29 @@ const styles = StyleSheet.create({
     color: tokens.textPrimary,
     backgroundColor: tokens.bgSubtle,
   },
+  codeRow: {
+    marginTop: 6,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  codeInputFlex: { flex: 1, marginTop: 0 },
+  codeChevronBtn: {
+    minWidth: 48,
+    minHeight: 48,
+    borderWidth: 1,
+    borderColor: tokens.borderDefault,
+    borderRadius: tokens.radiusMd,
+    backgroundColor: tokens.bgSubtle,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  phoneConflictHint: {
+    marginTop: 6,
+    fontSize: 12,
+    color: tokens.outward,
+    fontFamily: "NotoSans-Regular",
+  },
   footer: {
     flexDirection: "row",
     gap: 10,
@@ -290,4 +495,65 @@ const styles = StyleSheet.create({
   footerBtnPrimary: { backgroundColor: tokens.brandUi },
   footerBtnPrimaryText: { fontFamily: "NotoSans-SemiBold", fontSize: 16, color: tokens.textOnBrand },
   footerBtnDisabled: { opacity: 0.5 },
+  modalRoot: { flex: 1, backgroundColor: tokens.bgPage },
+  modalHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    borderBottomWidth: 1,
+    borderBottomColor: tokens.borderDefault,
+    backgroundColor: tokens.bgSurface,
+    paddingHorizontal: 4,
+  },
+  modalHeaderBtn: { width: 48, height: 48, alignItems: "center", justifyContent: "center" },
+  modalTitle: {
+    flex: 1,
+    fontFamily: "NotoSerif-SemiBold",
+    fontSize: 18,
+    color: tokens.textPrimary,
+    textAlign: "center",
+  },
+  modalSearchWrap: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    marginHorizontal: tokens.sp4,
+    marginTop: tokens.sp3,
+    marginBottom: 8,
+    paddingHorizontal: 12,
+    minHeight: 48,
+    borderWidth: 1,
+    borderColor: tokens.borderDefault,
+    borderRadius: tokens.radiusMd,
+    backgroundColor: tokens.bgSubtle,
+  },
+  modalSearchInput: {
+    flex: 1,
+    minHeight: 44,
+    fontSize: 16,
+    fontFamily: "NotoSans-Regular",
+    color: tokens.textPrimary,
+  },
+  modalEmpty: {
+    paddingHorizontal: tokens.sp4,
+    paddingVertical: 16,
+    fontSize: 14,
+    color: tokens.textTertiary,
+    fontFamily: "NotoSans-Regular",
+  },
+  codeListRow: {
+    paddingHorizontal: tokens.sp4,
+    paddingVertical: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: tokens.borderDefault,
+    minHeight: 56,
+  },
+  codeListCode: {
+    fontFamily: "NotoSans-Regular",
+    fontSize: 15,
+    fontWeight: "600",
+    color: tokens.textPrimary,
+  },
+  codeListMeta: { marginTop: 4, fontSize: 13, color: tokens.textSecondary, fontFamily: "NotoSans-Regular" },
+  codeListMetaMuted: { marginTop: 4, fontSize: 13, color: tokens.textTertiary, fontFamily: "NotoSans-Regular" },
+  codeListWarn: { marginTop: 4, fontSize: 13, color: tokens.outward, fontFamily: "NotoSans-Regular" },
 });

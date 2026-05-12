@@ -29,6 +29,7 @@ interface StockActivityTableProps {
   onSort: (column: StockSortColumn) => void;
   onPageChange: (page: number) => void;
   onPageSizeChange: (size: number) => void;
+  onRowClick?: (row: StockMovementRow) => void;
 }
 
 function SortGlyph({ active, dir }: { active: boolean; dir: "asc" | "desc" }) {
@@ -84,6 +85,7 @@ export function StockActivityTable({
   onSort,
   onPageChange,
   onPageSizeChange,
+  onRowClick,
 }: StockActivityTableProps) {
   const totalPages = Math.max(1, Math.ceil(totalCount / pageSize));
   const start = totalCount === 0 ? 0 : (page - 1) * pageSize + 1;
@@ -122,7 +124,23 @@ export function StockActivityTable({
             {rows.map((row) => (
               <tr
                 key={`${row.transaction_type}-${row.event_id}`}
-                className="border-b border-[var(--border-default)] last:border-b-0"
+                className={cn(
+                  "border-b border-[var(--border-default)] last:border-b-0",
+                  onRowClick ? "cursor-pointer hover:bg-[var(--bg-subtle)]" : null
+                )}
+                tabIndex={onRowClick ? 0 : undefined}
+                role={onRowClick ? "button" : undefined}
+                onClick={onRowClick ? () => onRowClick(row) : undefined}
+                onKeyDown={
+                  onRowClick ?
+                    (e) => {
+                      if (e.key === "Enter" || e.key === " ") {
+                        e.preventDefault();
+                        onRowClick(row);
+                      }
+                    }
+                  : undefined
+                }
               >
                 <td className={dataTableTdBodyMuted}>{formatActivityDate(row.tx_date)}</td>
                 <td className={cn(dataTableTdMono, "max-w-[160px] truncate text-center")}>{row.lot_number}</td>

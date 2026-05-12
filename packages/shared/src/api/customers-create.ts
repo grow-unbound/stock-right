@@ -1,6 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
-import { assertIndiaMobileOptional } from "../utils/phone-in";
+import { assertIndiaMobileOptional, normalizeIndiaPhoneDigits } from "../utils/phone-in";
 
 export interface InsertCustomerParams {
   warehouseId: string;
@@ -9,6 +9,21 @@ export interface InsertCustomerParams {
   phone: string;
   alternateMobile: string;
   address: string;
+}
+
+/** Persist 10-digit India mobile; null if empty or not normalizable to 10 digits. */
+function primaryPhoneForStorage(raw: string): string | null {
+  const t = raw.trim();
+  if (t === "") return null;
+  const d = normalizeIndiaPhoneDigits(t);
+  return d.length === 10 && /^[6-9]\d{9}$/.test(d) ? d : null;
+}
+
+function alternatePhoneForStorage(raw: string): string | null {
+  const t = raw.trim();
+  if (t === "") return null;
+  const d = normalizeIndiaPhoneDigits(t);
+  return d.length === 10 && /^[6-9]\d{9}$/.test(d) ? d : null;
 }
 
 export async function insertCustomer(
@@ -24,8 +39,8 @@ export async function insertCustomer(
   assertIndiaMobileOptional(params.phone, "Phone number");
   assertIndiaMobileOptional(params.alternateMobile, "Alternate mobile");
 
-  const phone = params.phone.trim() === "" ? null : params.phone.trim();
-  const mobile = params.alternateMobile.trim() === "" ? null : params.alternateMobile.trim();
+  const phone = primaryPhoneForStorage(params.phone);
+  const mobile = alternatePhoneForStorage(params.alternateMobile);
 
   const { data: wh, error: whErr } = await client
     .from("warehouses")
@@ -42,11 +57,67 @@ export async function insertCustomer(
     .eq("warehouse_id", params.warehouseId)
     .eq("customer_code", customerCode)
     .eq("customer_name", customerName)
+    .eq("is_active", true)
     .maybeSingle();
 
   if (dupErr) throw dupErr;
   if (dupComposite) {
     throw new Error("A customer with this code and name already exists.");
+  }
+
+  if (phone) {
+    const norm = normalizeIndiaPhoneDigits(phone);
+    const { data: peers, error: peersErr } = await client
+      .from("customers")
+      .select("phone")
+      .eq("warehouse_id", params.warehouseId)
+      .eq("customer_code", customerCode);
+
+    if (peersErr) throw peersErr;
+    const peerNorms = new Set<string>();
+    for (const p of peers ?? []) {
+      const praw = p.phone?.trim() ?? "";
+      if (praw === "") continue;
+      peerNorms.add(normalizeIndiaPhoneDigits(praw));
+    }
+    if (peerNorms.size > 1) {
+      throw new Error(
+        "This party code has different phone numbers on file. Fix existing data before adding another name."
+      );
+    }
+    if (peerNorms.size === 1) {
+      const established = [...peerNorms][0];
+      if (norm !== established) {
+        throw new Error("This phone does not match the number already used for this party code.");
+      }
+    }
+
+    const { data: otherRows, error: otherErr } = await client
+      .from("customers")
+      .select("customer_code, phone")
+      .eq("warehouse_id", params.warehouseId)
+      .neq("customer_code", customerCode);
+
+    if (otherErr) throw otherErr;
+    for (const row of otherRows ?? []) {
+      const prow = row.phone?.trim() ?? "";
+      if (prow === "") continue;
+      if (normalizeIndiaPhoneDigits(prow) === norm) {
+        throw new Error(`Phone number is already set up for ${row.customer_code}.`);
+      }
+    }
+  } else {
+    const { data: peersForPhone, error: pfpErr } = await client
+      .from("customers")
+      .select("phone")
+      .eq("warehouse_id", params.warehouseId)
+      .eq("customer_code", customerCode);
+
+    if (pfpErr) throw pfpErr;
+    const anyPeerHasPhone = (peersForPhone ?? []).some((p) => (p.phone?.trim() ?? "") !== "");
+    if (anyPeerHasPhone) {
+      throw new Error("This party code already has a phone on file. Enter the same number.");
+    }
   }
 
   const { data, error } = await client

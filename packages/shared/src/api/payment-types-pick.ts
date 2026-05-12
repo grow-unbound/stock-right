@@ -19,18 +19,29 @@ async function tenantIdForWarehouse(client: SupabaseClient, warehouseId: string)
 
 export async function searchPaymentTypesQuickPick(
   client: SupabaseClient,
-  params: { warehouseId: string; q: string; limit: number; offset: number }
+  params: {
+    warehouseId: string;
+    q: string;
+    limit: number;
+    offset: number;
+    excludeCategories?: readonly string[];
+  }
 ): Promise<{ rows: PaymentTypePickRow[]; count: number | null }> {
   const tenantId = await tenantIdForWarehouse(client, params.warehouseId);
   const limit = Math.min(Math.max(params.limit, 1), 100);
   const offset = Math.max(params.offset, 0);
   const needle = params.q.trim();
+  const excluded = [...new Set((params.excludeCategories ?? []).filter((c) => c.length > 0))];
 
   let qb = client
     .from("payment_types")
     .select("id, name, category", { count: "exact" })
     .eq("tenant_id", tenantId)
     .eq("is_active", true);
+
+  for (const cat of excluded) {
+    qb = qb.neq("category", cat);
+  }
 
   if (needle.length > 0) {
     const e = escapeIlike(needle);

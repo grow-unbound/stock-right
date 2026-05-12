@@ -6,3 +6,4 @@ export * from "./fetch";
 export * from "./cache";
 export * from "./merge";
 export * from "./synthetic-lodgement-row";
+export * from "./synthetic-delivery-row";

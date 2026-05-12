@@ -18,6 +18,16 @@ export function formatIndianCurrency(amount: number): string {
   return `₹${formatted}`;
 }
 
+/** Indian rupees with two fractional digits (e.g. 238.6 → ₹238.60). */
+export function formatIndianCurrency2(amount: number): string {
+  const absAmount = Math.abs(amount);
+  const formatted = absAmount.toLocaleString("en-IN", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
+  return `₹${formatted}`;
+}
+
 // Indian number words: 250000 → "2.5 Lakh", 10000000 → "1 Crore"
 export function formatIndianNumber(n: number): string {
   if (n >= 10_000_000) return `${(n / 10_000_000).toFixed(1)} Crore`;

@@ -1,7 +1,7 @@
 "use client";
 
 import { X } from "lucide-react";
-import { useEffect, type ReactNode } from "react";
+import { useCallback, useEffect, type ReactNode } from "react";
 import { FORM_DRAWER_PANEL_WIDTH_CLASS } from "./form-drawer-classes";
 
 interface FormSidebarProps {
@@ -9,9 +9,18 @@ interface FormSidebarProps {
   title: string;
   onClose: () => void;
   children: ReactNode;
+  /** When set, a host node is rendered after the title for portaling UI (e.g. lot number chip). */
+  onTitleAccessoryHostReady?: (el: HTMLElement | null) => void;
 }
 
-export function FormSidebar({ open, title, onClose, children }: FormSidebarProps) {
+export function FormSidebar({ open, title, onClose, children, onTitleAccessoryHostReady }: FormSidebarProps) {
+  const titleAccessoryRef = useCallback(
+    (node: HTMLSpanElement | null) => {
+      onTitleAccessoryHostReady?.(node);
+    },
+    [onTitleAccessoryHostReady]
+  );
+
   useEffect(() => {
     if (!open) return;
     function onKey(e: KeyboardEvent) {
@@ -40,16 +49,27 @@ export function FormSidebar({ open, title, onClose, children }: FormSidebarProps
         aria-modal="true"
         aria-labelledby="form-sidebar-title"
       >
-        <div className="flex shrink-0 items-center justify-between border-b border-[var(--border-default)] px-4 py-3">
-          <h2
-            id="form-sidebar-title"
-            className="font-[family-name:var(--font-display)] text-[18px] font-semibold text-[var(--text-primary)]"
-          >
-            {title}
-          </h2>
+        <div className="flex shrink-0 items-center justify-between gap-2 border-b border-[var(--border-default)] px-4 py-3">
+          {onTitleAccessoryHostReady ?
+            <div className="flex min-w-0 flex-1 items-center gap-2">
+              <h2
+                id="form-sidebar-title"
+                className="min-w-0 truncate font-[family-name:var(--font-display)] text-[18px] font-semibold text-[var(--text-primary)]"
+              >
+                {title}
+              </h2>
+              <span ref={titleAccessoryRef} className="inline-flex shrink-0" />
+            </div>
+          : <h2
+              id="form-sidebar-title"
+              className="font-[family-name:var(--font-display)] text-[18px] font-semibold text-[var(--text-primary)]"
+            >
+              {title}
+            </h2>
+          }
           <button
             type="button"
-            className="flex min-h-[48px] min-w-[48px] items-center justify-center rounded-[var(--radius-md)] text-[var(--text-primary)] focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-[var(--focus-ring)]"
+            className="flex min-h-[48px] min-w-[48px] shrink-0 items-center justify-center rounded-[var(--radius-md)] text-[var(--text-primary)] focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-[var(--focus-ring)]"
             aria-label="Close"
             onClick={onClose}
           >

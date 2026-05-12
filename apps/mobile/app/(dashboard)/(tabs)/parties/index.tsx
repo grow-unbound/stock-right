@@ -32,6 +32,7 @@ import {
 } from "@stockright/shared/parties-tab";
 import { PARTIES_REFRESH_EVENT } from "@stockright/shared/api";
 import { useDebouncedValue } from "@stockright/shared/hooks";
+import { shouldPrefetchListScroll } from "@stockright/shared/list-scroll-prefetch";
 import { ACTIVE_WAREHOUSE_ID_KEY, formatIndianCurrency } from "@stockright/shared/utils";
 import { tokens } from "@stockright/shared/tokens";
 import { TabScreenHeader } from "@/components/landing/TabScreenHeader";
@@ -100,6 +101,8 @@ export default function PartiesScreen() {
   const [baselineRows, setBaselineRows] = useState<PartiesTabListRow[]>([]);
   const [mobilePage, setMobilePage] = useState(1);
   const [mobileLoadingMore, setMobileLoadingMore] = useState(false);
+  const mobileLoadingMoreRef = useRef(false);
+  mobileLoadingMoreRef.current = mobileLoadingMore;
   const [remoteSearchPending, setRemoteSearchPending] = useState(false);
 
   const [totalCount, setTotalCount] = useState(0);
@@ -292,13 +295,21 @@ export default function PartiesScreen() {
     setMobilePage((p) => p + 1);
   };
 
-  const onScroll = useCallback((e: NativeSyntheticEvent<NativeScrollEvent>) => {
-    const { layoutMeasurement, contentOffset, contentSize } = e.nativeEvent;
-    const pad = 160;
-    if (layoutMeasurement.height + contentOffset.y >= contentSize.height - pad) {
-      endFetchRef.current();
-    }
-  }, []);
+  const onScroll = useCallback(
+    (e: NativeSyntheticEvent<NativeScrollEvent>) => {
+      const { layoutMeasurement, contentOffset, contentSize } = e.nativeEvent;
+      const loaded = localDataRef.current.length;
+      if (
+        shouldPrefetchListScroll(contentOffset.y, layoutMeasurement.height, contentSize.height, {
+          hasMore: loaded > 0 && totalCount > 0 && loaded < totalCount,
+          loading: mobileLoadingMoreRef.current,
+        })
+      ) {
+        endFetchRef.current();
+      }
+    },
+    [totalCount]
+  );
 
   const searchAccessory =
     searchInput.trim() !== "" && (remoteSearchPending || searchInput.trim() !== debouncedSearch) ? (
