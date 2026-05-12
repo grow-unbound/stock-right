@@ -77,7 +77,7 @@ export default function ProfileSettingsPage() {
         </h1>
       </header>
 
-      <div className="flex flex-1 flex-col gap-4 overflow-y-auto px-0 pb-10 pt-2 sm:pt-4">
+      <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto px-0 pb-10 pt-2 sm:pt-4">
         <section className="flex items-center gap-3 rounded-[var(--radius-xl)] border border-[var(--border-default)] bg-[var(--bg-surface)] p-3.5">
           <span className="flex size-12 shrink-0 items-center justify-center rounded-full border border-[var(--border-default)] bg-[var(--brand-subtle)] font-[family-name:var(--font-display)] text-[18px] font-semibold text-[var(--brand-text)]">
             {context?.initials ?? "?"}

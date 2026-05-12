@@ -76,6 +76,13 @@ function roundMoney(n: number): number {
   return Math.round(n * 100) / 100;
 }
 
+export async function previewNextLotSequenceNumber(
+  client: SupabaseClient,
+  warehouseId: string
+): Promise<number> {
+  return computeNextLotX(client, warehouseId);
+}
+
 export async function previewNextLotNumber(
   client: SupabaseClient,
   warehouseId: string,

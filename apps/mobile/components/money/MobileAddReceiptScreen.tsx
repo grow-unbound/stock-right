@@ -9,34 +9,29 @@ import {
   Pressable,
   ScrollView,
   StyleSheet,
-  Switch,
   Text,
   TextInput,
   View,
 } from "react-native";
 import * as Haptics from "expo-haptics";
-import { ChevronLeft, Check, ChevronDown, ChevronUp, Search, X } from "lucide-react-native";
+import { ChevronLeft, Check, ChevronDown, Search, X } from "lucide-react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import {
   createReceiptWithAllocations,
-  fetchCustomerOutstandingTotals,
   fetchOutstandingAllocatable,
   searchCustomersQuickPick,
-  suggestNextReceiptReference,
   type OutstandingAllocatableRow,
   type PartiesTabRow,
 } from "@stockright/shared/api";
 import { useDebouncedValue } from "@stockright/shared/hooks";
 import {
-  buildFifoAllocations,
-  formatRupeeDigitsForInput,
-  isPartialAllocation,
+  buildReceiptAllocationsLotView,
   parseIndianRupeeInput,
   PAYMENT_METHOD_VALUES,
   paymentMethodLabel,
   type PaymentMethodValue,
 } from "@stockright/shared/receipt";
-import { formatIndianCurrency, partyInitials, ACTIVE_WAREHOUSE_ID_KEY } from "@stockright/shared/utils";
+import { formatDate, formatIndianCurrency, partyInitials, ACTIVE_WAREHOUSE_ID_KEY } from "@stockright/shared/utils";
 import { tokens } from "@stockright/shared/tokens";
 import { getSupabaseClient } from "@/lib/supabase";
 import { storage } from "@/lib/storage";
@@ -55,34 +50,9 @@ function todayIso(): string {
   return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
 }
 
-interface DraftRow {
-  lineKind: "rent" | "charge";
-  lineId: string;
-  remainingAmount: number;
-  allocated: number;
-  enabled: boolean;
-  source: OutstandingAllocatableRow;
-}
-
-function buildDraft(rows: OutstandingAllocatableRow[], receiptAmount: number): DraftRow[] {
-  const sources = rows.map((r) => ({
-    lineKind: r.line_kind,
-    lineId: r.line_id,
-    remainingAmount: r.remaining_amount,
-  }));
-  const fifo = buildFifoAllocations(sources, receiptAmount);
-  const map = new Map(fifo.map((f) => [`${f.lineKind}:${f.lineId}`, f.amount]));
-  return rows.map((r) => {
-    const amt = map.get(`${r.line_kind}:${r.line_id}`) ?? 0;
-    return {
-      lineKind: r.line_kind,
-      lineId: r.line_id,
-      remainingAmount: r.remaining_amount,
-      allocated: amt,
-      enabled: amt > 0,
-      source: r,
-    };
-  });
+function lotDateLabel(iso: string): string {
+  if (!iso || iso.trim() === "") return "—";
+  return formatDate(iso);
 }
 
 interface MobileAddReceiptScreenProps {
@@ -182,15 +152,11 @@ export function MobileAddReceiptScreen({ warehouseId: warehouseIdProp, onClose, 
   const [amountStr, setAmountStr] = useState("");
   const [receiptDate, setReceiptDate] = useState(todayIso());
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethodValue>("UPI");
-  const [reference, setReference] = useState("");
-  const referenceManualRef = useRef(false);
   const [notes, setNotes] = useState("");
   const [allocOpen, setAllocOpen] = useState(false);
   const [outstanding, setOutstanding] = useState<OutstandingAllocatableRow[]>([]);
   const [loadingLines, setLoadingLines] = useState(false);
   const [outstandingError, setOutstandingError] = useState<string | null>(null);
-  const [totals, setTotals] = useState<{ charges: number; rents: number } | null>(null);
-  const [draft, setDraft] = useState<DraftRow[]>([]);
   const [submitting, setSubmitting] = useState(false);
 
   type ReceiptDialog =
@@ -200,24 +166,16 @@ export function MobileAddReceiptScreen({ warehouseId: warehouseIdProp, onClose, 
     | { kind: "error"; title: string; message: string };
   const [dialog, setDialog] = useState<ReceiptDialog>({ kind: "none" });
 
-  useEffect(() => {
-    if (!warehouseId) return;
-    let cancelled = false;
-    void suggestNextReceiptReference(supabase, warehouseId).then((s) => {
-      if (cancelled || referenceManualRef.current) return;
-      setReference(s);
-    });
-    return () => {
-      cancelled = true;
-    };
-  }, [warehouseId, supabase]);
+  const receiptAmount = parseIndianRupeeInput(amountStr) ?? 0;
+  const allocLotView = useMemo(
+    () => buildReceiptAllocationsLotView(outstanding, receiptAmount),
+    [outstanding, receiptAmount]
+  );
 
   useEffect(() => {
     if (!allocOpen || !customer?.customer_id || !warehouseId) {
       setOutstanding([]);
-      setTotals(null);
       setOutstandingError(null);
-      setDraft([]);
       setLoadingLines(false);
       return;
     }
@@ -226,16 +184,11 @@ export function MobileAddReceiptScreen({ warehouseId: warehouseIdProp, onClose, 
       setLoadingLines(true);
       setOutstandingError(null);
       try {
-        const [t, lines] = await Promise.all([
-          fetchCustomerOutstandingTotals(supabase, warehouseId, customer.customer_id),
-          fetchOutstandingAllocatable(supabase, warehouseId, customer.customer_id),
-        ]);
+        const lines = await fetchOutstandingAllocatable(supabase, warehouseId, customer.customer_id);
         if (cancelled) return;
-        setTotals(t ? { charges: t.outstanding_charges, rents: t.outstanding_rents } : { charges: 0, rents: 0 });
         setOutstanding(lines);
       } catch {
         if (!cancelled) {
-          setTotals(null);
           setOutstanding([]);
           setOutstandingError("Could not load outstanding details. You can still save the receipt.");
         }
@@ -248,21 +201,11 @@ export function MobileAddReceiptScreen({ warehouseId: warehouseIdProp, onClose, 
     };
   }, [allocOpen, customer, warehouseId, supabase]);
 
-  useEffect(() => {
-    const amt = parseIndianRupeeInput(amountStr);
-    if (!amt || amt <= 0 || outstanding.length === 0) {
-      setDraft([]);
-      return;
-    }
-    setDraft(buildDraft(outstanding, amt));
-  }, [outstanding, amountStr]);
-
   const dirty =
     customer !== null ||
     amountStr.trim() !== "" ||
     receiptDate !== todayIso() ||
     paymentMethod !== "UPI" ||
-    reference.trim() !== "" ||
     notes.trim() !== "" ||
     allocOpen;
 
@@ -297,16 +240,17 @@ export function MobileAddReceiptScreen({ warehouseId: warehouseIdProp, onClose, 
       return;
     }
 
+    const view = buildReceiptAllocationsLotView(outstanding, amt);
     const lines =
-      allocOpen && draft.length > 0
-        ? draft
-            .filter((d) => d.enabled && d.allocated > 0)
-            .map((d) =>
-              d.lineKind === "rent"
-                ? { rent_accrual_id: d.lineId, amount: d.allocated }
-                : { charge_id: d.lineId, amount: d.allocated }
-            )
-        : [];
+      allocOpen && view.lineStates.some((s) => s.allocated > 0.005) ?
+        view.lineStates
+          .filter((s) => s.allocated > 0.005)
+          .map((s) =>
+            s.row.line_kind === "rent" ?
+              { rent_accrual_id: s.row.line_id, amount: s.allocated }
+            : { charge_id: s.row.line_id, amount: s.allocated }
+          )
+      : [];
 
     const sumAlloc = lines.reduce((s, l) => s + l.amount, 0);
     if (sumAlloc > amt + 0.01) {
@@ -326,7 +270,6 @@ export function MobileAddReceiptScreen({ warehouseId: warehouseIdProp, onClose, 
         receiptDate,
         totalAmount: amt,
         paymentMethod,
-        referenceNumber: reference.trim() === "" ? null : reference.trim(),
         notes: notes.trim() === "" ? null : notes.trim(),
         allocationLines: lines,
       });
@@ -348,6 +291,12 @@ export function MobileAddReceiptScreen({ warehouseId: warehouseIdProp, onClose, 
       setSubmitting(false);
     }
   }
+
+  const co = allocLotView.currentOutstanding;
+  const netSince =
+    allocLotView.netOutstanding.oldestLodgementDate ?
+      ` · since ${formatDate(allocLotView.netOutstanding.oldestLodgementDate)}`
+    : "";
 
   if (!warehouseId) {
     return (
@@ -402,44 +351,39 @@ export function MobileAddReceiptScreen({ warehouseId: warehouseIdProp, onClose, 
           ))}
         </View>
 
-        <Text style={styles.label}>Reference (optional)</Text>
-        <TextInput
-          value={reference}
-          onChangeText={(t) => {
-            referenceManualRef.current = true;
-            setReference(t);
-          }}
-          style={styles.input}
-          placeholder="Reference number"
-          placeholderTextColor={tokens.textPlaceholder}
-        />
-
         <Text style={styles.label}>Notes (optional)</Text>
         <TextInput
           value={notes}
           onChangeText={setNotes}
-          style={[styles.input, styles.notes]}
-          placeholder="Anything your team should remember"
+          style={styles.input}
+          placeholder="Optional note"
           placeholderTextColor={tokens.textPlaceholder}
-          multiline
-          textAlignVertical="top"
         />
 
-        <View style={styles.allocSectionTop}>
-          <Pressable style={styles.allocToggle} onPress={() => setAllocOpen((v) => !v)}>
-            <View style={{ flex: 1 }}>
-              <Text style={styles.allocSectionKicker}>Receipt allocations</Text>
-              <Text style={styles.allocToggleTitle}>
+        <View style={styles.allocCard}>
+          <Pressable
+            style={styles.allocHeaderBtn}
+            onPress={() => {
+              void Haptics.selectionAsync();
+              setAllocOpen((v) => !v);
+            }}
+          >
+            <View style={{ flex: 1, minWidth: 0 }}>
+              <Text style={styles.allocCardKicker}>Receipt allocations</Text>
+              <Text style={styles.allocCardTitle}>
                 Apply to charges & rent <Text style={styles.allocOptional}>(optional)</Text>
               </Text>
             </View>
-            {allocOpen ?
-              <ChevronUp size={20} color={tokens.textTertiary} strokeWidth={STROKE} />
-            : <ChevronDown size={20} color={tokens.textTertiary} strokeWidth={STROKE} />}
+            <ChevronDown
+              size={20}
+              color={tokens.textTertiary}
+              strokeWidth={STROKE}
+              style={allocOpen ? { transform: [{ rotate: "180deg" }] } : undefined}
+            />
           </Pressable>
 
           {allocOpen ?
-            <View style={styles.allocBody}>
+            <View style={styles.allocInner}>
               {!customer ?
                 <Text style={styles.muted}>Choose a party first.</Text>
               : outstandingError ?
@@ -450,79 +394,116 @@ export function MobileAddReceiptScreen({ warehouseId: warehouseIdProp, onClose, 
                 <Text style={styles.muted}>
                   No unpaid charges or rents on file for this party. This receipt will be recorded as advance credit.
                 </Text>
-              : <>
-                  {totals ?
-                    <View style={styles.totalsRow}>
-                      <View style={styles.totalCard}>
-                        <Text style={styles.totalLbl}>Charges due</Text>
-                        <Text style={styles.totalVal}>{formatIndianCurrency(totals.charges)}</Text>
-                      </View>
-                      <View style={styles.totalCard}>
-                        <Text style={styles.totalLbl}>Rents due</Text>
-                        <Text style={styles.totalVal}>{formatIndianCurrency(totals.rents)}</Text>
-                      </View>
+              : (
+                <>
+                  <View style={styles.currentOutstandingBox}>
+                    <View style={styles.dueLine}>
+                      <Text style={styles.dueLineLbl}>Charges due</Text>
+                      <Text style={styles.dueLineVal}>{formatIndianCurrency(co.charges)}</Text>
                     </View>
+                    <View style={styles.dueLine}>
+                      <Text style={styles.dueLineLbl}>Rents due</Text>
+                      <Text style={styles.dueLineVal}>{formatIndianCurrency(co.rents)}</Text>
+                    </View>
+                    <View style={[styles.dueLine, styles.dueLineTotalRow]}>
+                      <Text style={styles.dueLineTotalLbl}>Current outstanding</Text>
+                      <Text style={styles.dueLineTotalVal}>{formatIndianCurrency(co.total)}</Text>
+                    </View>
+                  </View>
+
+                  {receiptAmount <= 0 ?
+                    <Text style={styles.hintMuted}>
+                      Oldest charges and rents are settled first (FIFO). Enter an amount to see how this receipt applies.
+                    </Text>
                   : null}
-                  {draft.map((row) => {
-                    const partial =
-                      row.enabled &&
-                      row.allocated > 0 &&
-                      isPartialAllocation(row.allocated, row.remainingAmount);
-                    const typeLabel = row.lineKind === "rent" ? "Rent" : row.source.line_label;
-                    return (
-                      <View key={`${row.lineKind}-${row.lineId}`} style={styles.allocRow}>
-                        <View style={styles.allocRowTop}>
-                          <Switch
-                            value={row.enabled}
-                            onValueChange={(on) => {
-                              setDraft((prev) =>
-                                prev.map((r) =>
-                                  r.lineId === row.lineId && r.lineKind === row.lineKind ?
-                                    { ...r, enabled: on, allocated: on ? r.allocated : 0 }
-                                  : r
-                                )
-                              );
-                            }}
-                            trackColor={{ false: tokens.bgInset, true: tokens.brandSubtle }}
-                            thumbColor={tokens.bgSurface}
-                          />
-                          <View style={{ flex: 1 }}>
-                            <Text style={styles.allocMeta}>
-                              Lot {row.source.lot_number} · {row.source.product_name}
-                            </Text>
-                            <Text style={styles.allocTitle}>
-                              {typeLabel} · {row.source.balance_bags}/{row.source.original_bags} bags left
-                            </Text>
-                            <Text style={styles.allocDue}>Due {formatIndianCurrency(row.remainingAmount)}</Text>
-                            {partial ?
-                              <Text style={styles.partialBadge}>PARTIAL ALLOCATION</Text>
-                            : null}
-                          </View>
+
+                  {allocLotView.displayRows.length > 0 ?
+                    <View style={styles.settledList}>
+                      {allocLotView.displayRows.map((row, idx) => (
+                        <View key={`${row.kind}-${row.lotId}-${idx}`} style={styles.settleCard}>
+                          {row.kind === "preview_unsettled" ?
+                            <>
+                              <View style={styles.settleMetaRow}>
+                                <Text style={styles.settleLotMeta}>Lot {row.lotNumber}</Text>
+                                <Text style={styles.settleLotDate}>{lotDateLabel(row.lotLodgementDate)}</Text>
+                              </View>
+                              <Text style={styles.settleProduct}>{row.productName}</Text>
+                              <Text style={styles.settleBags}>
+                                {row.balanceBags}/{row.originalBags} bags remaining
+                              </Text>
+                              <Text style={styles.settleSub}>Not settled until you enter an amount</Text>
+                              <View style={styles.settleStatusRow}>
+                                <View style={styles.pillPending}>
+                                  <Text style={styles.pillPendingText}>PENDING</Text>
+                                </View>
+                              </View>
+                            </>
+                          : (
+                            <>
+                              <View style={styles.settleMetaRow}>
+                                <Text style={styles.settleLotMeta}>Lot {row.lotNumber}</Text>
+                                <Text style={styles.settleLotDate}>{lotDateLabel(row.lotLodgementDate)}</Text>
+                              </View>
+                              <Text style={styles.settleProduct}>{row.productName}</Text>
+                              <Text style={styles.settleBags}>
+                                {row.balanceBags}/{row.originalBags} bags remaining
+                              </Text>
+                              <View style={styles.settleDivider} />
+                              <View style={styles.settleMonoBlock}>
+                                <View style={styles.settleRow}>
+                                  <Text style={styles.settleLbl}>Charges due</Text>
+                                  <Text style={styles.settleAmt}>{formatIndianCurrency(row.chargesDue)}</Text>
+                                </View>
+                                <View style={styles.settleRow}>
+                                  <Text style={styles.settleLbl}>Rents due</Text>
+                                  <Text style={styles.settleAmt}>{formatIndianCurrency(row.rentsDue)}</Text>
+                                </View>
+                                <View style={styles.settleRow}>
+                                  <Text style={styles.settleLblBold}>Total due</Text>
+                                  <Text style={styles.settleAmtBold}>{formatIndianCurrency(row.totalDue)}</Text>
+                                </View>
+                              </View>
+                              <View style={styles.settleStatusRow}>
+                                {row.kind === "full" ?
+                                  <View style={styles.pillNeutral}>
+                                    <Text style={styles.pillNeutralText}>FULL</Text>
+                                  </View>
+                                : (
+                                  <View style={styles.pillPending}>
+                                    <Text style={styles.pillPendingText}>PARTIAL</Text>
+                                  </View>
+                                )}
+                              </View>
+                            </>
+                          )}
                         </View>
-                        <TextInput
-                          keyboardType="decimal-pad"
-                          editable={row.enabled}
-                          value={row.enabled ? formatRupeeDigitsForInput(row.allocated) : "0"}
-                          onChangeText={(raw) => {
-                            const n = parseIndianRupeeInput(raw);
-                            setDraft((prev) =>
-                              prev.map((r) =>
-                                r.lineId === row.lineId && r.lineKind === row.lineKind ?
-                                  {
-                                    ...r,
-                                    allocated: n === null ? 0 : Math.min(n, r.remainingAmount),
-                                    enabled: (n ?? 0) > 0,
-                                  }
-                                : r
-                              )
-                            );
-                          }}
-                          style={styles.allocAmt}
-                        />
-                      </View>
-                    );
-                  })}
+                      ))}
+                    </View>
+                  : receiptAmount > 0 ?
+                    <Text style={styles.hintMuted}>Nothing settled from this receipt.</Text>
+                  : null}
+
+                  <View style={styles.netBox}>
+                    <Text style={styles.netHeader}>
+                      <Text style={styles.netLabel}>NET OUTSTANDING </Text>
+                      <Text style={styles.netLotsBracket}>({allocLotView.netOutstanding.lotCount} lots)</Text>
+                      <Text style={styles.netSince}>{netSince}</Text>
+                    </Text>
+                    <View style={styles.settleRow}>
+                      <Text style={styles.settleLbl}>Charges due</Text>
+                      <Text style={styles.settleAmt}>{formatIndianCurrency(allocLotView.netOutstanding.chargesDue)}</Text>
+                    </View>
+                    <View style={styles.settleRow}>
+                      <Text style={styles.settleLbl}>Rents due</Text>
+                      <Text style={styles.settleAmt}>{formatIndianCurrency(allocLotView.netOutstanding.rentsDue)}</Text>
+                    </View>
+                    <View style={styles.settleRow}>
+                      <Text style={styles.settleLblBold}>Total due</Text>
+                      <Text style={styles.settleAmtBold}>{formatIndianCurrency(allocLotView.netOutstanding.totalDue)}</Text>
+                    </View>
+                  </View>
                 </>
+              )
               }
             </View>
           : null}
@@ -683,7 +664,6 @@ const styles = StyleSheet.create({
     color: tokens.textPrimary,
     backgroundColor: tokens.bgSubtle,
   },
-  notes: { minHeight: 96, paddingTop: 10 },
   pmWrap: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
   pmChip: {
     paddingVertical: 10,
@@ -698,72 +678,142 @@ const styles = StyleSheet.create({
   pmChipOn: { borderColor: tokens.brandUi, backgroundColor: tokens.brandSubtle },
   pmChipText: { fontFamily: "NotoSans-Regular", fontSize: 14, color: tokens.textPrimary },
   pmChipTextOn: { fontFamily: "NotoSans-SemiBold", color: tokens.brandText },
-  allocSectionTop: { marginTop: 8, borderTopWidth: 1, borderTopColor: tokens.borderDefault, paddingTop: 12 },
-  allocSectionKicker: {
+  allocCard: {
+    marginTop: tokens.sp3,
+    padding: tokens.sp3,
+    borderRadius: tokens.radiusMd,
+    borderWidth: 1,
+    borderColor: tokens.borderDefault,
+    backgroundColor: tokens.bgSurface,
+  },
+  allocHeaderBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    minHeight: 48,
+  },
+  allocCardKicker: {
     fontFamily: "NotoSans-Medium",
     fontSize: 10,
     letterSpacing: 0.6,
     textTransform: "uppercase",
     color: tokens.textTertiary,
   },
-  allocToggle: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-    minHeight: 48,
-  },
-  allocToggleTitle: {
+  allocCardTitle: {
     fontFamily: "NotoSerif-SemiBold",
     fontSize: 15,
     color: tokens.textPrimary,
     marginTop: 4,
   },
   allocOptional: { fontFamily: "NotoSans-Regular", fontSize: 14, color: tokens.textSecondary },
-  allocBody: { marginTop: 12, gap: 10 },
-  totalsRow: { flexDirection: "row", gap: 8 },
-  totalCard: {
-    flex: 1,
-    padding: 8,
+  allocInner: { marginTop: 10, gap: 12, borderTopWidth: 1, borderTopColor: tokens.borderDefault, paddingTop: 12 },
+  currentOutstandingBox: {
+    borderWidth: 1,
+    borderColor: tokens.borderDefault,
     borderRadius: tokens.radiusSm,
     backgroundColor: tokens.bgSubtle,
-  },
-  totalLbl: { fontSize: 10, letterSpacing: 0.6, textTransform: "uppercase", color: tokens.textTertiary },
-  totalVal: { fontFamily: "NotoSansMono-Regular", fontSize: 14, color: tokens.textPrimary },
-  allocRow: {
-    paddingVertical: 8,
-    borderBottomWidth: 1,
-    borderBottomColor: tokens.borderDefault,
+    padding: 12,
     gap: 8,
   },
-  allocRowTop: { flexDirection: "row", gap: 10, alignItems: "flex-start" },
-  allocMeta: { fontFamily: "NotoSansMono-Regular", fontSize: 11, color: tokens.textTertiary },
-  allocTitle: { fontFamily: "NotoSans-Regular", fontSize: 13, color: tokens.textPrimary, marginTop: 2 },
-  allocDue: { fontFamily: "NotoSansMono-Regular", fontSize: 14, color: tokens.textSecondary, marginTop: 4 },
-  partialBadge: {
-    marginTop: 6,
-    alignSelf: "flex-start",
+  dueLine: { flexDirection: "row", alignItems: "baseline", justifyContent: "space-between", gap: 8 },
+  dueLineLbl: {
+    fontFamily: "NotoSans-Medium",
+    fontSize: 10,
+    letterSpacing: 0.6,
+    textTransform: "uppercase",
+    color: tokens.textTertiary,
+  },
+  dueLineVal: { fontFamily: "NotoSansMono-Regular", fontSize: 14, color: tokens.textPrimary },
+  dueLineTotalRow: {
+    marginTop: 4,
+    paddingTop: 8,
+    borderTopWidth: 1,
+    borderTopColor: tokens.borderDefault,
+  },
+  dueLineTotalLbl: { fontFamily: "NotoSans-SemiBold", fontSize: 12, color: tokens.textPrimary },
+  dueLineTotalVal: { fontFamily: "NotoSansMono-Regular", fontSize: 15, fontWeight: "600", color: tokens.textPrimary },
+  hintMuted: { fontFamily: "NotoSans-Regular", fontSize: 13, color: tokens.textSecondary },
+  settledList: { gap: 12 },
+  settleCard: {
+    padding: tokens.sp3,
+    borderRadius: tokens.radiusMd,
+    borderWidth: 1,
+    borderColor: tokens.borderDefault,
+    backgroundColor: tokens.bgSurface,
+    gap: 8,
+  },
+  settleLotMeta: { fontFamily: "NotoSansMono-Regular", fontSize: 13, color: tokens.textPrimary, fontWeight: "600" },
+  settleMetaRow: {
+    flexDirection: "row",
+    alignItems: "baseline",
+    justifyContent: "space-between",
+    gap: 8,
+  },
+  settleLotDate: { fontFamily: "NotoSansMono-Regular", fontSize: 11, color: tokens.textTertiary },
+  settleProduct: { fontFamily: "NotoSans-Regular", fontSize: 14, color: tokens.textSecondary },
+  settleSub: { fontFamily: "NotoSans-Regular", fontSize: 12, color: tokens.textSecondary },
+  settleBags: { fontFamily: "NotoSansMono-Regular", fontSize: 12, color: tokens.textTertiary },
+  settleDivider: { height: 1, backgroundColor: tokens.borderDefault, marginVertical: 4 },
+  settleMonoBlock: { gap: 6 },
+  settleRow: { flexDirection: "row", alignItems: "baseline", justifyContent: "space-between", gap: 8 },
+  settleLbl: { fontFamily: "NotoSans-Medium", fontSize: 11, letterSpacing: 0.5, color: tokens.textTertiary },
+  settleAmt: { fontFamily: "NotoSansMono-Regular", fontSize: 15, color: tokens.textPrimary },
+  settleLblBold: { fontFamily: "NotoSans-SemiBold", fontSize: 13, color: tokens.textPrimary },
+  settleAmtBold: { fontFamily: "NotoSansMono-Regular", fontSize: 16, fontWeight: "600", color: tokens.textPrimary },
+  settleStatusRow: { alignItems: "center", marginTop: 2 },
+  pillNeutral: {
+    alignSelf: "center",
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 999,
+    backgroundColor: tokens.bgSubtle,
+  },
+  pillNeutralText: {
+    fontFamily: "NotoSansMono-Regular",
+    fontSize: 10,
+    letterSpacing: 0.6,
+    color: tokens.textSecondary,
+  },
+  pillPending: {
+    alignSelf: "center",
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: tokens.pendingBorder,
+    backgroundColor: tokens.pendingBg,
+  },
+  pillPendingText: {
     fontFamily: "NotoSansMono-Regular",
     fontSize: 10,
     letterSpacing: 0.6,
     color: tokens.pending,
-    borderWidth: 1,
-    borderColor: tokens.pendingBorder,
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 999,
-    overflow: "hidden",
   },
-  allocAmt: {
-    marginLeft: 52,
-    minHeight: 44,
-    borderWidth: 1,
-    borderColor: tokens.borderDefault,
-    borderRadius: tokens.radiusSm,
-    paddingHorizontal: 8,
-    fontFamily: "NotoSansMono-Regular",
-    fontSize: 16,
-    color: tokens.textPrimary,
-    backgroundColor: tokens.bgSubtle,
+  netBox: {
+    marginTop: 4,
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: tokens.borderDefault,
+    gap: 6,
+  },
+  netHeader: { flexDirection: "row", flexWrap: "wrap", alignItems: "baseline", gap: 4 },
+  netLabel: {
+    fontFamily: "NotoSans-Medium",
+    fontSize: 10,
+    letterSpacing: 0.6,
+    textTransform: "uppercase",
+    color: tokens.textTertiary,
+  },
+  netLotsBracket: {
+    fontFamily: "NotoSans-Medium",
+    fontSize: 10,
+    letterSpacing: 0.2,
+    color: tokens.textTertiary,
+  },
+  netSince: {
+    fontFamily: "NotoSans-Regular",
+    fontSize: 10,
+    color: tokens.textSecondary,
   },
   footer: {
     flexDirection: "row",

@@ -20,6 +20,10 @@ interface DashboardPageShellProps {
   chips: LandingFilterChip[];
   chipActiveId: string;
   onChipChange: (id: string) => void;
+  /**
+   * `titleOnly` — at `sm+`, search + chips are hidden (rendered inside desktop list pane instead).
+   */
+  chromeVariant?: "full" | "titleOnly";
   trailing?: ReactNode;
   /** Shown on desktop only, right-aligned next to the page title */
   desktopActions?: ReactNode;
@@ -41,6 +45,7 @@ export function DashboardPageShell({
   chips,
   chipActiveId,
   onChipChange,
+  chromeVariant = "full",
   trailing,
   desktopActions,
   moneyFabEnabled = true,
@@ -61,7 +66,7 @@ export function DashboardPageShell({
   const searchControlled = typeof onSearchChange === "function";
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col">
+    <div className="flex min-h-0 flex-1 flex-col sm:min-h-0 sm:overflow-hidden">
       {offline && <OfflineBanner queueCount={DEMO_PROFILE_USER.offlineQueuedCount} />}
 
       <div className="sticky top-0 z-10 shrink-0 bg-[var(--bg-page)] pt-2">
@@ -76,7 +81,7 @@ export function DashboardPageShell({
             {trailing}
           </div>
         </div>
-        <div className="px-0 pb-2.5">
+        <div className={cn("px-0 pb-2.5", chromeVariant === "titleOnly" && "sm:hidden")}>
           <label
             className={cn(
               "flex min-h-12 items-center gap-2 rounded-[var(--radius-md)] border border-[var(--border-default)] bg-[var(--bg-surface)] px-3 py-2 sm:min-h-10 sm:py-0",
@@ -114,12 +119,14 @@ export function DashboardPageShell({
             {searchAccessory}
           </label>
         </div>
-        <div className="px-0">
+        <div className={cn("px-0", chromeVariant === "titleOnly" && "sm:hidden")}>
           <FilterChipRow chips={chips} activeId={chipActiveId} onChange={onChipChange} />
         </div>
       </div>
 
-      <div className="min-h-0 flex-1 pb-[calc(96px+env(safe-area-inset-bottom))] sm:pb-6">{children}</div>
+      <div className="min-h-0 flex-1 pb-[calc(96px+env(safe-area-inset-bottom))] sm:flex sm:min-h-0 sm:flex-1 sm:flex-col sm:overflow-hidden sm:pb-6">
+        {children}
+      </div>
 
       {fabConfig && (
         <>

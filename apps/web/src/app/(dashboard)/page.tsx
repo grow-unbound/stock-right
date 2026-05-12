@@ -49,7 +49,7 @@ export default function DashboardHomePage() {
         </Link>
       }
     >
-      <div className="flex flex-col gap-4 px-0 pt-4">
+      <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto px-0 pt-4 sm:min-h-0">
         <div>
           <p className="text-[13px] text-[var(--text-secondary)]">{DEMO_HOME_REGISTER_DATE}</p>
           <p className="mt-0.5 font-[family-name:var(--font-display)] text-[22px] font-semibold text-[var(--text-primary)]">

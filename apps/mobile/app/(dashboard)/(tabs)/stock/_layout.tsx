@@ -9,6 +9,7 @@ export default function StockStackLayout() {
     >
       <Stack.Screen name="index" />
       <Stack.Screen name="lot/new" options={{ animation: "slide_from_right" }} />
+      <Stack.Screen name="delivery/new" options={{ animation: "slide_from_right" }} />
     </Stack>
   );
 }

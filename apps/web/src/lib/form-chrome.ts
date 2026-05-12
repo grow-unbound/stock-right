@@ -3,6 +3,7 @@ const HIDE_CHROME_PATTERNS: RegExp[] = [
   /\/payment\/new(\/|$)/,
   /\/parties\/new(\/|$)/,
   /\/stock\/lot\/new(\/|$)/,
+  /\/stock\/delivery\/new(\/|$)/,
   /^\/settings(\/|$)/,
   /^\/users\/.+/,
 ];

@@ -1,33 +1,36 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Check, ChevronDown, ChevronUp, X } from "lucide-react";
+import { Check, ChevronDown, X } from "lucide-react";
 import { toast } from "sonner";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import {
   createReceiptWithAllocations,
-  fetchCustomerOutstandingTotals,
   fetchOutstandingAllocatable,
-  suggestNextReceiptReference,
   type OutstandingAllocatableRow,
   type PartiesTabRow,
 } from "@stockright/shared/api";
 import {
-  buildFifoAllocations,
-  formatRupeeDigitsForInput,
-  formatRupeeInputLive,
-  isPartialAllocation,
+  buildReceiptAllocationsLotView,
   parseIndianRupeeInput,
   PAYMENT_METHOD_VALUES,
   paymentMethodLabel,
   type PaymentMethodValue,
+  type ReceiptAllocationDisplayRow,
 } from "@stockright/shared/receipt";
-import { formatIndianCurrency } from "@stockright/shared/utils";
+import { formatDate, formatIndianCurrency } from "@stockright/shared/utils";
+import {
+  dataTableHeaderStatic,
+  dataTableTdAmount,
+  dataTableTdBody,
+  dataTableTdMono,
+} from "@/components/ui/data-table-classes";
+import { useMediaQuery } from "@/hooks/useMediaQuery";
 import { cn } from "@/lib/utils";
 import {
   AlertDialog,
-  AlertDialogCancelButton,
   AlertDialogActionButton,
+  AlertDialogCancelButton,
   AlertDialogContent,
   AlertDialogDescription,
   AlertDialogFooter,
@@ -37,19 +40,11 @@ import {
 import { AmountField } from "@/components/ui/AmountField";
 import { Button } from "@/components/ui/Button";
 import { DatePickerField } from "@/components/ui/date-picker-field";
-import { CustomerSearchOverlay } from "./CustomerSearchOverlay";
-
-export interface AllocationDraftRow {
-  lineKind: "rent" | "charge";
-  lineId: string;
-  remainingAmount: number;
-  allocated: number;
-  enabled: boolean;
-  source: OutstandingAllocatableRow;
-}
+import { PartyQuickPickField } from "@/components/quick-pick/PartyQuickPickField";
 
 interface AddReceiptFormProps {
-  variant: "sidebar" | "fullscreen";
+  variant: "sidebar" | "fullscreen" | "detailPane";
+  title?: string;
   warehouseId: string;
   supabase: SupabaseClient;
   onClose: () => void;
@@ -62,74 +57,125 @@ function todayIsoDate(): string {
   return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
 }
 
-function buildDraftFromOutstanding(
-  rows: OutstandingAllocatableRow[],
-  receiptAmount: number
-): AllocationDraftRow[] {
-  const sources = rows.map((r) => ({
-    lineKind: r.line_kind,
-    lineId: r.line_id,
-    remainingAmount: r.remaining_amount,
-  }));
-  const fifo = buildFifoAllocations(sources, receiptAmount);
-  const allocMap = new Map(fifo.map((f) => [`${f.lineKind}:${f.lineId}`, f.amount]));
+function lotDateCell(iso: string): string {
+  if (!iso || iso.trim() === "") return "—";
+  return formatDate(iso);
+}
 
-  return rows.map((r) => {
-    const amt = allocMap.get(`${r.line_kind}:${r.line_id}`) ?? 0;
-    return {
-      lineKind: r.line_kind,
-      lineId: r.line_id,
-      remainingAmount: r.remaining_amount,
-      allocated: amt,
-      enabled: amt > 0,
-      source: r,
-    };
-  });
+function LotDetailsStack({ row }: { row: ReceiptAllocationDisplayRow }) {
+  return (
+    <>
+      <span className="block text-[15px] font-semibold text-[var(--text-primary)]">Lot {row.lotNumber}</span>
+      <span className="mt-0.5 block text-[12px] text-[var(--text-secondary)]">{row.productName}</span>
+      <span className="mt-0.5 block font-[family-name:var(--font-mono)] text-[11px] text-[var(--text-tertiary)]">
+        {row.balanceBags}/{row.originalBags} bags remaining
+      </span>
+    </>
+  );
+}
+
+function SettledRowCells({ row }: { row: ReceiptAllocationDisplayRow }) {
+  const lotDate = lotDateCell(row.lotLodgementDate);
+
+  if (row.kind === "preview_unsettled") {
+    return (
+      <>
+        <td className={cn(dataTableTdBody, "align-top")}>
+          <LotDetailsStack row={row} />
+        </td>
+        <td className={cn(dataTableTdBody, "align-top font-[family-name:var(--font-mono)] text-[13px] text-[var(--text-primary)]")}>
+          {lotDate}
+        </td>
+        <td className={cn(dataTableTdMono, "text-right align-top")}>{formatIndianCurrency(row.chargesDue)}</td>
+        <td className={cn(dataTableTdMono, "text-right align-top")}>{formatIndianCurrency(row.rentsDue)}</td>
+        <td className={cn(dataTableTdAmount, "align-top")}>
+          <div className="text-right">{formatIndianCurrency(row.totalDue)}</div>
+        </td>
+        <td className={cn(dataTableTdBody, "align-top text-center")}>
+          <span className="text-[12px] text-[var(--text-tertiary)]">Not settled</span>
+        </td>
+      </>
+    );
+  }
+
+  const settled = row.kind === "full" ? "Full" : "Partial";
+  const badgeClass =
+    settled === "Full" ?
+      "bg-[var(--bg-subtle)] text-[var(--text-secondary)]"
+    : "border border-[var(--pending-border)] bg-[var(--pending-bg)] text-[var(--pending)]";
+
+  return (
+    <>
+      <td className={cn(dataTableTdBody, "align-top")}>
+        <LotDetailsStack row={row} />
+      </td>
+      <td className={cn(dataTableTdBody, "align-top font-[family-name:var(--font-mono)] text-[13px] text-[var(--text-primary)]")}>
+        {lotDate}
+      </td>
+      <td className={cn(dataTableTdMono, "text-right align-top")}>{formatIndianCurrency(row.chargesDue)}</td>
+      <td className={cn(dataTableTdMono, "text-right align-top")}>{formatIndianCurrency(row.rentsDue)}</td>
+      <td className={cn(dataTableTdAmount, "align-top")}>
+        <div className="text-right">{formatIndianCurrency(row.totalDue)}</div>
+      </td>
+      <td className={cn(dataTableTdBody, "align-top text-center")}>
+        <span
+          className={cn(
+            "inline-block rounded-[var(--radius-pill)] px-2 py-0.5 font-[family-name:var(--font-mono)] text-[10px] uppercase tracking-[0.06em]",
+            badgeClass
+          )}
+        >
+          {settled}
+        </span>
+      </td>
+    </>
+  );
 }
 
 export function AddReceiptForm({
-  variant: _layoutVariant,
+  variant: layoutVariant,
+  title = "New receipt",
   warehouseId,
   supabase,
   onClose,
   onSuccess,
 }: AddReceiptFormProps) {
   const [customer, setCustomer] = useState<PartiesTabRow | null>(null);
-  const [customerPickerOpen, setCustomerPickerOpen] = useState(false);
   const [amountStr, setAmountStr] = useState("");
   const [receiptDate, setReceiptDate] = useState(todayIsoDate);
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethodValue>("UPI");
-  const [reference, setReference] = useState("");
   const [notes, setNotes] = useState("");
-  const referenceManualRef = useRef(false);
   const [allocExpanded, setAllocExpanded] = useState(false);
   const [outstanding, setOutstanding] = useState<OutstandingAllocatableRow[]>([]);
   const [loadingLines, setLoadingLines] = useState(false);
   const [outstandingError, setOutstandingError] = useState<string | null>(null);
-  const [totals, setTotals] = useState<{ charges: number; rents: number } | null>(null);
-  const [draft, setDraft] = useState<AllocationDraftRow[]>([]);
   const [submitting, setSubmitting] = useState(false);
   const [discardDialogOpen, setDiscardDialogOpen] = useState(false);
+  const isWideWeb = useMediaQuery("(min-width: 640px)");
   const initialRef = useRef({
     customerId: null as string | null,
     amountStr: "",
     receiptDate: todayIsoDate(),
     paymentMethod: "UPI" as PaymentMethodValue,
-    reference: "",
     notes: "",
     allocExpanded: false,
   });
+
+  const receiptAmount = parseIndianRupeeInput(amountStr) ?? 0;
+
+  const allocLotView = useMemo(
+    () => buildReceiptAllocationsLotView(outstanding, receiptAmount),
+    [outstanding, receiptAmount]
+  );
 
   const dirty = useMemo(() => {
     if (customer?.customer_id !== initialRef.current.customerId) return true;
     if (amountStr.trim() !== initialRef.current.amountStr) return true;
     if (receiptDate !== initialRef.current.receiptDate) return true;
     if (paymentMethod !== initialRef.current.paymentMethod) return true;
-    if (reference.trim() !== initialRef.current.reference) return true;
     if (notes.trim() !== initialRef.current.notes) return true;
     if (allocExpanded !== initialRef.current.allocExpanded) return true;
     return false;
-  }, [customer, amountStr, receiptDate, paymentMethod, reference, notes, allocExpanded]);
+  }, [customer, amountStr, receiptDate, paymentMethod, notes, allocExpanded]);
 
   useEffect(() => {
     function handleBeforeUnload(e: BeforeUnloadEvent) {
@@ -141,23 +187,9 @@ export function AddReceiptForm({
   }, [dirty]);
 
   useEffect(() => {
-    let cancelled = false;
-    void suggestNextReceiptReference(supabase, warehouseId).then((s) => {
-      if (cancelled || referenceManualRef.current) return;
-      setReference(s);
-      initialRef.current.reference = s;
-    });
-    return () => {
-      cancelled = true;
-    };
-  }, [warehouseId, supabase]);
-
-  useEffect(() => {
     if (!allocExpanded || !customer?.customer_id || !warehouseId) {
       setOutstanding([]);
-      setTotals(null);
       setOutstandingError(null);
-      setDraft([]);
       setLoadingLines(false);
       return;
     }
@@ -166,18 +198,11 @@ export function AddReceiptForm({
       setLoadingLines(true);
       setOutstandingError(null);
       try {
-        const [t, lines] = await Promise.all([
-          fetchCustomerOutstandingTotals(supabase, warehouseId, customer.customer_id),
-          fetchOutstandingAllocatable(supabase, warehouseId, customer.customer_id),
-        ]);
+        const lines = await fetchOutstandingAllocatable(supabase, warehouseId, customer.customer_id);
         if (cancelled) return;
-        setTotals(
-          t ? { charges: t.outstanding_charges, rents: t.outstanding_rents } : { charges: 0, rents: 0 }
-        );
         setOutstanding(lines);
       } catch {
         if (!cancelled) {
-          setTotals(null);
           setOutstanding([]);
           setOutstandingError("Could not load outstanding details. You can still save the receipt.");
         }
@@ -189,15 +214,6 @@ export function AddReceiptForm({
       cancelled = true;
     };
   }, [allocExpanded, customer, warehouseId, supabase]);
-
-  useEffect(() => {
-    const amt = parseIndianRupeeInput(amountStr);
-    if (!amt || amt <= 0 || outstanding.length === 0) {
-      setDraft([]);
-      return;
-    }
-    setDraft(buildDraftFromOutstanding(outstanding, amt));
-  }, [outstanding, amountStr]);
 
   const requestClose = useCallback(() => {
     if (dirty) {
@@ -223,16 +239,17 @@ export function AddReceiptForm({
       return;
     }
 
+    const view = buildReceiptAllocationsLotView(outstanding, amt);
     const lines =
-      allocExpanded && draft.length > 0
-        ? draft
-            .filter((d) => d.enabled && d.allocated > 0)
-            .map((d) =>
-              d.lineKind === "rent"
-                ? { rent_accrual_id: d.lineId, amount: d.allocated }
-                : { charge_id: d.lineId, amount: d.allocated }
-            )
-        : [];
+      allocExpanded && view.lineStates.some((s) => s.allocated > 0.005) ?
+        view.lineStates
+          .filter((s) => s.allocated > 0.005)
+          .map((s) =>
+            s.row.line_kind === "rent" ?
+              { rent_accrual_id: s.row.line_id, amount: s.allocated }
+            : { charge_id: s.row.line_id, amount: s.allocated }
+          )
+      : [];
 
     const sumAlloc = lines.reduce((s, l) => s + l.amount, 0);
     if (sumAlloc > amt + 0.01) {
@@ -248,7 +265,6 @@ export function AddReceiptForm({
         receiptDate,
         totalAmount: amt,
         paymentMethod,
-        referenceNumber: reference.trim() === "" ? null : reference.trim(),
         notes: notes.trim() === "" ? null : notes.trim(),
         allocationLines: lines,
       });
@@ -263,39 +279,58 @@ export function AddReceiptForm({
     }
   }
 
-  const headerPad = "";
+  const isDetailPane = layoutVariant === "detailPane";
+  const fieldsLayoutClass = isDetailPane ? "grid grid-cols-1 gap-4 lg:grid-cols-2 lg:gap-x-6" : "flex flex-col gap-4";
+
+  const labelClass =
+    "mb-1 block text-[12px] font-medium uppercase tracking-[0.06em] text-[var(--text-tertiary)]";
+  const inputClass =
+    "min-h-[48px] w-full rounded-[var(--radius-md)] border border-[var(--border-default)] bg-[var(--bg-subtle)] px-3 text-[16px] text-[var(--text-primary)] outline-none focus-visible:border-[var(--brand-ui)] focus-visible:ring-[3px] focus-visible:ring-[rgba(200,113,42,0.12)]";
+
+  const co = allocLotView.currentOutstanding;
+  const netSince =
+    allocLotView.netOutstanding.oldestLodgementDate ?
+      ` · since ${formatDate(allocLotView.netOutstanding.oldestLodgementDate)}`
+    : "";
 
   return (
-    <div className={`flex min-h-0 flex-1 flex-col overflow-hidden ${headerPad}`}>
-      <CustomerSearchOverlay
-        open={customerPickerOpen}
-        warehouseId={warehouseId}
-        supabase={supabase}
-        onClose={() => setCustomerPickerOpen(false)}
-        onSelect={(row) => {
-          setCustomer(row);
-          initialRef.current.customerId = row.customer_id;
-        }}
-      />
+    <div
+      className={cn(
+        "flex min-h-0 flex-1 flex-col overflow-hidden",
+        isDetailPane &&
+          "h-full min-h-0 rounded-[var(--radius-md)] border border-[var(--border-default)] bg-[var(--bg-surface)]"
+      )}
+    >
+      {isDetailPane ? (
+        <div className="sticky top-0 z-[1] flex shrink-0 items-center justify-between bg-[var(--bg-page)] px-4 py-3">
+          <h2 className="font-[family-name:var(--font-display)] text-[18px] font-semibold text-[var(--text-primary)]">
+            {title}
+          </h2>
+          <button
+            type="button"
+            className="flex min-h-[48px] min-w-[48px] items-center justify-center rounded-[var(--radius-md)] text-[var(--text-primary)] focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-[var(--focus-ring)]"
+            onClick={() => requestClose()}
+            aria-label="Close form"
+          >
+            <X className="size-5" strokeWidth={2} aria-hidden />
+          </button>
+        </div>
+      ) : null}
 
       <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
         <div className="min-h-0 flex-1 overflow-y-auto px-4 pb-4 pt-2">
-          <div className="flex flex-col gap-4">
-            <div>
-              <label className="mb-1 block text-[12px] font-medium uppercase tracking-[0.06em] text-[var(--text-tertiary)]">
-                Party
-              </label>
-              <button
-                type="button"
-                className="flex min-h-[48px] w-full items-center justify-between rounded-[var(--radius-md)] border border-[var(--border-default)] bg-[var(--bg-subtle)] px-3 text-left text-[16px] text-[var(--text-primary)] focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-[var(--focus-ring)]"
-                onClick={() => setCustomerPickerOpen(true)}
-              >
-                <span className={customer ? "text-[var(--text-primary)]" : "text-[var(--text-placeholder)]"}>
-                  {customer ? `${customer.customer_name} (${customer.customer_code})` : "Search parties…"}
-                </span>
-                <ChevronDown className="size-4 text-[var(--text-tertiary)]" aria-hidden />
-              </button>
-            </div>
+          <div className={fieldsLayoutClass}>
+            <PartyQuickPickField
+              label="Party"
+              labelClassName="mb-1 block text-[12px] font-medium uppercase tracking-[0.06em] text-[var(--text-tertiary)]"
+              warehouseId={warehouseId}
+              supabase={supabase}
+              value={customer}
+              onChange={(row) => {
+                setCustomer(row);
+                initialRef.current.customerId = row.customer_id;
+              }}
+            />
 
             <AmountField label="Amount" value={amountStr} onChange={setAmountStr} />
 
@@ -329,43 +364,33 @@ export function AddReceiptForm({
               </div>
             </div>
 
-            <div>
-              <label className="mb-1 block text-[12px] font-medium uppercase tracking-[0.06em] text-[var(--text-tertiary)]">
-                Reference <span className="normal-case text-[var(--text-placeholder)]">(optional)</span>
-              </label>
-              <input
-                type="text"
-                value={reference}
-                onChange={(e) => {
-                  referenceManualRef.current = true;
-                  setReference(e.target.value);
-                }}
-                className="min-h-[48px] w-full rounded-[var(--radius-md)] border border-[var(--border-default)] bg-[var(--bg-subtle)] px-3 text-[16px] text-[var(--text-primary)] outline-none focus-visible:border-[var(--brand-ui)] focus-visible:ring-[3px] focus-visible:ring-[rgba(200,113,42,0.12)]"
-                placeholder="Reference number"
-              />
-            </div>
-
-            <div>
-              <label className="mb-1 block text-[12px] font-medium uppercase tracking-[0.06em] text-[var(--text-tertiary)]">
+            <div className={cn(isDetailPane && "lg:col-span-2")}>
+              <label htmlFor="add-receipt-notes" className={labelClass}>
                 Notes <span className="normal-case text-[var(--text-placeholder)]">(optional)</span>
               </label>
-              <textarea
+              <input
+                id="add-receipt-notes"
+                type="text"
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
-                rows={3}
-                className="min-h-[96px] w-full resize-y rounded-[var(--radius-md)] border border-[var(--border-default)] bg-[var(--bg-subtle)] px-3 py-2 text-[16px] text-[var(--text-primary)] outline-none focus-visible:border-[var(--brand-ui)] focus-visible:ring-[3px] focus-visible:ring-[rgba(200,113,42,0.12)]"
-                placeholder="Anything your team should remember about this receipt"
+                className={cn(inputClass, "truncate")}
+                placeholder="Optional note"
               />
             </div>
 
-            <div className="border-t border-[var(--border-default)] pt-3">
+            <div
+              className={cn(
+                "rounded-[var(--radius-md)] border border-[var(--border-default)] bg-[var(--bg-surface)]",
+                isDetailPane && "lg:col-span-2"
+              )}
+            >
               <button
                 type="button"
-                className="flex w-full min-h-[48px] items-center justify-between gap-2 py-2 text-left focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-[var(--focus-ring)]"
+                className="flex min-h-[48px] w-full items-center justify-between gap-2 px-3 text-left"
                 onClick={() => setAllocExpanded((v) => !v)}
               >
                 <span>
-                  <span className="block text-[10px] font-medium uppercase tracking-[0.06em] text-[var(--text-tertiary)]">
+                  <span className="block text-[12px] font-medium uppercase tracking-[0.06em] text-[var(--text-tertiary)]">
                     Receipt allocations
                   </span>
                   <span className="mt-0.5 block font-[family-name:var(--font-display)] text-[15px] font-semibold text-[var(--text-primary)]">
@@ -373,145 +398,199 @@ export function AddReceiptForm({
                     <span className="font-normal text-[var(--text-secondary)]">(optional)</span>
                   </span>
                 </span>
-                {allocExpanded ?
-                  <ChevronUp className="size-5 shrink-0 text-[var(--text-tertiary)]" aria-hidden />
-                : <ChevronDown className="size-5 shrink-0 text-[var(--text-tertiary)]" aria-hidden />}
+                <ChevronDown
+                  className={cn(
+                    "size-5 shrink-0 text-[var(--text-tertiary)] transition-transform",
+                    allocExpanded && "rotate-180"
+                  )}
+                  aria-hidden
+                />
               </button>
 
               {allocExpanded ?
-                <div className="mt-3 space-y-3">
+                <div className="border-t border-[var(--border-default)] px-3 pb-3 pt-2">
                   {!customer ?
                     <p className="text-[14px] text-[var(--text-secondary)]">Choose a party first.</p>
                   : outstandingError ?
                     <p className="text-[14px] text-[var(--outward)]">{outstandingError}</p>
                   : loadingLines ?
-                    <div className="flex flex-col gap-2">
-                      <div className="h-16 skeleton" />
-                      <div className="h-16 skeleton" />
-                    </div>
+                    <div className="h-[120px] skeleton rounded-[var(--radius-md)]" />
                   : outstanding.length === 0 ?
                     <p className="text-[14px] text-[var(--text-secondary)]">
                       No unpaid charges or rents on file for this party. This receipt will be recorded as advance
                       credit.
                     </p>
-                  : <>
-                      {totals ?
-                        <div className="grid grid-cols-2 gap-2 text-[13px]">
-                          <div className="rounded-[var(--radius-sm)] bg-[var(--bg-subtle)] px-2 py-2">
-                            <span className="block text-[10px] uppercase tracking-[0.06em] text-[var(--text-tertiary)]">
+                  : (
+                    <>
+                      <p className="mb-2 text-[12px] text-[var(--text-secondary)]">
+                        Oldest accruals settle first (FIFO). With no amount, the next lots in queue are shown as not
+                        settled.
+                      </p>
+
+                      {outstanding.length > 0 ?
+                        <div className="mb-3 space-y-2 rounded-[var(--radius-sm)] border border-[var(--border-default)] bg-[var(--bg-subtle)] px-3 py-2">
+                          <div className="flex items-baseline justify-between gap-2">
+                            <span className="text-[10px] font-medium uppercase tracking-[0.06em] text-[var(--text-tertiary)]">
                               Charges due
                             </span>
-                            <span className="font-[family-name:var(--font-mono)] tabular-nums text-[var(--text-primary)]">
-                              {formatIndianCurrency(totals.charges)}
+                            <span className="font-[family-name:var(--font-mono)] text-[14px] tabular-nums text-[var(--text-primary)]">
+                              {formatIndianCurrency(co.charges)}
                             </span>
                           </div>
-                          <div className="rounded-[var(--radius-sm)] bg-[var(--bg-subtle)] px-2 py-2">
-                            <span className="block text-[10px] uppercase tracking-[0.06em] text-[var(--text-tertiary)]">
+                          <div className="flex items-baseline justify-between gap-2">
+                            <span className="text-[10px] font-medium uppercase tracking-[0.06em] text-[var(--text-tertiary)]">
                               Rents due
                             </span>
-                            <span className="font-[family-name:var(--font-mono)] tabular-nums text-[var(--text-primary)]">
-                              {formatIndianCurrency(totals.rents)}
+                            <span className="font-[family-name:var(--font-mono)] text-[14px] tabular-nums text-[var(--text-primary)]">
+                              {formatIndianCurrency(co.rents)}
+                            </span>
+                          </div>
+                          <div className="flex items-baseline justify-between gap-2 border-t border-[var(--border-default)] pt-2">
+                            <span className="text-[12px] font-semibold text-[var(--text-primary)]">
+                              Current outstanding
+                            </span>
+                            <span className="font-[family-name:var(--font-mono)] text-[15px] font-semibold tabular-nums text-[var(--text-primary)]">
+                              {formatIndianCurrency(co.total)}
                             </span>
                           </div>
                         </div>
                       : null}
-                      <p className="text-[12px] text-[var(--text-secondary)]">
-                        Oldest accruals first. Adjust amounts if needed.
-                      </p>
-                      <ul className="flex flex-col gap-2">
-                        {draft.map((row) => {
-                          const partial =
-                            row.enabled &&
-                            row.allocated > 0 &&
-                            isPartialAllocation(row.allocated, row.remainingAmount);
-                          const typeLabel = row.lineKind === "rent" ? "Rent" : row.source.line_label;
-                          return (
-                            <li
-                              key={`${row.lineKind}-${row.lineId}`}
-                              className="rounded-[var(--radius-md)] border border-[var(--border-default)] bg-[var(--bg-surface)] p-2"
-                            >
-                              <label className="flex cursor-pointer items-start gap-2">
-                                <input
-                                  type="checkbox"
-                                  checked={row.enabled}
-                                  className="mt-1 size-4 accent-[var(--brand-ui)]"
-                                  onChange={(e) => {
-                                    const on = e.target.checked;
-                                    setDraft((prev) =>
-                                      prev.map((r) =>
-                                        r.lineId === row.lineId && r.lineKind === row.lineKind ?
-                                          {
-                                            ...r,
-                                            enabled: on,
-                                            allocated: on ? r.allocated : 0,
-                                          }
-                                        : r
-                                      )
-                                    );
-                                  }}
-                                />
-                                <span className="min-w-0 flex-1">
-                                  <span className="block font-[family-name:var(--font-mono)] text-[11px] text-[var(--text-tertiary)]">
-                                    Lot {row.source.lot_number} · {row.source.product_name}
-                                  </span>
-                                  <span className="mt-0.5 block text-[13px] text-[var(--text-primary)]">
-                                    {typeLabel} · {row.source.balance_bags}/{row.source.original_bags} bags left
-                                  </span>
-                                  <span className="mt-1 block font-[family-name:var(--font-mono)] text-[14px] tabular-nums text-[var(--text-secondary)]">
-                                    Due {formatIndianCurrency(row.remainingAmount)}
-                                  </span>
-                                  {partial ?
-                                    <span className="mt-1 inline-block rounded-[var(--radius-pill)] border border-[var(--pending-border)] bg-[var(--pending-bg)] px-2 py-0.5 font-[family-name:var(--font-mono)] text-[10px] uppercase tracking-[0.06em] text-[var(--pending)]">
-                                      Partial allocation
+
+                      {allocLotView.displayRows.length > 0 ?
+                        isWideWeb ?
+                          <div className="-mx-1 min-w-0 overflow-x-auto">
+                            <table className="w-full min-w-0 table-fixed border-collapse">
+                              <thead>
+                                <tr className="border-b border-[var(--border-default)]">
+                                  <th className={cn(dataTableHeaderStatic, "w-[26%] min-w-0 text-left")}>
+                                    Lot details
+                                  </th>
+                                  <th className={cn(dataTableHeaderStatic, "w-[14%] text-left")}>Lot date</th>
+                                  <th className={cn(dataTableHeaderStatic, "w-[15%] text-right")}>Charges due</th>
+                                  <th className={cn(dataTableHeaderStatic, "w-[15%] text-right")}>Rents due</th>
+                                  <th className={cn(dataTableHeaderStatic, "w-[15%] text-right")}>Total due</th>
+                                  <th
+                                    className={cn(
+                                      dataTableHeaderStatic,
+                                      "w-[15%] min-w-[4.5rem] text-center"
+                                    )}
+                                  >
+                                    Settled
+                                  </th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {allocLotView.displayRows.map((row, idx) => (
+                                  <tr
+                                    key={`${row.kind}-${row.lotId}-${idx}`}
+                                    className="border-b border-[var(--border-default)] last:border-0"
+                                  >
+                                    <SettledRowCells row={row} />
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </div>
+                        : (
+                          <div className="flex flex-col gap-3">
+                            {allocLotView.displayRows.map((row, idx) => (
+                              <div
+                                key={`${row.kind}-${row.lotId}-${idx}`}
+                                className="rounded-[var(--radius-md)] border border-[var(--border-default)] bg-[var(--bg-surface)] p-3"
+                              >
+                                <div className="flex flex-row items-baseline justify-between gap-2">
+                                  <p className="min-w-0 truncate text-[15px] font-semibold text-[var(--text-primary)]">
+                                    Lot {row.lotNumber}
+                                  </p>
+                                  <p className="shrink-0 font-[family-name:var(--font-mono)] text-[12px] text-[var(--text-tertiary)]">
+                                    {lotDateCell(row.lotLodgementDate)}
+                                  </p>
+                                </div>
+                                <p className="mt-1 text-[12px] text-[var(--text-secondary)]">{row.productName}</p>
+                                <p className="mt-0.5 font-[family-name:var(--font-mono)] text-[11px] text-[var(--text-tertiary)]">
+                                  {row.balanceBags}/{row.originalBags} bags remaining
+                                </p>
+                                <div className="mt-3 space-y-2 border-t border-[var(--border-default)] pt-3">
+                                  <div className="flex justify-between gap-2">
+                                    <span className="text-[11px] uppercase tracking-[0.06em] text-[var(--text-tertiary)]">
+                                      Charges due
                                     </span>
-                                  : null}
-                                </span>
-                              </label>
-                              <div className="mt-2 flex items-center gap-2 pl-6">
-                                <label className="text-[12px] text-[var(--text-secondary)]" htmlFor={`alloc-${row.lineId}`}>
-                                  Apply
-                                </label>
-                                <input
-                                  id={`alloc-${row.lineId}`}
-                                  type="text"
-                                  inputMode="decimal"
-                                  disabled={!row.enabled}
-                                  value={row.enabled ? formatRupeeDigitsForInput(row.allocated) : "0"}
-                                  onChange={(e) => {
-                                    const raw = e.target.value;
-                                    const n = parseIndianRupeeInput(raw);
-                                    setDraft((prev) =>
-                                      prev.map((r) =>
-                                        r.lineId === row.lineId && r.lineKind === row.lineKind ?
-                                          {
-                                            ...r,
-                                            allocated: n === null ? 0 : Math.min(n, r.remainingAmount),
-                                            enabled: (n ?? 0) > 0,
-                                          }
-                                        : r
-                                      )
-                                    );
-                                  }}
-                                  className="min-h-[40px] min-w-0 flex-1 rounded-[var(--radius-sm)] border border-[var(--border-default)] bg-[var(--bg-subtle)] px-2 font-[family-name:var(--font-mono)] text-[16px] outline-none disabled:opacity-50"
-                                />
+                                    <span className="font-[family-name:var(--font-mono)] text-[15px] tabular-nums text-[var(--text-primary)]">
+                                      {formatIndianCurrency(row.chargesDue)}
+                                    </span>
+                                  </div>
+                                  <div className="flex justify-between gap-2">
+                                    <span className="text-[11px] uppercase tracking-[0.06em] text-[var(--text-tertiary)]">
+                                      Rents due
+                                    </span>
+                                    <span className="font-[family-name:var(--font-mono)] text-[15px] tabular-nums text-[var(--text-primary)]">
+                                      {formatIndianCurrency(row.rentsDue)}
+                                    </span>
+                                  </div>
+                                  <div className="flex justify-between gap-2 font-[family-name:var(--font-mono)] font-semibold text-[var(--text-primary)]">
+                                    <span>Total due</span>
+                                    <span>{formatIndianCurrency(row.totalDue)}</span>
+                                  </div>
+                                </div>
+                                <div className="mt-3 flex justify-center">
+                                  {row.kind === "preview_unsettled" ?
+                                    <span className="text-[12px] text-[var(--text-tertiary)]">Not settled</span>
+                                  : (
+                                    <span
+                                      className={cn(
+                                        "inline-block rounded-[var(--radius-pill)] px-2 py-0.5 font-[family-name:var(--font-mono)] text-[10px] uppercase tracking-[0.06em]",
+                                        row.kind === "full" ?
+                                          "bg-[var(--bg-subtle)] text-[var(--text-secondary)]"
+                                        : "border border-[var(--pending-border)] bg-[var(--pending-bg)] text-[var(--pending)]"
+                                      )}
+                                    >
+                                      {row.kind === "full" ? "Full" : "Partial"}
+                                    </span>
+                                  )}
+                                </div>
                               </div>
-                            </li>
-                          );
-                        })}
-                      </ul>
+                            ))}
+                          </div>
+                        )
+                      : receiptAmount > 0 ?
+                        <p className="text-[13px] text-[var(--text-secondary)]">Nothing settled from this receipt.</p>
+                      : null}
+
+                      <div className="mt-4 space-y-1.5 border-t border-[var(--border-default)] pt-3">
+                        <p className="text-[10px] font-medium tracking-[0.06em] text-[var(--text-tertiary)]">
+                          <span className="uppercase">Net outstanding </span>
+                          <span className="font-medium normal-case">({allocLotView.netOutstanding.lotCount} lots)</span>
+                          {netSince ? (
+                            <span className="font-normal normal-case text-[var(--text-secondary)]">{netSince}</span>
+                          ) : null}
+                        </p>
+                        <div className="flex flex-wrap items-baseline justify-between gap-2 font-[family-name:var(--font-mono)] text-[14px] tabular-nums text-[var(--text-primary)]">
+                          <span className="text-[var(--text-secondary)]">Charges due</span>
+                          <span>{formatIndianCurrency(allocLotView.netOutstanding.chargesDue)}</span>
+                        </div>
+                        <div className="flex flex-wrap items-baseline justify-between gap-2 font-[family-name:var(--font-mono)] text-[14px] tabular-nums text-[var(--text-primary)]">
+                          <span className="text-[var(--text-secondary)]">Rents due</span>
+                          <span>{formatIndianCurrency(allocLotView.netOutstanding.rentsDue)}</span>
+                        </div>
+                        <div className="flex flex-wrap items-baseline justify-between gap-2 font-[family-name:var(--font-mono)] text-[15px] font-semibold tabular-nums text-[var(--text-primary)]">
+                          <span>Total due</span>
+                          <span>{formatIndianCurrency(allocLotView.netOutstanding.totalDue)}</span>
+                        </div>
+                      </div>
                     </>
-                  }
+                  )
+                }
                 </div>
               : null}
             </div>
           </div>
         </div>
 
-        <div className="flex shrink-0 gap-2 border-t border-[var(--border-default)] bg-[var(--bg-surface)] px-4 py-3 pb-[calc(12px+env(safe-area-inset-bottom))]">
+        <div className="flex shrink-0 justify-end gap-2 border-t border-[var(--border-default)] bg-[var(--bg-surface)] px-4 py-3 pb-[calc(12px+env(safe-area-inset-bottom))] sm:pb-3">
           <Button
             type="button"
             variant="secondary"
-            className="min-h-[48px] flex-1 gap-2"
+            className="min-h-[48px] shrink-0 gap-2 min-w-[var(--cta-tab-min-width)] justify-center"
             onClick={() => requestClose()}
             disabled={submitting}
           >
@@ -521,7 +600,7 @@ export function AddReceiptForm({
           <Button
             type="button"
             variant="primary"
-            className="min-h-[48px] flex-1 gap-2"
+            className="min-h-[48px] shrink-0 gap-2 min-w-[var(--cta-tab-min-width)] justify-center"
             loading={submitting}
             loadingLabel="Creating…"
             onClick={() => void handleSubmit()}

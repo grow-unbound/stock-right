@@ -1,15 +1,13 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useId } from "react";
 import { Search, X } from "lucide-react";
-import { searchCustomersQuickPick, type PartiesTabRow } from "@stockright/shared/api";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { partyInitials } from "@stockright/shared/utils";
-import { useDebouncedValue } from "@stockright/shared/hooks";
+import type { PartiesTabRow } from "@stockright/shared/api";
 import { cn } from "@/lib/utils";
+import { CustomerQuickPickList } from "@/components/quick-pick/CustomerQuickPickList";
+import { useCustomerQuickPick } from "@/components/quick-pick/useCustomerQuickPick";
 import { FORM_DRAWER_PANEL_WIDTH_CLASS } from "./form-drawer-classes";
-
-const PAGE_SIZE = 25;
 
 interface CustomerSearchOverlayProps {
   open: boolean;
@@ -26,70 +24,12 @@ export function CustomerSearchOverlay({
   onClose,
   onSelect,
 }: CustomerSearchOverlayProps) {
-  const [query, setQuery] = useState("");
-  const debounced = useDebouncedValue(query.trim(), 320);
-  const [rows, setRows] = useState<PartiesTabRow[]>([]);
-  const [totalCount, setTotalCount] = useState<number | null>(null);
-  const [loading, setLoading] = useState(false);
-  const scrollRootRef = useRef<HTMLDivElement>(null);
-  const sentinelRef = useRef<HTMLDivElement>(null);
-  const emptySearchCacheRef = useRef<PartiesTabRow[] | null>(null);
-
-  const fetchPage = useCallback(
-    async (nextOffset: number, reset: boolean) => {
-      if (!warehouseId) return;
-      setLoading(true);
-      try {
-        const { rows: batch, count } = await searchCustomersQuickPick(supabase, {
-          warehouseId,
-          q: debounced,
-          limit: PAGE_SIZE,
-          offset: nextOffset,
-        });
-        if (count !== null) setTotalCount(count);
-        setRows((prev) => (reset ? batch : mergeById(prev, batch)));
-        if (reset && debounced === "" && batch.length > 0) {
-          emptySearchCacheRef.current = batch;
-        }
-      } finally {
-        setLoading(false);
-      }
-    },
-    [debounced, supabase, warehouseId]
-  );
-
-  useEffect(() => {
-    if (!open) return;
-    if (debounced === "" && emptySearchCacheRef.current && emptySearchCacheRef.current.length > 0) {
-      setRows(emptySearchCacheRef.current);
-    } else {
-      setRows([]);
-    }
-    setTotalCount(null);
-    void fetchPage(0, true);
-  }, [open, debounced, fetchPage]);
-
-  const loadedCount = rows.length;
-  const canLoadMore =
-    totalCount !== null ? loadedCount < totalCount : rows.length === PAGE_SIZE;
-
-  useEffect(() => {
-    if (!open) return;
-    const root = scrollRootRef.current;
-    const sentinel = sentinelRef.current;
-    if (!root || !sentinel) return;
-
-    const obs = new IntersectionObserver(
-      (entries) => {
-        const hit = entries.some((e) => e.isIntersecting);
-        if (!hit || loading || !canLoadMore) return;
-        void fetchPage(loadedCount, false);
-      },
-      { root, rootMargin: "120px", threshold: 0 }
-    );
-    obs.observe(sentinel);
-    return () => obs.disconnect();
-  }, [open, loading, canLoadMore, loadedCount, fetchPage]);
+  const listboxId = useId();
+  const { query, setQuery, rows, loading, scrollRootRef, sentinelRef } = useCustomerQuickPick({
+    warehouseId,
+    supabase,
+    enabled: open,
+  });
 
   if (!open) return null;
 
@@ -129,74 +69,22 @@ export function CustomerSearchOverlay({
             placeholder="Search name, code, phone…"
             className="min-h-[40px] min-w-0 flex-1 bg-transparent text-[16px] text-[var(--text-primary)] outline-none placeholder:text-[var(--text-placeholder)]"
             autoFocus
+            aria-controls={listboxId}
           />
         </label>
       </div>
-      <div
-        ref={scrollRootRef}
-        className="min-h-0 flex-1 overflow-y-auto px-2 pb-[calc(16px+env(safe-area-inset-bottom))] pt-2"
-      >
-        {loading && rows.length === 0 ? (
-          <ul className="flex flex-col gap-2">
-            {Array.from({ length: 6 }).map((_, i) => (
-              <li
-                key={i}
-                className="h-[72px] animate-pulse rounded-[var(--radius-md)] bg-[var(--bg-subtle)]"
-              />
-            ))}
-          </ul>
-        ) : rows.length === 0 ? (
-          <p className="px-2 py-8 text-center text-[15px] text-[var(--text-secondary)]">
-            No parties match. Try a different search.
-          </p>
-        ) : (
-          <ul className="flex flex-col gap-2">
-            {rows.map((r) => (
-              <li key={r.customer_id}>
-                <button
-                  type="button"
-                  className={cn(
-                    "flex w-full min-h-[48px] flex-row items-center gap-3 rounded-[var(--radius-md)] border border-[var(--border-default)] bg-[var(--bg-subtle)] px-3 py-3 text-left",
-                    "focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-[var(--focus-ring)]"
-                  )}
-                  onClick={() => {
-                    onSelect(r);
-                    onClose();
-                  }}
-                >
-                  <span
-                    className="flex size-11 shrink-0 items-center justify-center rounded-full bg-[var(--brand-subtle)] font-[family-name:var(--font-body)] text-[13px] font-semibold text-[var(--brand-text)]"
-                    aria-hidden
-                  >
-                    {partyInitials(r.customer_name)}
-                  </span>
-                  <span className="min-w-0 flex-1">
-                    <span className="block font-[family-name:var(--font-display)] text-[15px] font-semibold text-[var(--text-primary)]">
-                      {r.customer_name}
-                    </span>
-                    <span className="mt-0.5 block font-[family-name:var(--font-mono)] text-[13px] text-[var(--text-secondary)]">
-                      {r.customer_code}
-                    </span>
-                  </span>
-                </button>
-              </li>
-            ))}
-          </ul>
-        )}
-        <div ref={sentinelRef} className="h-1 w-full shrink-0" aria-hidden />
-      </div>
+      <CustomerQuickPickList
+        rows={rows}
+        loading={loading}
+        scrollRootRef={scrollRootRef}
+        sentinelRef={sentinelRef}
+        listboxId={listboxId}
+        density="overlay"
+        onSelect={(row) => {
+          onSelect(row);
+          onClose();
+        }}
+      />
     </div>
   );
-}
-
-function mergeById(a: PartiesTabRow[], b: PartiesTabRow[]): PartiesTabRow[] {
-  const seen = new Set(a.map((r) => r.customer_id));
-  const out = [...a];
-  for (const row of b) {
-    if (!seen.has(row.customer_id)) {
-      seen.add(row.customer_id);
-      out.push(row);
-    }
-  }
-  return out;
 }

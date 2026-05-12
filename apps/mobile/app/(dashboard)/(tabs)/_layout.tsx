@@ -18,6 +18,7 @@ function hideDashboardTabBar(pathname: string): boolean {
     pathname.includes("/payment/new") ||
     pathname.includes("/parties/new") ||
     pathname.includes("/stock/lot/new") ||
+    pathname.includes("/stock/delivery/new") ||
     pathname.startsWith("/users/")
   );
 }

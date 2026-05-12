@@ -1,41 +1,12 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import {
-  ActivityIndicator,
-  DeviceEventEmitter,
-  FlatList,
-  Modal,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  View,
-} from "react-native";
+import { DeviceEventEmitter, FlatList, Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
 import * as Haptics from "expo-haptics";
 import { ChevronLeft, Check, Search, X } from "lucide-react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import {
-  MONEY_REFRESH_EVENT,
-  fetchUnpaidChargesForLotDelivery,
-  insertOperationalPayment,
-  listDeliveriesForLot,
-  searchLotsQuickPick,
-  searchPaymentTypesQuickPick,
-  type DeliveryPickRow,
-  type LotPickRow,
-  type PaymentTypePickRow,
-  type UnpaidChargeRow,
-} from "@stockright/shared/api";
+import { MONEY_REFRESH_EVENT, insertOperationalPayment, searchPaymentTypesQuickPick, type PaymentTypePickRow } from "@stockright/shared/api";
 import { useDebouncedValue } from "@stockright/shared/hooks";
-import {
-  formatRupeeDigitsForInput,
-  formatRupeeInputLive,
-  parseIndianRupeeInput,
-  PAYMENT_METHOD_VALUES,
-  paymentMethodLabel,
-  type PaymentMethodValue,
-} from "@stockright/shared/receipt";
-import { assertIndiaMobileOptional, formatIndianCurrency, ACTIVE_WAREHOUSE_ID_KEY } from "@stockright/shared/utils";
+import { parseIndianRupeeInput, PAYMENT_METHOD_VALUES, paymentMethodLabel, type PaymentMethodValue } from "@stockright/shared/receipt";
+import { assertIndiaMobileOptional, ACTIVE_WAREHOUSE_ID_KEY } from "@stockright/shared/utils";
 import { tokens } from "@stockright/shared/tokens";
 import { getSupabaseClient } from "@/lib/supabase";
 import { storage } from "@/lib/storage";
@@ -45,15 +16,12 @@ import { AmountField } from "@/components/ui/AmountField";
 
 const PAGE_SIZE = 25;
 const STROKE = 2;
+const EXCLUDE_PAYMENT_CATEGORIES = ["STOCK_MOVEMENT"] as const;
 
 function todayIso(): string {
   const d = new Date();
   const p = (n: number) => String(n).padStart(2, "0");
   return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
-}
-
-function round2(n: number): number {
-  return Math.round(n * 100) / 100;
 }
 
 interface MobileAddPaymentScreenProps {
@@ -80,62 +48,22 @@ export function MobileAddPaymentScreen({ warehouseId: warehouseIdProp, onClose, 
   }, [warehouseIdProp]);
 
   const [paymentDate, setPaymentDate] = useState(todayIso);
-  const [dueDate, setDueDate] = useState(todayIso);
   const [amountStr, setAmountStr] = useState("");
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethodValue>("UPI");
   const [paymentType, setPaymentType] = useState<PaymentTypePickRow | null>(null);
   const [notes, setNotes] = useState("");
-  const [status, setStatus] = useState<"PAID" | "PENDING">("PAID");
   const [partyName, setPartyName] = useState("");
   const [partyPhone, setPartyPhone] = useState("");
-  const [lot, setLot] = useState<LotPickRow | null>(null);
-  const [delivery, setDelivery] = useState<DeliveryPickRow | null>(null);
-  const [unpaidCharges, setUnpaidCharges] = useState<UnpaidChargeRow[]>([]);
-  const [chargePayStr, setChargePayStr] = useState<Record<string, string>>({});
-  const [loadingCharges, setLoadingCharges] = useState(false);
   const [submitError, setSubmitError] = useState<{ title: string; message: string } | null>(null);
 
   const [submitting, setSubmitting] = useState(false);
   const [typeModal, setTypeModal] = useState(false);
-  const [lotModal, setLotModal] = useState(false);
-  const [delModal, setDelModal] = useState(false);
   const [typeQ, setTypeQ] = useState("");
-  const [lotQ, setLotQ] = useState("");
   const debTypeQ = useDebouncedValue(typeQ.trim(), 300);
-  const debLotQ = useDebouncedValue(lotQ.trim(), 300);
   const [typeRows, setTypeRows] = useState<PaymentTypePickRow[]>([]);
-  const [lotRows, setLotRows] = useState<LotPickRow[]>([]);
-  const [delRows, setDelRows] = useState<DeliveryPickRow[]>([]);
-  const [delLoading, setDelLoading] = useState(false);
   const [discardOpen, setDiscardOpen] = useState(false);
 
   const isStaff = paymentType?.category === "STAFF";
-  const isStockMovement = paymentType?.category === "STOCK_MOVEMENT";
-  const stockPaid = isStockMovement && status === "PAID";
-
-  const chargeSum = useMemo(() => {
-    let s = 0;
-    for (const row of unpaidCharges) {
-      const n = parseIndianRupeeInput(chargePayStr[row.id] ?? "");
-      if (n !== null && n > 0) s += n;
-    }
-    return round2(s);
-  }, [unpaidCharges, chargePayStr]);
-
-  useEffect(() => {
-    if (stockPaid) {
-      setAmountStr(chargeSum > 0 ? formatRupeeDigitsForInput(chargeSum) : "");
-    }
-  }, [stockPaid, chargeSum]);
-
-  useEffect(() => {
-    if (!isStockMovement) {
-      setLot(null);
-      setDelivery(null);
-      setUnpaidCharges([]);
-      setChargePayStr({});
-    }
-  }, [isStockMovement]);
 
   useEffect(() => {
     if (!isStaff) {
@@ -144,33 +72,6 @@ export function MobileAddPaymentScreen({ warehouseId: warehouseIdProp, onClose, 
     }
   }, [isStaff]);
 
-  useEffect(() => {
-    if (!stockPaid || !lot || !delivery) {
-      setUnpaidCharges([]);
-      setChargePayStr({});
-      return;
-    }
-    let cancelled = false;
-    setLoadingCharges(true);
-    void (async () => {
-      try {
-        const rows = await fetchUnpaidChargesForLotDelivery(supabase, {
-          lotId: lot.lot_id,
-          deliveryId: delivery.delivery_id,
-        });
-        if (!cancelled) {
-          setUnpaidCharges(rows);
-          setChargePayStr({});
-        }
-      } finally {
-        if (!cancelled) setLoadingCharges(false);
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [stockPaid, lot, delivery, supabase]);
-
   const refreshTypes = useCallback(async () => {
     if (!warehouseId) return;
     const { rows } = await searchPaymentTypesQuickPick(supabase, {
@@ -178,63 +79,20 @@ export function MobileAddPaymentScreen({ warehouseId: warehouseIdProp, onClose, 
       q: debTypeQ,
       limit: PAGE_SIZE,
       offset: 0,
+      excludeCategories: EXCLUDE_PAYMENT_CATEGORIES,
     });
     setTypeRows(rows);
   }, [debTypeQ, supabase, warehouseId]);
-
-  const refreshLots = useCallback(async () => {
-    if (!warehouseId) return;
-    const { rows } = await searchLotsQuickPick(supabase, {
-      warehouseId,
-      q: debLotQ,
-      limit: PAGE_SIZE,
-      offset: 0,
-    });
-    setLotRows(rows);
-  }, [debLotQ, supabase, warehouseId]);
 
   useEffect(() => {
     if (!typeModal || !warehouseId) return;
     void refreshTypes();
   }, [typeModal, warehouseId, refreshTypes]);
 
-  useEffect(() => {
-    if (!lotModal || !warehouseId) return;
-    void refreshLots();
-  }, [lotModal, warehouseId, refreshLots]);
-
-  useEffect(() => {
-    if (!delModal || !lot) {
-      setDelRows([]);
-      return;
-    }
-    setDelLoading(true);
-    void listDeliveriesForLot(supabase, { lotId: lot.lot_id })
-      .then(setDelRows)
-      .finally(() => setDelLoading(false));
-  }, [delModal, lot, supabase]);
-
   async function handleSubmit() {
     if (!warehouseId || !paymentType) return;
-    let amount = parseIndianRupeeInput(amountStr);
-    if (stockPaid) amount = chargeSum;
+    const amount = parseIndianRupeeInput(amountStr);
     if (amount === null || amount <= 0) return;
-
-    const chargeLines =
-      stockPaid ?
-        unpaidCharges
-          .map((row) => {
-            const n = parseIndianRupeeInput(chargePayStr[row.id] ?? "");
-            return {
-              transactionChargeId: row.id,
-              amount: n !== null && n > 0 ? round2(n) : 0,
-            };
-          })
-          .filter((l) => l.amount > 0)
-      : undefined;
-
-    if (isStockMovement && (!lot || !delivery)) return;
-    if (stockPaid && unpaidCharges.length === 0) return;
 
     if (isStaff) {
       if (partyPhone.trim() === "") {
@@ -258,17 +116,16 @@ export function MobileAddPaymentScreen({ warehouseId: warehouseIdProp, onClose, 
         warehouseId,
         paymentTypeId: paymentType.id,
         paymentTypeCategory: paymentType.category,
-        status,
+        status: "PAID",
         amount,
         paymentMethod,
         paymentDateIso: paymentDate,
-        dueDateIso: status === "PENDING" ? dueDate : null,
+        dueDateIso: null,
         notes: notes.trim() === "" ? null : notes.trim(),
         partyName: isStaff ? (partyName.trim() === "" ? null : partyName.trim()) : null,
         partyPhone: isStaff ? (partyPhone.trim() === "" ? null : partyPhone.trim()) : null,
-        lotId: isStockMovement ? lot?.lot_id ?? null : null,
-        deliveryId: isStockMovement ? delivery?.delivery_id ?? null : null,
-        chargePayLines: chargeLines,
+        lotId: null,
+        deliveryId: null,
       });
       DeviceEventEmitter.emit(MONEY_REFRESH_EVENT);
       onDone();
@@ -305,7 +162,7 @@ export function MobileAddPaymentScreen({ warehouseId: warehouseIdProp, onClose, 
           <MobileDatePickerField value={paymentDate} onChange={setPaymentDate} />
         </View>
         <View style={styles.block}>
-          <AmountField label="Amount" value={amountStr} onChange={setAmountStr} editable={!stockPaid} />
+          <AmountField label="Amount" value={amountStr} onChange={setAmountStr} />
         </View>
         <Text style={styles.sectionLabel}>Payment method</Text>
         <View style={styles.pmWrap}>
@@ -330,37 +187,6 @@ export function MobileAddPaymentScreen({ warehouseId: warehouseIdProp, onClose, 
             {paymentType ? paymentType.name : "Tap to choose"}
           </Text>
         </Pressable>
-        <Text style={styles.fieldLabel}>Notes</Text>
-        <TextInput
-          value={notes}
-          onChangeText={setNotes}
-          placeholder="Optional"
-          placeholderTextColor={tokens.textPlaceholder}
-          multiline
-          style={styles.textarea}
-        />
-        <Text style={styles.sectionLabel}>Status</Text>
-        <View style={styles.pillRow}>
-          {(["PAID", "PENDING"] as const).map((s) => (
-            <Pressable
-              key={s}
-              onPress={() => setStatus(s)}
-              style={[styles.pill, status === s ? styles.pillOn : styles.pillOff]}
-            >
-              <Text style={[styles.pillTxt, status === s ? styles.pillTxtOn : styles.pillTxtOff]}>
-                {s === "PAID" ? "Paid" : "Pending"}
-              </Text>
-            </Pressable>
-          ))}
-        </View>
-        {status === "PENDING" ?
-          <>
-            <Text style={styles.fieldLabel}>Due date</Text>
-            <View style={styles.block}>
-              <MobileDatePickerField value={dueDate} onChange={setDueDate} />
-            </View>
-          </>
-        : null}
         {isStaff ?
           <>
             <Text style={styles.fieldLabel}>Employee name</Text>
@@ -374,49 +200,14 @@ export function MobileAddPaymentScreen({ warehouseId: warehouseIdProp, onClose, 
             />
           </>
         : null}
-        {isStockMovement ?
-          <>
-            <Text style={styles.fieldLabel}>Lot</Text>
-            <Pressable style={styles.pickerBtn} onPress={() => setLotModal(true)}>
-              <Text style={lot ? styles.pickerVal : styles.pickerPh}>{lot ? lot.lot_number : "Search lots"}</Text>
-            </Pressable>
-            <Text style={styles.fieldLabel}>Delivery</Text>
-            <Pressable style={styles.pickerBtn} disabled={!lot} onPress={() => setDelModal(true)}>
-              <Text style={delivery ? styles.pickerVal : styles.pickerPh}>
-                {delivery ? `${delivery.delivery_date} · ${delivery.num_bags_out} bags` : "Choose delivery"}
-              </Text>
-            </Pressable>
-            {stockPaid ?
-              <View style={styles.chargeBox}>
-                <Text style={styles.sectionLabel}>Stock movement charges</Text>
-                {loadingCharges ?
-                  <ActivityIndicator color={tokens.brandUi} />
-                : unpaidCharges.length === 0 ?
-                  <Text style={styles.muted}>No unpaid charges.</Text>
-                : (
-                  unpaidCharges.map((row) => {
-                    const remaining = round2(row.chargeAmount - row.legacyAmountPaid);
-                    return (
-                      <View key={row.id} style={styles.chargeRow}>
-                        <Text style={styles.chargeName}>{row.displayName}</Text>
-                        <Text style={styles.muted}>Due {formatIndianCurrency(remaining)}</Text>
-                        <TextInput
-                          value={chargePayStr[row.id] ?? ""}
-                          onChangeText={(t) =>
-                            setChargePayStr((prev) => ({ ...prev, [row.id]: formatRupeeInputLive(t) }))
-                          }
-                          keyboardType="decimal-pad"
-                          style={styles.input}
-                        />
-                      </View>
-                    );
-                  })
-                )}
-                <Text style={styles.totalLine}>Total {formatIndianCurrency(chargeSum)}</Text>
-              </View>
-            : null}
-          </>
-        : null}
+        <Text style={styles.fieldLabel}>Notes</Text>
+        <TextInput
+          value={notes}
+          onChangeText={setNotes}
+          placeholder="Optional note"
+          placeholderTextColor={tokens.textPlaceholder}
+          style={styles.input}
+        />
       </ScrollView>
 
       <View style={[styles.footer, { paddingBottom: bottomPad }]}>
@@ -468,78 +259,6 @@ export function MobileAddPaymentScreen({ warehouseId: warehouseIdProp, onClose, 
               </Pressable>
             )}
           />
-        </View>
-      </Modal>
-
-      <Modal visible={lotModal} animationType="slide" onRequestClose={() => setLotModal(false)}>
-        <View style={[styles.modal, { paddingTop: insets.top }]}>
-          <View style={styles.modalHead}>
-            <Text style={styles.modalTitle}>Lot</Text>
-            <Pressable onPress={() => setLotModal(false)} style={styles.headerBtn}>
-              <X size={22} color={tokens.textPrimary} strokeWidth={STROKE} />
-            </Pressable>
-          </View>
-          <View style={styles.searchRow}>
-            <Search size={18} color={tokens.textTertiary} strokeWidth={STROKE} />
-            <TextInput
-              value={lotQ}
-              onChangeText={setLotQ}
-              placeholder="Search"
-              placeholderTextColor={tokens.textPlaceholder}
-              style={styles.searchInp}
-            />
-          </View>
-          <FlatList
-            data={lotRows}
-            keyExtractor={(i) => i.lot_id}
-            renderItem={({ item }) => (
-              <Pressable
-                style={styles.listRow}
-                onPress={() => {
-                  setLot(item);
-                  setDelivery(null);
-                  setLotModal(false);
-                }}
-              >
-                <Text style={styles.listTitle}>{item.lot_number}</Text>
-                <Text style={styles.muted} numberOfLines={1}>
-                  {item.customer_name}
-                </Text>
-              </Pressable>
-            )}
-          />
-        </View>
-      </Modal>
-
-      <Modal visible={delModal} animationType="slide" onRequestClose={() => setDelModal(false)}>
-        <View style={[styles.modal, { paddingTop: insets.top }]}>
-          <View style={styles.modalHead}>
-            <Text style={styles.modalTitle}>Delivery</Text>
-            <Pressable onPress={() => setDelModal(false)} style={styles.headerBtn}>
-              <X size={22} color={tokens.textPrimary} strokeWidth={STROKE} />
-            </Pressable>
-          </View>
-          {delLoading ?
-            <ActivityIndicator color={tokens.brandUi} style={{ marginTop: 24 }} />
-          : (
-            <FlatList
-              data={delRows}
-              keyExtractor={(i) => i.delivery_id}
-              renderItem={({ item }) => (
-                <Pressable
-                  style={styles.listRow}
-                  onPress={() => {
-                    setDelivery(item);
-                    setDelModal(false);
-                  }}
-                >
-                  <Text style={styles.listTitle}>
-                    {item.delivery_date} · {item.num_bags_out} bags
-                  </Text>
-                </Pressable>
-              )}
-            />
-          )}
         </View>
       </Modal>
 
@@ -604,7 +323,6 @@ const styles = StyleSheet.create({
     color: tokens.textTertiary,
     fontWeight: "500",
   },
-  pillRow: { flexDirection: "row", flexWrap: "wrap", gap: 8, paddingHorizontal: 16, marginTop: 8 },
   pmWrap: {
     flexDirection: "row",
     flexWrap: "wrap",
@@ -625,18 +343,6 @@ const styles = StyleSheet.create({
   pmChipOn: { borderColor: tokens.brandUi, backgroundColor: tokens.brandSubtle },
   pmChipText: { fontFamily: "NotoSans-Regular", fontSize: 14, color: tokens.textPrimary },
   pmChipTextOn: { fontFamily: "NotoSans-SemiBold", color: tokens.brandText },
-  pill: {
-    minHeight: 48,
-    paddingHorizontal: 16,
-    borderRadius: 999,
-    borderWidth: 1,
-    justifyContent: "center",
-  },
-  pillOn: { borderColor: tokens.brandUi, backgroundColor: tokens.brandSubtle },
-  pillOff: { borderColor: tokens.borderDefault, backgroundColor: tokens.bgSubtle },
-  pillTxt: { fontSize: 16 },
-  pillTxtOn: { color: tokens.brandText, fontWeight: "600" },
-  pillTxtOff: { color: tokens.textSecondary },
   pickerBtn: {
     marginHorizontal: 16,
     marginTop: 6,
@@ -650,19 +356,6 @@ const styles = StyleSheet.create({
   },
   pickerVal: { fontSize: 16, color: tokens.textPrimary },
   pickerPh: { fontSize: 16, color: tokens.textPlaceholder },
-  textarea: {
-    marginHorizontal: 16,
-    marginTop: 6,
-    minHeight: 96,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: tokens.borderDefault,
-    backgroundColor: tokens.bgSubtle,
-    padding: 12,
-    fontSize: 16,
-    color: tokens.textPrimary,
-    textAlignVertical: "top",
-  },
   input: {
     marginHorizontal: 16,
     marginTop: 6,
@@ -675,19 +368,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: tokens.textPrimary,
   },
-  chargeBox: {
-    marginHorizontal: 16,
-    marginTop: 12,
-    padding: 12,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: tokens.borderDefault,
-    backgroundColor: tokens.bgSurface,
-  },
-  chargeRow: { marginBottom: 12 },
-  chargeName: { fontSize: 15, fontWeight: "600", color: tokens.textPrimary },
   muted: { fontSize: 13, color: tokens.textSecondary, marginTop: 4 },
-  totalLine: { marginTop: 8, fontSize: 15, fontWeight: "700", color: tokens.textPrimary },
   footer: {
     flexDirection: "row",
     gap: 8,

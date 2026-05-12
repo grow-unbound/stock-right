@@ -14,7 +14,9 @@
     "./offline/app-cache": "./src/offline/app-cache/index.ts",
     "./stock-tab": "./src/stock-tab/index.ts",
     "./parties-tab": "./src/parties-tab/index.ts",
-    "./receipt": "./src/receipt/index.ts"
+    "./receipt": "./src/receipt/index.ts",
+    "./list-scroll-prefetch": "./src/list-scroll-prefetch.ts",
+    "./lot-charge-form": "./src/lot-charge-form.ts"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.49.4",

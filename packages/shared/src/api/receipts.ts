@@ -18,6 +18,9 @@ const OutstandingRowSchema = z.object({
   product_name: z.string(),
   balance_bags: z.coerce.number(),
   original_bags: z.coerce.number(),
+  lot_lodgement_date: z
+    .union([z.string(), z.null(), z.undefined()])
+    .transform((v) => (v == null || v === "" ? "" : String(v))),
 });
 
 export type OutstandingAllocatableRow = z.infer<typeof OutstandingRowSchema>;
@@ -85,7 +88,6 @@ export async function insertCustomerReceipt(
     receiptDate: string;
     totalAmount: number;
     paymentMethod: string;
-    referenceNumber?: string | null;
     notes?: string | null;
   }
 ): Promise<{ id: string }> {
@@ -116,7 +118,6 @@ export async function insertCustomerReceipt(
       receipt_date: params.receiptDate,
       total_amount: totalAmount,
       payment_method: paymentMethod,
-      reference_number: params.referenceNumber ?? null,
       notes: params.notes ?? null,
       recorded_by: recordedBy,
     })
@@ -209,7 +210,6 @@ export async function createReceiptWithAllocations(
     receiptDate: string;
     totalAmount: number;
     paymentMethod: string;
-    referenceNumber?: string | null;
     notes?: string | null;
     allocationLines: ConfirmAllocationInputLine[];
   }
@@ -220,7 +220,6 @@ export async function createReceiptWithAllocations(
     receiptDate: params.receiptDate,
     totalAmount: params.totalAmount,
     paymentMethod: params.paymentMethod,
-    referenceNumber: params.referenceNumber,
     notes: params.notes,
   });
 

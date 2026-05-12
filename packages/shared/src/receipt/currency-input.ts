@@ -7,12 +7,20 @@ export function parseIndianRupeeInput(raw: string): number | null {
   return Math.round(n * 100) / 100;
 }
 
-/** Format number for controlled input display (no ₹ prefix — add in UI if needed). */
+/** Format number for controlled input (no currency symbol); drops ".00" for whole rupees. */
 export function formatRupeeDigitsForInput(amount: number): string {
   if (!Number.isFinite(amount)) return "";
   const [intPart, frac] = amount.toFixed(2).split(".");
   const withGrouping = intPart.replace(/\B(?=(\d{3})+(?!\d))/g, ",");
   return frac === "00" ? withGrouping : `${withGrouping}.${frac}`;
+}
+
+/** Same as {@link formatRupeeDigitsForInput} but always keeps two fractional digits. */
+export function formatRupeeDigitsForInput2(amount: number): string {
+  if (!Number.isFinite(amount)) return "";
+  const [intPart, frac] = amount.toFixed(2).split(".");
+  const withGrouping = intPart.replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+  return `${withGrouping}.${frac}`;
 }
 
 /** Indian-style grouping while typing (digits + optional decimal, max 2 fractional digits). */

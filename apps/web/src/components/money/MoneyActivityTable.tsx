@@ -29,6 +29,7 @@ interface MoneyActivityTableProps {
   formatOccurredAt: (iso: string) => string;
   paymentMethodLabel: (raw: string | null) => string;
   referenceLabel: (row: MoneyMovementRow) => string;
+  onRowClick?: (row: MoneyMovementRow) => void;
 }
 
 function SortGlyph({ active, dir }: { active: boolean; dir: "asc" | "desc" }) {
@@ -79,6 +80,7 @@ export function MoneyActivityTable({
   formatOccurredAt,
   paymentMethodLabel,
   referenceLabel,
+  onRowClick,
 }: MoneyActivityTableProps) {
   const totalPages = Math.max(1, Math.ceil(totalCount / pageSize));
   const start = totalCount === 0 ? 0 : (page - 1) * pageSize + 1;
@@ -113,7 +115,26 @@ export function MoneyActivityTable({
             {rows.map((row) => {
               const extra = additionalDetails(row);
               return (
-                <tr key={`${row.transaction_type}-${row.event_id}`} className="border-b border-[var(--border-default)] last:border-b-0">
+                <tr
+                  key={`${row.transaction_type}-${row.event_id}`}
+                  className={cn(
+                    "border-b border-[var(--border-default)] last:border-b-0",
+                    onRowClick ? "cursor-pointer hover:bg-[var(--bg-subtle)]" : null
+                  )}
+                  tabIndex={onRowClick ? 0 : undefined}
+                  role={onRowClick ? "button" : undefined}
+                  onClick={onRowClick ? () => onRowClick(row) : undefined}
+                  onKeyDown={
+                    onRowClick ?
+                      (e) => {
+                        if (e.key === "Enter" || e.key === " ") {
+                          e.preventDefault();
+                          onRowClick(row);
+                        }
+                      }
+                    : undefined
+                  }
+                >
                   <td className={cn(dataTableTdMono, "max-w-[200px] truncate")}>{referenceLabel(row)}</td>
                   <td className={dataTableTdMono}>{formatOccurredAt(row.occurred_at)}</td>
                   <td className="px-3 py-2.5 align-middle">{moneyTypeBadge(row.transaction_type)}</td>

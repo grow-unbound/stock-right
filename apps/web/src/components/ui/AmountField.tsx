@@ -2,6 +2,7 @@
 
 import {
   formatRupeeDigitsForInput,
+  formatRupeeDigitsForInput2,
   formatRupeeInputLive,
   parseIndianRupeeInput,
 } from "@stockright/shared/receipt";
@@ -17,6 +18,10 @@ interface AmountFieldProps {
   placeholder?: string;
   disabled?: boolean;
   className?: string;
+  /** Right-align rupee amount (e.g. charge lines). */
+  inputAlign?: "left" | "right";
+  /** On blur, always show two fractional digits (e.g. …,60). */
+  twoDecimalBlur?: boolean;
 }
 
 export function AmountField({
@@ -28,6 +33,8 @@ export function AmountField({
   placeholder = "0",
   disabled,
   className,
+  inputAlign = "left",
+  twoDecimalBlur,
 }: AmountFieldProps) {
   const genId = useId();
   const id = idProp ?? genId;
@@ -57,9 +64,15 @@ export function AmountField({
           onChange={(e) => onChange(formatRupeeInputLive(e.target.value))}
           onBlur={() => {
             const n = parseIndianRupeeInput(value);
-            if (n !== null) onChange(formatRupeeDigitsForInput(n));
+            if (n !== null) {
+              onChange(twoDecimalBlur ? formatRupeeDigitsForInput2(n) : formatRupeeDigitsForInput(n));
+            }
           }}
-          className="min-h-[var(--touch-target)] w-full rounded-[var(--radius-md)] border border-[var(--border-default)] bg-[var(--bg-subtle)] py-2 pl-8 pr-3 font-[family-name:var(--font-mono)] text-[16px] text-[var(--text-primary)] outline-none focus-visible:border-[var(--brand-ui)] focus-visible:ring-[3px] focus-visible:ring-[rgba(200,113,42,0.12)]"
+          className={cn(
+            "min-h-[var(--touch-target)] w-full rounded-[var(--radius-md)] border border-[var(--border-default)] bg-[var(--bg-subtle)] py-2 pl-8 pr-3 font-[family-name:var(--font-mono)] text-[16px] text-[var(--text-primary)] outline-none focus-visible:border-[var(--brand-ui)] focus-visible:ring-[3px] focus-visible:ring-[rgba(200,113,42,0.12)]",
+            inputAlign === "right" && "text-right",
+            disabled && "cursor-not-allowed opacity-[0.72] text-[var(--text-secondary)]"
+          )}
           placeholder={placeholder}
         />
       </div>

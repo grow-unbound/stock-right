@@ -47,6 +47,7 @@
 - Any feature added to web MUST be simultaneously added to mobile, or deferred with a tracked issue.
 - Any feature added to mobile MUST be simultaneously added to web, or deferred with a tracked issue.
 - Shared logic (validation, API calls, types) MUST live in `packages/shared`, not duplicated.
+- Always work on the current branch. Do not attempt to switch branches or perform git merges unless asked.
 
 ## Security
 - Never log OTP codes, session tokens, or user PII.

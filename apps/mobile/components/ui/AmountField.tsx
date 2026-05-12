@@ -1,6 +1,7 @@
-import { View, Text, TextInput, StyleSheet } from "react-native";
+import { View, Text, TextInput, StyleSheet, type StyleProp, type ViewStyle } from "react-native";
 import {
   formatRupeeDigitsForInput,
+  formatRupeeDigitsForInput2,
   formatRupeeInputLive,
   parseIndianRupeeInput,
 } from "@stockright/shared/receipt";
@@ -13,6 +14,12 @@ interface AmountFieldProps {
   optionalSuffix?: string;
   placeholder?: string;
   editable?: boolean;
+  containerStyle?: StyleProp<ViewStyle>;
+  dense?: boolean;
+  /** Right-align amount digits in the input. */
+  valueAlign?: "left" | "right";
+  /** On blur, always show two fractional digits. */
+  twoDecimalBlur?: boolean;
 }
 
 export function AmountField({
@@ -22,14 +29,18 @@ export function AmountField({
   optionalSuffix,
   placeholder = "0",
   editable = true,
+  containerStyle,
+  dense,
+  valueAlign = "left",
+  twoDecimalBlur,
 }: AmountFieldProps) {
   return (
-    <View>
-      <Text style={styles.label}>
+    <View style={containerStyle}>
+      <Text style={[styles.label, dense && styles.labelDense]}>
         {label}
         {optionalSuffix ? <Text style={styles.optionalSuffix}> {optionalSuffix}</Text> : null}
       </Text>
-      <View style={styles.rupeeRow}>
+      <View style={[styles.rupeeRow, !editable && styles.rupeeRowDisabled]}>
         <Text style={styles.rupeeSym}>₹</Text>
         <TextInput
           value={value}
@@ -37,12 +48,14 @@ export function AmountField({
           onChangeText={(t) => onChange(formatRupeeInputLive(t))}
           onBlur={() => {
             const n = parseIndianRupeeInput(value);
-            if (n !== null) onChange(formatRupeeDigitsForInput(n));
+            if (n !== null) {
+              onChange(twoDecimalBlur ? formatRupeeDigitsForInput2(n) : formatRupeeDigitsForInput(n));
+            }
           }}
           keyboardType="decimal-pad"
           placeholder={placeholder}
           placeholderTextColor={tokens.textPlaceholder}
-          style={styles.rupeeInput}
+          style={[styles.rupeeInput, valueAlign === "right" && styles.rupeeInputRight]}
         />
       </View>
     </View>
@@ -58,6 +71,9 @@ const styles = StyleSheet.create({
     letterSpacing: 0.6,
     textTransform: "uppercase",
     color: tokens.textTertiary,
+  },
+  labelDense: {
+    marginTop: 4,
   },
   optionalSuffix: {
     fontFamily: "NotoSans-Regular",
@@ -76,6 +92,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: tokens.sp3,
     backgroundColor: tokens.bgSubtle,
   },
+  rupeeRowDisabled: {
+    opacity: 0.72,
+  },
   rupeeSym: {
     fontFamily: "NotoSansMono-Regular",
     fontSize: 16,
@@ -89,5 +108,8 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: tokens.textPrimary,
     paddingVertical: 8,
+  },
+  rupeeInputRight: {
+    textAlign: "right",
   },
 });

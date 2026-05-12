@@ -13,7 +13,6 @@ import {
 import { tokens } from "@stockright/shared/tokens";
 import { FabActionSheet } from "./FabActionSheet";
 import { useMoneyAccessContext } from "@/contexts/MoneyAccessContext";
-import { BrandedAlertModal } from "@/components/ui/BrandedAlertModal";
 
 /** Keep in sync with `DashboardTabBar` height + `globals.css` `--tabbar-height` */
 const TABBAR_BASE = 64;
@@ -34,7 +33,6 @@ export function LandingFab() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const [open, setOpen] = useState(false);
-  const [comingSoonOpen, setComingSoonOpen] = useState(false);
   const { canManageMoney, loaded: moneyAccessLoaded } = useMoneyAccessContext();
 
   const segmentTab = useMemo(() => {
@@ -43,7 +41,8 @@ export function LandingFab() {
       pathname.includes("/receipt/new") ||
       pathname.includes("/payment/new") ||
       pathname.includes("/parties/new") ||
-      pathname.includes("/stock/lot/new")
+      pathname.includes("/stock/lot/new") ||
+      pathname.includes("/stock/delivery/new")
     ) {
       return undefined;
     }
@@ -77,7 +76,7 @@ export function LandingFab() {
     }
     if (segmentTab === "stock") {
       if (id === "add_lot") router.push("/stock/lot/new");
-      if (id === "add_delivery") setComingSoonOpen(true);
+      if (id === "add_delivery") router.push("/stock/delivery/new");
     }
   }
 
@@ -97,12 +96,6 @@ export function LandingFab() {
         actions={config.actions}
         onClose={() => setOpen(false)}
         onSelect={handleFabActionSelect}
-      />
-      <BrandedAlertModal
-        visible={comingSoonOpen}
-        title="Coming soon"
-        message="Record dispatch will be available in a later update."
-        onConfirm={() => setComingSoonOpen(false)}
       />
     </>
   );

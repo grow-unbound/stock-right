@@ -21,7 +21,7 @@ export function AppShell({ children }: AppShellProps) {
               <SideNav />
             </div>
 
-            <main className="flex min-h-0 flex-1 flex-col overflow-y-auto px-6 pb-4 pt-4 sm:pb-6 sm:pt-6">
+            <main className="flex min-h-0 flex-1 flex-col overflow-y-auto px-6 pb-4 pt-4 sm:min-h-0 sm:flex-col sm:overflow-hidden sm:pb-6 sm:pt-6">
               {children}
             </main>
           </div>

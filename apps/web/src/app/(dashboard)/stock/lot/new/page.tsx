@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ChevronLeft } from "lucide-react";
 import { useSessionUser } from "@/components/session/session-user-provider";
@@ -12,6 +12,7 @@ export default function StockLotNewPage() {
   const { context } = useSessionUser();
   const warehouseId = context?.warehouseId ?? null;
   const supabase = useMemo(() => createSupabaseBrowserClient(), []);
+  const [headerLotChipHost, setHeaderLotChipHost] = useState<HTMLElement | null>(null);
 
   return (
     <div className="flex h-[100dvh] min-h-0 flex-col overflow-hidden bg-[var(--bg-page)] pb-[env(safe-area-inset-bottom)] pt-[env(safe-area-inset-top)]">
@@ -23,15 +24,19 @@ export default function StockLotNewPage() {
         >
           <ChevronLeft className="size-5" strokeWidth={2} aria-hidden />
         </button>
-        <h1 className="min-w-0 flex-1 font-[family-name:var(--font-display)] text-[18px] font-semibold text-[var(--text-primary)]">
-          Add Lot
-        </h1>
+        <div className="flex min-w-0 flex-1 items-center gap-2">
+          <h1 className="min-w-0 shrink truncate font-[family-name:var(--font-display)] text-[18px] font-semibold text-[var(--text-primary)]">
+            Add Lot
+          </h1>
+          <span className="inline-flex shrink-0" ref={setHeaderLotChipHost} />
+        </div>
       </header>
       {warehouseId ? (
         <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
           <AddLotForm
             warehouseId={warehouseId}
             supabase={supabase}
+            headerLotChipHost={headerLotChipHost}
             onClose={() => router.back()}
             onSuccess={() => {}}
           />

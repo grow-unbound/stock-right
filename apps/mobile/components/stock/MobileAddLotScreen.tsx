@@ -17,7 +17,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import {
   fetchProductChargesForProduct,
   insertLodgementLot,
-  previewNextLotNumber,
+  previewNextLotSequenceNumber,
   searchCustomersQuickPick,
   searchProductsQuickPick,
   STOCK_REFRESH_EVENT,
@@ -32,8 +32,13 @@ import {
   paymentMethodLabel,
   type PaymentMethodValue,
 } from "@stockright/shared/receipt";
+import {
+  buildInitialNumBagsByLine,
+  isChargeNumBagsLockedToLot,
+  syncLockedNumBagsToLotBags,
+} from "@stockright/shared/lot-charge-form";
 import { buildSyntheticLodgementRow } from "@stockright/shared/stock-tab";
-import { formatIndianCurrency, partyInitials, ACTIVE_WAREHOUSE_ID_KEY } from "@stockright/shared/utils";
+import { formatIndianCurrency2, partyInitials, ACTIVE_WAREHOUSE_ID_KEY } from "@stockright/shared/utils";
 import { tokens } from "@stockright/shared/tokens";
 import { getSupabaseClient } from "@/lib/supabase";
 import { storage } from "@/lib/storage";
@@ -85,14 +90,6 @@ function mergeProd(a: ProductPickRow[], b: ProductPickRow[]): ProductPickRow[] {
   return out;
 }
 
-function initialNumBagsMap(rows: ChargeDef[], lodgedBags: number): Record<string, string> {
-  const o: Record<string, string> = {};
-  for (const row of rows) {
-    o[row.productChargeTypeId] = row.code === "PLATFORM_HAMALI" ? String(Math.max(0, lodgedBags)) : "0";
-  }
-  return o;
-}
-
 interface MobileAddLotScreenProps {
   warehouseId?: string;
   onClose: () => void;
@@ -137,14 +134,37 @@ export function MobileAddLotScreen({ warehouseId: warehouseIdProp, onClose, onDo
   const [numBagsByLine, setNumBagsByLine] = useState<Record<string, string>>({});
   const [paidNowStr, setPaidNowStr] = useState<Record<string, string>>({});
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethodValue>("UPI");
-  const [transportOpen, setTransportOpen] = useState(false);
+  const [transportOpen, setTransportOpen] = useState(true);
   const [chargesOpen, setChargesOpen] = useState(false);
-  const [lotPreview, setLotPreview] = useState<string | null>(null);
-  const [lotPreviewLoading, setLotPreviewLoading] = useState(false);
+  const [lotSeq, setLotSeq] = useState<number | null>(null);
+  const [lotSeqLoading, setLotSeqLoading] = useState(false);
   const [loadingCharges, setLoadingCharges] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [discardOpen, setDiscardOpen] = useState(false);
   const [errorOpen, setErrorOpen] = useState<{ title: string; message: string } | null>(null);
+
+  useEffect(() => {
+    if (!warehouseId) {
+      setLotSeq(null);
+      setLotSeqLoading(false);
+      return;
+    }
+    let cancelled = false;
+    setLotSeqLoading(true);
+    void previewNextLotSequenceNumber(supabase, warehouseId)
+      .then((n) => {
+        if (!cancelled) setLotSeq(n);
+      })
+      .catch(() => {
+        if (!cancelled) setLotSeq(null);
+      })
+      .finally(() => {
+        if (!cancelled) setLotSeqLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [warehouseId, supabase]);
 
   const fetchCust = useCallback(
     async (offset: number, reset: boolean) => {
@@ -201,8 +221,10 @@ export function MobileAddLotScreen({ warehouseId: warehouseIdProp, onClose, onDo
       setChargeDefs([]);
       setNumBagsByLine({});
       setPaidNowStr({});
+      setChargesOpen(false);
       return;
     }
+    setChargesOpen(false);
     let cancelled = false;
     setLoadingCharges(true);
     void (async () => {
@@ -212,7 +234,7 @@ export function MobileAddLotScreen({ warehouseId: warehouseIdProp, onClose, onDo
           setChargeDefs(rows);
           setPaidNowStr({});
           const lodged = Number.parseInt(bagsStr.replace(/\D/g, "") || "0", 10);
-          setNumBagsByLine(initialNumBagsMap(rows, Number.isFinite(lodged) ? lodged : 0));
+          setNumBagsByLine(buildInitialNumBagsByLine(rows, Number.isFinite(lodged) ? lodged : 0));
         }
       } finally {
         if (!cancelled) setLoadingCharges(false);
@@ -223,50 +245,27 @@ export function MobileAddLotScreen({ warehouseId: warehouseIdProp, onClose, onDo
     };
   }, [product, supabase]);
 
+  useEffect(() => {
+    if (product && !loadingCharges) {
+      setChargesOpen(true);
+    }
+  }, [product, loadingCharges]);
+
   const bagsNum = useMemo(() => {
     const n = Number.parseInt(bagsStr.replace(/\D/g, "") || "0", 10);
     return Number.isFinite(n) ? n : 0;
   }, [bagsStr]);
 
-  useEffect(() => {
-    setNumBagsByLine((prev) => {
-      const next = { ...prev };
-      let changed = false;
-      for (const l of chargeDefs) {
-        if (l.code === "PLATFORM_HAMALI") {
-          const v = String(bagsNum);
-          if (next[l.productChargeTypeId] !== v) {
-            next[l.productChargeTypeId] = v;
-            changed = true;
-          }
-        }
-      }
-      return changed ? next : prev;
-    });
-  }, [bagsNum, chargeDefs]);
+  const lotChipLabel = useMemo(() => {
+    if (lotSeqLoading) return "…";
+    if (lotSeq === null) return "—";
+    if (bagsNum > 0) return `${lotSeq}/${bagsNum}`;
+    return `${lotSeq}/—`;
+  }, [lotSeq, lotSeqLoading, bagsNum]);
 
   useEffect(() => {
-    if (bagsNum <= 0 || !warehouseId) {
-      setLotPreview(null);
-      setLotPreviewLoading(false);
-      return;
-    }
-    let cancelled = false;
-    setLotPreviewLoading(true);
-    void previewNextLotNumber(supabase, warehouseId, bagsNum)
-      .then((s) => {
-        if (!cancelled) setLotPreview(s);
-      })
-      .catch(() => {
-        if (!cancelled) setLotPreview(null);
-      })
-      .finally(() => {
-        if (!cancelled) setLotPreviewLoading(false);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [bagsNum, warehouseId, supabase]);
+    setNumBagsByLine((prev) => syncLockedNumBagsToLotBags(prev, chargeDefs, bagsNum));
+  }, [bagsNum, chargeDefs]);
 
   const chargePreview = useMemo(() => {
     return chargeDefs.map((l) => {
@@ -281,6 +280,12 @@ export function MobileAddLotScreen({ warehouseId: warehouseIdProp, onClose, onDo
   }, [chargeDefs, numBagsByLine, paidNowStr]);
 
   const anyPayNow = useMemo(() => chargePreview.some((l) => l.paidN > 0), [chargePreview]);
+
+  const chargeTotals = useMemo(() => {
+    const receivable = chargePreview.reduce((s, l) => s + l.total, 0);
+    const paid = chargePreview.reduce((s, l) => s + l.paidN, 0);
+    return { receivable: round2(receivable), paid: round2(paid) };
+  }, [chargePreview]);
 
   const dirty = useMemo(() => {
     if (customer !== null) return true;
@@ -363,10 +368,14 @@ export function MobileAddLotScreen({ warehouseId: warehouseIdProp, onClose, onDo
         >
           <ChevronLeft size={22} color={tokens.textPrimary} strokeWidth={STROKE} />
         </Pressable>
-        <Text style={styles.headerTitle} numberOfLines={1}>
-          Add Lot
-        </Text>
-        <View style={styles.headerSpacer} />
+        <View style={styles.headerTitleWrap}>
+          <Text style={styles.headerTitle} numberOfLines={1}>
+            Add Lot
+          </Text>
+          <Text style={styles.lotChip} numberOfLines={1} accessibilityLabel="Lot number preview">
+            {lotChipLabel}
+          </Text>
+        </View>
       </View>
 
       <ScrollView
@@ -398,15 +407,6 @@ export function MobileAddLotScreen({ warehouseId: warehouseIdProp, onClose, onDo
           keyboardType="number-pad"
         />
 
-        {bagsNum > 0 ?
-          <View style={styles.lotPreviewBox}>
-            <Text style={styles.sectionKicker}>Lot number (preview)</Text>
-            <Text style={styles.lotPreviewText}>
-              {lotPreviewLoading ? "Resolving…" : (lotPreview ?? "—")}
-            </Text>
-          </View>
-        : null}
-
         <Text style={styles.label}>Receive date</Text>
         <MobileDatePickerField value={lodgementDate} onChange={setLodgementDate} />
 
@@ -426,30 +426,33 @@ export function MobileAddLotScreen({ warehouseId: warehouseIdProp, onClose, onDo
           />
         </Pressable>
         {transportOpen ?
-          <>
-            <Text style={styles.label}>Driver (optional)</Text>
-            <TextInput
-              value={driverName}
-              onChangeText={setDriverName}
-              style={styles.input}
-              placeholderTextColor={tokens.textPlaceholder}
-            />
-            <Text style={styles.label}>Vehicle (optional)</Text>
-            <TextInput
-              value={vehicleNumber}
-              onChangeText={setVehicleNumber}
-              style={styles.input}
-              placeholderTextColor={tokens.textPlaceholder}
-            />
-          </>
+          <View style={styles.transportGrid}>
+            <View style={styles.transportCol}>
+              <Text style={styles.label}>Driver (optional)</Text>
+              <TextInput
+                value={driverName}
+                onChangeText={setDriverName}
+                style={styles.input}
+                placeholderTextColor={tokens.textPlaceholder}
+              />
+            </View>
+            <View style={styles.transportCol}>
+              <Text style={styles.label}>Vehicle (optional)</Text>
+              <TextInput
+                value={vehicleNumber}
+                onChangeText={setVehicleNumber}
+                style={styles.input}
+                placeholderTextColor={tokens.textPlaceholder}
+              />
+            </View>
+          </View>
         : null}
 
         <Text style={styles.label}>Notes (optional)</Text>
         <TextInput
           value={notes}
           onChangeText={setNotes}
-          style={[styles.input, { minHeight: 88, textAlignVertical: "top" }]}
-          multiline
+          style={styles.input}
           placeholderTextColor={tokens.textPlaceholder}
         />
 
@@ -476,34 +479,67 @@ export function MobileAddLotScreen({ warehouseId: warehouseIdProp, onClose, onDo
               : chargeDefs.length === 0 ?
                 <Text style={styles.muted}>No charge lines for this commodity.</Text>
               : (
-                chargePreview.map((l) => (
-                  <View key={l.productChargeTypeId} style={styles.chargeRow}>
-                    <Text style={styles.chargeName}>{l.displayName}</Text>
-                    <Text style={styles.rateLine}>{formatIndianCurrency(l.chargesPerBag)} / bag</Text>
-                    <Text style={styles.bagFieldLabel}>Bags for this charge</Text>
-                    <TextInput
-                      value={numBagsByLine[l.productChargeTypeId] ?? "0"}
-                      onChangeText={(t) =>
-                        setNumBagsByLine((prev) => ({
-                          ...prev,
-                          [l.productChargeTypeId]: t.replace(/\D/g, ""),
-                        }))
-                      }
-                      style={styles.input}
-                      keyboardType="number-pad"
-                      placeholderTextColor={tokens.textPlaceholder}
-                    />
-                    <Text style={styles.receivableLine}>Receivable {formatIndianCurrency(l.total)}</Text>
-                    <AmountField
-                      label="Pay now"
-                      optionalSuffix="(optional)"
-                      value={paidNowStr[l.productChargeTypeId] ?? ""}
-                      onChange={(v) =>
-                        setPaidNowStr((prev) => ({ ...prev, [l.productChargeTypeId]: formatRupeeInputLive(v) }))
-                      }
-                    />
+                <>
+                  {chargePreview.map((l) => {
+                    const locked = isChargeNumBagsLockedToLot(l.code);
+                    const nbVal = numBagsByLine[l.productChargeTypeId] ?? "0";
+                    return (
+                      <View key={l.productChargeTypeId} style={styles.chargeItemCard}>
+                        <Text style={styles.chargeTitleLine}>
+                          {l.displayName}
+                          <Text style={styles.chargeTitleRate}>
+                            {" "}
+                            ({formatIndianCurrency2(l.chargesPerBag)} / bag)
+                          </Text>
+                        </Text>
+                        <View style={styles.chargeMidRow}>
+                          <View style={styles.chargeBagsCol}>
+                            <Text style={styles.chargeFieldLabel}>Bags</Text>
+                            <TextInput
+                              value={nbVal}
+                              editable={!locked}
+                              onChangeText={(t) =>
+                                setNumBagsByLine((prev) => ({
+                                  ...prev,
+                                  [l.productChargeTypeId]: t.replace(/\D/g, ""),
+                                }))
+                              }
+                              style={[styles.input, styles.chargeBagsInput, locked && styles.inputDisabled]}
+                              keyboardType="number-pad"
+                              placeholderTextColor={tokens.textPlaceholder}
+                            />
+                          </View>
+                          <View style={[styles.chargeAmtCompact, styles.chargeReceivableCol]}>
+                            <Text style={[styles.chargeFieldLabel, { textAlign: "right" }]}>Amount receivable</Text>
+                            <Text style={styles.receivableAmountBold}>{formatIndianCurrency2(l.total)}</Text>
+                          </View>
+                        </View>
+                        <AmountField
+                          label="Amount paid"
+                          optionalSuffix="(optional)"
+                          dense
+                          valueAlign="right"
+                          twoDecimalBlur
+                          containerStyle={styles.chargeAmtCompact}
+                          value={paidNowStr[l.productChargeTypeId] ?? ""}
+                          onChange={(v) =>
+                            setPaidNowStr((prev) => ({ ...prev, [l.productChargeTypeId]: formatRupeeInputLive(v) }))
+                          }
+                        />
+                      </View>
+                    );
+                  })}
+                  <View style={styles.chargeSummary}>
+                    <View style={styles.chargeSummaryRow}>
+                      <Text style={styles.chargeSummaryLabel}>Total charges receivable</Text>
+                      <Text style={styles.chargeSummaryValue}>{formatIndianCurrency2(chargeTotals.receivable)}</Text>
+                    </View>
+                    <View style={styles.chargeSummaryRow}>
+                      <Text style={styles.chargeSummaryTotalLabel}>Total charges paid</Text>
+                      <Text style={styles.chargeSummaryTotalValue}>{formatIndianCurrency2(chargeTotals.paid)}</Text>
+                    </View>
                   </View>
-                ))
+                </>
               )
             : null}
           </View>
@@ -689,24 +725,37 @@ const styles = StyleSheet.create({
     paddingHorizontal: 4,
   },
   headerBtn: { minWidth: 48, minHeight: 48, alignItems: "center", justifyContent: "center" },
-  headerSpacer: { width: 48 },
-  headerTitle: {
+  headerTitleWrap: {
     flex: 1,
+    minWidth: 0,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    paddingHorizontal: 4,
+    justifyContent: "flex-start",
+  },
+  headerTitle: {
+    flexShrink: 1,
     fontFamily: "NotoSerif-SemiBold",
     fontSize: 18,
     color: tokens.textPrimary,
-    textAlign: "center",
   },
-  scrollContent: { paddingHorizontal: tokens.sp4, paddingTop: tokens.sp3, gap: 6 },
-  lotPreviewBox: {
-    marginTop: tokens.sp2,
-    padding: tokens.sp3,
-    borderRadius: tokens.radiusMd,
+  lotChip: {
+    flexShrink: 0,
+    fontFamily: "NotoSansMono-Regular",
+    fontSize: 12,
+    color: tokens.textPrimary,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 999,
     borderWidth: 1,
     borderColor: tokens.borderDefault,
     backgroundColor: tokens.bgSubtle,
+    overflow: "hidden",
+    textAlign: "center",
+    fontVariant: ["tabular-nums"],
   },
-  lotPreviewText: { marginTop: 4, fontFamily: "NotoSans-Medium", fontSize: 16, color: tokens.textPrimary },
+  scrollContent: { paddingHorizontal: tokens.sp4, paddingTop: tokens.sp3, gap: 6 },
   sectionHeaderBtn: {
     marginTop: tokens.sp3,
     flexDirection: "row",
@@ -729,6 +778,19 @@ const styles = StyleSheet.create({
     letterSpacing: 0.6,
     textTransform: "uppercase",
     color: tokens.textTertiary,
+  },
+  transportGrid: {
+    flexDirection: "row",
+    gap: 12,
+    alignItems: "flex-start",
+    marginTop: 4,
+    paddingBottom: 4,
+    borderBottomWidth: 1,
+    borderBottomColor: tokens.borderDefault,
+  },
+  transportCol: {
+    flex: 1,
+    minWidth: 0,
   },
   label: {
     marginTop: tokens.sp2,
@@ -779,20 +841,93 @@ const styles = StyleSheet.create({
     color: tokens.textTertiary,
   },
   muted: { fontFamily: "NotoSans-Regular", fontSize: 14, color: tokens.textSecondary },
-  rateLine: { fontFamily: "NotoSans-Regular", fontSize: 13, color: tokens.textSecondary, marginBottom: 4 },
-  bagFieldLabel: {
-    marginTop: 8,
+  chargeItemCard: {
+    padding: tokens.sp3,
+    borderRadius: tokens.radiusMd,
+    borderWidth: 1,
+    borderColor: tokens.borderDefault,
+    backgroundColor: tokens.bgSurface,
+    gap: tokens.sp2,
+  },
+  chargeTitleLine: {
+    fontFamily: "NotoSans-SemiBold",
+    fontSize: 14,
+    color: tokens.textPrimary,
+    flexWrap: "wrap",
+  },
+  chargeTitleRate: {
+    fontFamily: "NotoSans-Regular",
+    fontSize: 14,
+    color: tokens.textSecondary,
+    fontWeight: "400",
+  },
+  chargeMidRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "flex-end",
+    gap: 12,
+    flexWrap: "wrap",
+  },
+  chargeBagsCol: { flexShrink: 0, minWidth: 100 },
+  chargeBagsInput: { maxWidth: 120, textAlign: "right" as const },
+  chargeFieldLabel: {
+    marginTop: 0,
+    marginBottom: 4,
     fontFamily: "NotoSans-Medium",
     fontSize: 12,
     letterSpacing: 0.6,
     textTransform: "uppercase",
     color: tokens.textTertiary,
   },
-  receivableLine: {
-    marginTop: 8,
+  chargeReceivableCol: { flex: 1, minWidth: 0, alignItems: "flex-end" },
+  chargeAmtCompact: { maxWidth: 220, width: "100%", alignSelf: "flex-start" },
+  receivableAmountBold: {
+    marginTop: 6,
     fontFamily: "NotoSans-SemiBold",
-    fontSize: 14,
+    fontSize: 16,
     color: tokens.textPrimary,
+    textAlign: "right",
+    fontVariant: ["tabular-nums"],
+  },
+  inputDisabled: { opacity: 0.72 },
+  chargeSummary: {
+    marginTop: tokens.sp3,
+    paddingTop: tokens.sp3,
+    borderTopWidth: 1,
+    borderTopColor: tokens.borderDefault,
+    gap: 8,
+  },
+  chargeSummaryRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    gap: 12,
+  },
+  chargeSummaryLabel: {
+    flex: 1,
+    fontFamily: "NotoSans-Regular",
+    fontSize: 15,
+    color: tokens.textSecondary,
+    fontVariant: ["tabular-nums"],
+  },
+  chargeSummaryValue: {
+    fontFamily: "NotoSans-Regular",
+    fontSize: 15,
+    color: tokens.textPrimary,
+    fontVariant: ["tabular-nums"],
+  },
+  chargeSummaryTotalLabel: {
+    flex: 1,
+    fontFamily: "NotoSans-SemiBold",
+    fontSize: 15,
+    color: tokens.textPrimary,
+    fontVariant: ["tabular-nums"],
+  },
+  chargeSummaryTotalValue: {
+    fontFamily: "NotoSans-SemiBold",
+    fontSize: 15,
+    color: tokens.textPrimary,
+    fontVariant: ["tabular-nums"],
   },
   pmWrap: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
   pmChip: {
@@ -808,8 +943,6 @@ const styles = StyleSheet.create({
   pmChipOn: { borderColor: tokens.brandUi, backgroundColor: tokens.brandSubtle },
   pmChipText: { fontFamily: "NotoSans-Regular", fontSize: 14, color: tokens.textPrimary },
   pmChipTextOn: { fontFamily: "NotoSans-SemiBold", color: tokens.brandText },
-  chargeRow: { gap: 8, borderBottomWidth: 1, borderBottomColor: tokens.borderDefault, paddingBottom: 14 },
-  chargeName: { fontFamily: "NotoSans-SemiBold", fontSize: 14, color: tokens.textPrimary },
   footer: {
     flexDirection: "row",
     gap: 10,

@@ -18,6 +18,7 @@ interface PartiesActivityTableProps {
   pageSize: number;
   onPageChange: (page: number) => void;
   onPageSizeChange: (size: number) => void;
+  onRowClick?: (row: PartiesTabListRow) => void;
 }
 
 function formatIn(n: number): string {
@@ -36,6 +37,7 @@ export function PartiesActivityTable({
   pageSize,
   onPageChange,
   onPageSizeChange,
+  onRowClick,
 }: PartiesActivityTableProps) {
   const totalPages = Math.max(1, Math.ceil(totalCount / pageSize));
   const start = totalCount === 0 ? 0 : (page - 1) * pageSize + 1;
@@ -62,7 +64,23 @@ export function PartiesActivityTable({
             {rows.map((row) => (
               <tr
                 key={row.customer_id}
-                className="border-b border-[var(--border-default)] last:border-b-0"
+                className={cn(
+                  "border-b border-[var(--border-default)] last:border-b-0",
+                  onRowClick ? "cursor-pointer hover:bg-[var(--bg-subtle)]" : null
+                )}
+                tabIndex={onRowClick ? 0 : undefined}
+                role={onRowClick ? "button" : undefined}
+                onClick={onRowClick ? () => onRowClick(row) : undefined}
+                onKeyDown={
+                  onRowClick ?
+                    (e) => {
+                      if (e.key === "Enter" || e.key === " ") {
+                        e.preventDefault();
+                        onRowClick(row);
+                      }
+                    }
+                  : undefined
+                }
               >
                 <td className={cn(dataTableTdMono, "max-w-[140px] truncate text-center")}>{row.customer_code}</td>
                 <td className={cn(dataTableTdPrimary, "max-w-[200px] truncate")}>{row.customer_name}</td>

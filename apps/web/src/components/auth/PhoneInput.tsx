@@ -5,13 +5,24 @@ import type { InputHTMLAttributes } from "react";
 
 interface PhoneInputProps
   extends Omit<InputHTMLAttributes<HTMLInputElement>, "type" | "onChange"> {
+  /** When omitted, defaults to "Phone Number". */
+  label?: string;
   value: string;
   onChange: (value: string) => void;
   error?: string;
 }
 
-export function PhoneInput({ value, onChange, error, className, ...props }: PhoneInputProps) {
+export function PhoneInput({
+  label = "Phone Number",
+  value,
+  onChange,
+  error,
+  className,
+  disabled,
+  ...props
+}: PhoneInputProps) {
   function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
+    if (disabled) return;
     const digits = e.target.value.replace(/\D/g, "").slice(0, 10);
     onChange(digits ? `+91${digits}` : "");
   }
@@ -19,10 +30,13 @@ export function PhoneInput({ value, onChange, error, className, ...props }: Phon
   const displayValue = value.startsWith("+91") ? value.slice(3) : value;
 
   return (
-    <div className="flex flex-col gap-1.5">
-      <label className="text-[13px] font-medium text-[var(--text-secondary)]">
-        Phone Number
-      </label>
+    <div
+      className={cn(
+        "flex flex-col gap-1.5",
+        disabled && "pointer-events-none opacity-60"
+      )}
+    >
+      <label className="text-[13px] font-medium text-[var(--text-secondary)]">{label}</label>
       <div
         className={cn(
           "flex items-center rounded-[var(--radius-md)] border-[1.5px] bg-[var(--bg-surface)] overflow-hidden",
@@ -42,6 +56,7 @@ export function PhoneInput({ value, onChange, error, className, ...props }: Phon
           value={displayValue}
           onChange={handleChange}
           placeholder="98765 43210"
+          disabled={disabled}
           className={cn(
             "flex-1 h-9 px-3 bg-transparent outline-none",
             "text-[16px] text-[var(--text-primary)]", // 16px LOCKED — iOS zoom prevention

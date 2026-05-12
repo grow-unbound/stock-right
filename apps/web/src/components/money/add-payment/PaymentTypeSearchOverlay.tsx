@@ -14,6 +14,7 @@ interface PaymentTypeSearchOverlayProps {
   open: boolean;
   warehouseId: string;
   supabase: SupabaseClient;
+  excludeCategories?: readonly string[];
   onClose: () => void;
   onSelect: (row: PaymentTypePickRow) => void;
 }
@@ -34,6 +35,7 @@ export function PaymentTypeSearchOverlay({
   open,
   warehouseId,
   supabase,
+  excludeCategories,
   onClose,
   onSelect,
 }: PaymentTypeSearchOverlayProps) {
@@ -56,6 +58,7 @@ export function PaymentTypeSearchOverlay({
           q: debounced,
           limit: PAGE_SIZE,
           offset: nextOffset,
+          excludeCategories,
         });
         if (count !== null) setTotalCount(count);
         setRows((prev) => (reset ? batch : mergeById(prev, batch)));
@@ -66,7 +69,7 @@ export function PaymentTypeSearchOverlay({
         setLoading(false);
       }
     },
-    [debounced, supabase, warehouseId]
+    [debounced, excludeCategories, supabase, warehouseId]
   );
 
   useEffect(() => {
