@@ -85,6 +85,10 @@ export class OtpError extends Error {
   }
 }
 
+/** Shown when Resend rejects the send (domain, API key, or recipient rules). */
+export const OTP_EMAIL_DELIVERY_FAILED_HINT =
+  "We could not send the code by email. Try again later, or ask your warehouse owner for help.";
+
 // Typed error codes returned by Edge Functions
 export const OTP_ERROR_CODES = {
   PHONE_NOT_FOUND: "PHONE_NOT_FOUND",
@@ -95,6 +99,7 @@ export const OTP_ERROR_CODES = {
   TOO_MANY_ATTEMPTS: "TOO_MANY_ATTEMPTS",
   RATE_LIMITED: "RATE_LIMITED",
   ACCOUNT_INACTIVE: "ACCOUNT_INACTIVE",
+  EMAIL_FAILED: "EMAIL_FAILED",
 } as const;
 
 export type OtpErrorCode = (typeof OTP_ERROR_CODES)[keyof typeof OTP_ERROR_CODES];

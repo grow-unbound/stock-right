@@ -52,12 +52,26 @@ Deno.serve(async (req) => {
       if (profile.is_active === false) {
         return error("ACCOUNT_INACTIVE", "This account is inactive", 403);
       }
-      if (!profile.email) {
+      userId = profile.id as string;
+      recipientName = (profile.display_name as string) ?? "there";
+
+      const { data: authUserData, error: authLookupErr } = await adminClient.auth.admin.getUserById(userId);
+      if (authLookupErr) {
+        console.error("auth.admin.getUserById:", authLookupErr);
+      }
+      const authEmail = authUserData.user?.email?.trim() ?? "";
+      const profileEmail = (profile.email as string | null)?.trim() ?? "";
+      sendToEmail = authEmail || profileEmail;
+      if (!sendToEmail) {
         return error("NO_EMAIL", "No email on file for this account", 400);
       }
-      userId = profile.id as string;
-      sendToEmail = profile.email as string;
-      recipientName = (profile.display_name as string) ?? "there";
+      if (authEmail && profileEmail && authEmail !== profileEmail) {
+        console.warn("send-otp login: user_profiles.email differs from auth.users.email; sending to auth email", {
+          userId,
+          profileEmail,
+          authEmail,
+        });
+      }
     } else {
       // signup — email must be supplied in request
       if (!email) {
@@ -168,6 +182,14 @@ async function hashOtp(otp: string, salt: string): Promise<string> {
     .join("");
 }
 
+function escapeHtmlEmailText(text: string): string {
+  return text
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
+
 async function sendResendEmail({
   to,
   recipientName,
@@ -179,6 +201,8 @@ async function sendResendEmail({
   otp: string;
   purpose: string;
 }): Promise<boolean> {
+  const safeName = escapeHtmlEmailText(recipientName);
+
   const subject =
     purpose === "signup"
       ? "Your StockRight Verification Code"
@@ -186,7 +210,7 @@ async function sendResendEmail({
 
   const html = `
     <div style="font-family: sans-serif; max-width: 480px; margin: 0 auto; padding: 32px;">
-      <h2 style="color: #1C1A16; margin-bottom: 8px;">Hi ${recipientName},</h2>
+      <h2 style="color: #1C1A16; margin-bottom: 8px;">Hi ${safeName},</h2>
       <p style="color: #4A4237; margin-bottom: 24px;">Your StockRight verification code is:</p>
       <div style="background: #F5F0E8; border-radius: 8px; padding: 24px; text-align: center; margin-bottom: 24px;">
         <span style="font-size: 36px; font-weight: 700; letter-spacing: 0.15em; color: #1C1A16;">${otp}</span>
@@ -204,10 +228,24 @@ async function sendResendEmail({
       Authorization: `Bearer ${RESEND_API_KEY}`,
       "Content-Type": "application/json",
     },
-    body: JSON.stringify({ from: RESEND_FROM_EMAIL, to, subject, html }),
+    body: JSON.stringify({ from: RESEND_FROM_EMAIL, to: [to], subject, html }),
   });
 
-  return res.ok;
+  const rawBody = await res.text();
+  if (!res.ok) {
+    console.error(
+      "Resend emails API failed:",
+      res.status,
+      rawBody,
+      "from=",
+      RESEND_FROM_EMAIL,
+      "to=",
+      to
+    );
+    return false;
+  }
+
+  return true;
 }
 
 function maskEmail(email: string): string {

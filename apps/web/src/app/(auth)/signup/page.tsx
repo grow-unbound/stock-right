@@ -6,7 +6,7 @@ import Link from "next/link";
 import { PhoneInput } from "@/components/auth/PhoneInput";
 import { Input } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
-import { sendOtp, OTP_ERROR_CODES } from "@stockright/shared/api";
+import { sendOtp, OTP_ERROR_CODES, OtpError, OTP_EMAIL_DELIVERY_FAILED_HINT } from "@stockright/shared/api";
 import { signupSchema } from "@stockright/shared/utils";
 
 export default function SignupPage() {
@@ -59,11 +59,14 @@ export default function SignupPage() {
       sessionStorage.setItem("otp_name", form.fullName);
       router.push("/verify?from=signup");
     } catch (err: unknown) {
-      const code = (err as { code?: string }).code;
-      if (code === OTP_ERROR_CODES.PHONE_EXISTS) {
+      if (err instanceof OtpError && err.code === OTP_ERROR_CODES.PHONE_EXISTS) {
         setErrors({ phone: "This number is already registered. Log in instead." });
+      } else if (err instanceof OtpError && err.code === OTP_ERROR_CODES.EMAIL_EXISTS) {
+        setErrors({ email: "This email is already registered. Log in instead." });
+      } else if (err instanceof OtpError && err.code === OTP_ERROR_CODES.EMAIL_FAILED) {
+        setErrors({ _form: OTP_EMAIL_DELIVERY_FAILED_HINT });
       } else {
-        setErrors({ _form: (err as Error).message ?? "Something went wrong. Try again." });
+        setErrors({ _form: err instanceof Error ? err.message : "Something went wrong. Try again." });
       }
     } finally {
       setIsLoading(false);

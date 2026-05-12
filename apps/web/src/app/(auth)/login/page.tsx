@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { PhoneInput } from "@/components/auth/PhoneInput";
 import { Button } from "@/components/ui/Button";
-import { sendOtp, OTP_ERROR_CODES } from "@stockright/shared/api";
+import { sendOtp, OTP_ERROR_CODES, OtpError, OTP_EMAIL_DELIVERY_FAILED_HINT } from "@stockright/shared/api";
 import { indianPhoneSchema } from "@stockright/shared/utils";
 import { Lock } from "lucide-react";
 
@@ -47,11 +47,12 @@ export default function LoginPage() {
       router.push("/verify?from=login");
       // intentionally NOT resetting isLoading — page unmounts on navigation
     } catch (err: unknown) {
-      const code = (err as { code?: string }).code;
-      if (code === OTP_ERROR_CODES.PHONE_NOT_FOUND) {
+      if (err instanceof OtpError && err.code === OTP_ERROR_CODES.EMAIL_FAILED) {
+        setError(OTP_EMAIL_DELIVERY_FAILED_HINT);
+      } else if (err instanceof OtpError && err.code === OTP_ERROR_CODES.PHONE_NOT_FOUND) {
         setPageState("not_registered");
       } else {
-        setError((err as Error).message ?? "Something went wrong. Try again.");
+        setError(err instanceof Error ? err.message : "Something went wrong. Try again.");
       }
       isSubmittingRef.current = false;
       setIsLoading(false);

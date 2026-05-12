@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { OtpInput } from "@/components/auth/OtpInput";
 import { Button } from "@/components/ui/Button";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
-import { sendOtp, verifyOtp, warehouseFromVerifyOtpRow } from "@stockright/shared/api";
+import { sendOtp, verifyOtp, warehouseFromVerifyOtpRow, OtpError, OTP_ERROR_CODES, OTP_EMAIL_DELIVERY_FAILED_HINT } from "@stockright/shared/api";
 import { setActiveWarehouseIdAction } from "@/app/actions/session";
 
 const OTP_EXPIRY_SECONDS = 600; // 10 min
@@ -150,7 +150,13 @@ function VerifyPageInner() {
       setExpiryCountdown(OTP_EXPIRY_SECONDS);
       setResendCountdown(RESEND_COOLDOWN_SECONDS);
     } catch (err: unknown) {
-      setError((err as Error).message ?? "Failed to resend. Try again.");
+      setError(
+        err instanceof OtpError && err.code === OTP_ERROR_CODES.EMAIL_FAILED
+          ? OTP_EMAIL_DELIVERY_FAILED_HINT
+          : err instanceof Error
+            ? err.message
+            : "Failed to resend. Try again."
+      );
     } finally {
       setIsResending(false);
     }
